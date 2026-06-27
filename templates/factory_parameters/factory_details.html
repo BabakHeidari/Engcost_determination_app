@@ -4,7 +4,7 @@
 
 <div class="page-container">
     <button class="btn btn-secondary mb-3" onclick="history.back()">
-        ← Back to Factories
+        بازگشت به کارخانه‌ها
     </button>
 
     <!-- Factory Details Header -->
@@ -12,20 +12,20 @@
         <div class="title-badge">
             <span class="badge-icon">🏭</span>
             <div>
-                <h2>{{factory_name}} Site</h2>
-                <p class="subtitle">Cost breakdown and expense distribution analysis</p>
+                <h2>{{factory_name}} - سایت</h2>
+                <p class="subtitle">تحلیل ساختار هزینه و توزیع مخارج</p>
             </div>
         </div>
     </div>
 
-    <!-- Cost Structure Table -->
+    <!-- ساختار هزینه Table -->
     <div class="table-section">
         <div class="section-header">
             <div class="section-title">
                 <span class="section-icon">💰</span>
-                <h3>Cost Structure</h3>
+                <h3>ساختار هزینه</h3>
             </div>
-            <p class="section-description">Detailed breakdown of costs by subfield</p>
+            <p class="section-description">تفکیک جزئی هزینه‌ها بر اساس زیرحوزه</p>
         </div>
 
         <div class="table-wrapper">
@@ -39,19 +39,19 @@
 
         <div class="button-bar">
             <button class="btn btn-save" id="saveBtn">
-                <span class="btn-icon">💾</span> Save Changes
+                <span class="btn-icon">💾</span> ذخیره تغییرات
             </button>
         </div>
     </div>
 
-    <!-- Category Weight Distribution Table -->
+    <!-- توزیع وزن دسته‌ها Table -->
     <div class="table-section">
         <div class="section-header">
             <div class="section-title">
                 <span class="section-icon">📊</span>
-                <h3>Category Weight Distribution</h3>
+                <h3>توزیع وزن دسته‌ها</h3>
             </div>
-            <p class="section-description">Expense allocation percentages by category (must sum to 100%)</p>
+            <p class="section-description">درصدهای تخصیص هزینه بر اساس دسته (مجموع باید 100٪ باشد)</p>
         </div>
 
         <div class="table-wrapper">
@@ -65,19 +65,19 @@
 
         <div class="button-bar">
             <button class="btn btn-save" id="saveCategoryBtn">
-                <span class="btn-icon">💾</span> Save Category Weights
+                <span class="btn-icon">💾</span> ذخیره وزن دسته‌ها
             </button>
         </div>
     </div>
 
-    <!-- Prediction of Production Per Capita Table -->
+    <!-- پیش‌بینی تولید سرانه Table -->
     <div class="table-section">
         <div class="section-header">
             <div class="section-title">
                 <span class="section-icon">📈</span>
-                <h3>Prediction of Production Per Capita</h3>
+                <h3>پیش‌بینی تولید سرانه</h3>
             </div>
-            <p class="section-description">Production predictions for the following year by product</p>
+            <p class="section-description">پیش‌بینی تولید سال آینده بر اساس محصول</p>
         </div>
 
         <div class="table-wrapper">
@@ -91,7 +91,7 @@
 
         <div class="button-bar">
             <button class="btn btn-save" id="savePredictionBtn">
-                <span class="btn-icon">💾</span> Save Predictions
+                <span class="btn-icon">💾</span> ذخیره پیش‌بینی‌ها
             </button>
         </div>
     </div>
@@ -163,7 +163,7 @@
         });
         
         const viewHead = document.createElement("th");
-        viewHead.innerHTML = `👁️ Actions`;
+        viewHead.innerHTML = `👁️ عملیات`;
         viewHead.className = 'col-header';
         thead.appendChild(viewHead);
         renderTable();
@@ -229,7 +229,7 @@
     }
 
     function saveTable() {
-        const confirmed = confirm("Save all changes to the cost structure?");
+        const confirmed = confirm("همه تغییرات ساختار هزینه ذخیره شود؟");
         if (!confirmed) return;
         
         const payload = buildColumnData();
@@ -413,7 +413,7 @@
             return;
         }
 
-        const confirmed = confirm("Save changes to category weight distribution?");
+        const confirmed = confirm("تغییرات توزیع وزن دسته‌ها ذخیره شود؟");
         if (!confirmed) return;
         
         const payload = buildCategoryColumnData();
@@ -471,7 +471,7 @@
     }
 
     function getPredictionDisplayName(columnName) {
-        if (columnName === 'Product Name') return 'Product';
+        if (columnName === 'Product Name') return 'محصول';
         if (columnName === 'Predicted Production') return 'Prediction Value';
         return columnName.charAt(0).toUpperCase() + columnName.slice(1);
     }
@@ -581,7 +581,7 @@
     }
 
     function savePredictionTable() {
-        const confirmed = confirm("Save changes to production predictions?");
+        const confirmed = confirm("تغییرات پیش‌بینی تولید ذخیره شود؟");
         if (!confirmed) return;
         
         const payload = buildPredictionColumnData();

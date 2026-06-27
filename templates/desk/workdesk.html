@@ -4,7 +4,7 @@
 
 
 {% extends "base.html" %}
-{% block title %}Work Desk{% endblock %}
+{% block title %}میز کار{% endblock %}
 {% block content %}
 
 <link rel="stylesheet" href="workdesk_style.css">
@@ -73,13 +73,13 @@
     <div class="welcome-header">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <h2><i class="fas fa-tachometer-alt"></i> Work Desk</h2>
-                <p class="mb-0">Welcome back, {{ session.get('username', 'Admin') }} 👋</p>
-                <small>Last login: {{ session.get('last_login', '2026-04-21 12:38:22') }}</small>
+                <h2><i class="fas fa-tachometer-alt"></i> میز کار</h2>
+                <p class="mb-0">خوش آمدید، {{ session.get('username', 'مدیر') }} 👋</p>
+                <small>آخرین ورود: {{ session.get('last_login', '2026-04-21 12:38:22') }}</small>
             </div>
             <div>
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-light">
-                    <i class="fas fa-sign-out-alt"></i> Logout
+                    <i class="fas fa-sign-out-alt"></i> خروج
                 </a>
             </div>
         </div>
@@ -88,86 +88,86 @@
     <!-- Cards Grid -->
     <div class="row g-4">
         
-        <!-- General Parameters -->
+        <!-- پارامترهای عمومی -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
                 <div class="icon-circle">
                     <i class="fas fa-sliders-h card-icon" style="font-size: 2rem; color: #2ecc71;"></i>
                 </div>
-                <h5 class="card-title">General Parameters</h5>
-                <p class="text-muted small">Set system-wide parameters</p>
+                <h5 class="card-title">پارامترهای عمومی</h5>
+                <p class="text-muted small">تنظیم پارامترهای عمومی سامانه</p>
                 <a href="{{ url_for('general_parameters.general_parameters') }}" class="btn btn-primary btn-open">
-                    <i class="fas fa-arrow-right"></i> Open
+                    <i class="fas fa-arrow-right"></i> باز کردن
                 </a>
             </div>
         </div>
         
-        <!-- Factory Parameters -->
+        <!-- پارامترهای کارخانه -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
                 <div class="icon-circle">
                     <i class="fas fa-industry card-icon" style="font-size: 2rem; color: #e74c3c;"></i>
                 </div>
-                <h5 class="card-title">Factory Parameters</h5>
-                <p class="text-muted small">Manage factory settings</p>
+                <h5 class="card-title">پارامترهای کارخانه</h5>
+                <p class="text-muted small">مدیریت تنظیمات کارخانه</p>
                 <a href="{{ url_for('factory_parameters.factory_parameters') }}" class="btn btn-primary btn-open">
-                    <i class="fas fa-arrow-right"></i> Open
+                    <i class="fas fa-arrow-right"></i> باز کردن
                 </a>
             </div>
         </div>
         
-        <!-- Product Configuration -->
+        <!-- پیکربندی محصول -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
                 <div class="icon-circle">
                     <i class="fas fa-cogs card-icon" style="font-size: 2rem; color: #3498db;"></i>
                 </div>
-                <h5 class="card-title">Product Configuration</h5>
-                <p class="text-muted small">Configure your products and BOM</p>
+                <h5 class="card-title">پیکربندی محصول</h5>
+                <p class="text-muted small">پیکربندی محصولات و فهرست مواد (BOM)</p>
                 <a href="{{ url_for('product.production_selection') }}" class="btn btn-primary btn-open">
-                    <i class="fas fa-arrow-right"></i> Open
+                    <i class="fas fa-arrow-right"></i> باز کردن
                 </a>
             </div>
         </div>
         
-        <!-- Cost Calculation -->
+        <!-- محاسبه بهای تمام‌شده -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
                 <div class="icon-circle">
                     <i class="fas fa-calculator card-icon" style="font-size: 2rem; color: #f39c12;"></i>
                 </div>
-                <h5 class="card-title">Cost Calculation</h5>
-                <p class="text-muted small">Calculate product costs</p>
+                <h5 class="card-title">محاسبه بهای تمام‌شده</h5>
+                <p class="text-muted small">محاسبه هزینه محصولات</p>
                 <a href="{{ url_for('cost_calculation.cost_cal') }}" class="btn btn-primary btn-open">
-                    <i class="fas fa-chart-line"></i> Open
+                    <i class="fas fa-chart-line"></i> باز کردن
                 </a>
             </div>
         </div>
         
-        <!-- Dashboard -->
+        <!-- داشبورد مدیریتی -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
                 <div class="icon-circle">
                     <i class="fas fa-chart-pie card-icon" style="font-size: 2rem; color: #9b59b6;"></i>
                 </div>
-                <h5 class="card-title">Dashboard</h5>
-                <p class="text-muted small">View analytics and reports</p>
+                <h5 class="card-title">داشبورد مدیریتی</h5>
+                <p class="text-muted small">مشاهده تحلیل‌ها و گزارش‌ها</p>
                 <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary btn-open">
-                    <i class="fas fa-chart-bar"></i> Open
+                    <i class="fas fa-chart-bar"></i> باز کردن
                 </a>
             </div>
         </div>
         
-        <!-- User Profile -->
+        <!-- پروفایل کاربر -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
                 <div class="icon-circle">
                     <i class="fas fa-user-circle card-icon" style="font-size: 2rem; color: #1abc9c;"></i>
                 </div>
-                <h5 class="card-title">User Profile</h5>
-                <p class="text-muted small">Manage your account</p>
+                <h5 class="card-title">پروفایل کاربر</h5>
+                <p class="text-muted small">مدیریت حساب کاربری</p>
                 <a href="{{ url_for('profile.profile') }}" class="btn btn-primary btn-open">
-                    <i class="fas fa-user-edit"></i> Open
+                    <i class="fas fa-user-edit"></i> باز کردن
                 </a>
             </div>
         </div>

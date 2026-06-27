@@ -2,28 +2,28 @@
 {% block content %}
 
 <button class="btn btn-secondary mb-3" onclick="history.back()">
-    <i class="fas fa-arrow-left"></i> Back
+    <i class="fas fa-arrow-left"></i> بازگشت
 </button>
 
 <div class="page-container">
     <div class="page-header">
-        <h2>Editable Table</h2>
+        <h2>جدول قابل ویرایش</h2>
         <div class="header-actions">
             <button class="btn btn-add" id="addRowBtn">
-                <i class="fas fa-plus"></i> Add Row
+                <i class="fas fa-plus"></i> افزودن ردیف
             </button>
             <button class="btn btn-add" id="addColumnBtn">
-                <i class="fas fa-columns"></i> Add Column
+                <i class="fas fa-columns"></i> افزودن ستون
             </button>
             <button class="btn btn-save" id="saveBtn">
-                <i class="fas fa-save"></i> Save Changes
+                <i class="fas fa-save"></i> ذخیره تغییرات
             </button>
         </div>
     </div>
 
     <div class="search-bar">
         <i class="fas fa-search search-icon"></i>
-        <input id="searchInput" type="text" placeholder="Search by first column">
+        <input id="searchInput" type="text" placeholder="جستجو بر اساس ستون اول">
     </div>
 
     <div id="filtersContainer" class="dropdown-filters"></div>
@@ -39,13 +39,13 @@
 
     <div class="pagination-container">
         <div class="pagination-info">
-            Showing <span id="showingStart">0</span>-<span id="showingEnd">0</span> of <span id="totalRows">0</span> rows
+            نمایش <span id="showingStart">0</span>-<span id="showingEnd">0</span> از <span id="totalRows">0</span> ردیف
         </div>
         <div class="pagination-controls">
             <button class="btn-page" id="prevPage" disabled>
                 <i class="fas fa-chevron-left"></i>
             </button>
-            <span id="pageInfo" class="page-info">Page 1</span>
+            <span id="pageInfo" class="page-info">صفحه 1</span>
             <button class="btn-page" id="nextPage">
                 <i class="fas fa-chevron-right"></i>
             </button>
@@ -55,7 +55,7 @@
     <!-- Last Modified Info -->
     <div class="last-modified-info" id="lastModifiedInfo" style="display:none;">
         <i class="fas fa-clock"></i>
-        Last modified: <span id="lastModifiedDate"></span>
+        آخرین تغییر: <span id="lastModifiedDate"></span>
     </div>
 </div>
 
@@ -63,15 +63,15 @@
 <div id="addRowModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Add New Row</h3>
+            <h3>افزودن ردیف جدید</h3>
             <button class="modal-close" onclick="closeAddModal()">&times;</button>
         </div>
         <div class="modal-body">
             <div id="addModalFields"></div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+                <button class="btn btn-secondary" onclick="closeAddModal()">انصراف</button>
                 <button class="btn btn-save" onclick="submitNewRow()">
-                    <i class="fas fa-plus"></i> Add Row
+                    <i class="fas fa-plus"></i> افزودن ردیف
                 </button>
             </div>
         </div>
@@ -82,15 +82,15 @@
 <div id="editRowModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Edit Row</h3>
+            <h3>ویرایش ردیف</h3>
             <button class="modal-close" onclick="closeEditModal()">&times;</button>
         </div>
         <div class="modal-body">
             <div id="editModalFields"></div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-secondary" onclick="closeEditModal()">انصراف</button>
                 <button class="btn btn-save" onclick="submitEditRow()">
-                    <i class="fas fa-save"></i> Save Changes
+                    <i class="fas fa-save"></i> ذخیره تغییرات
                 </button>
             </div>
         </div>
@@ -370,7 +370,7 @@ function buildTable() {
             const del = document.createElement("button");
             del.innerHTML = '<i class="fas fa-times"></i>';
             del.className = "delete-btn";
-            del.title = "Delete column";
+            del.title = "حذف ستون";
             del.onclick = () => removeColumn(i);
             headerContent.appendChild(del);
         }
@@ -629,7 +629,7 @@ function removeColumn(i) {
     }
     
     const name = headers[i];
-    const confirmed = confirm(`Delete column "${name}"? This will remove all data in this column.`);
+    const confirmed = confirm(`حذف ستون "${name}"? This will remove all data in this column.`);
     
     if (!confirmed) return;
     
@@ -910,7 +910,7 @@ function saveTable() {
         return;
     }
     
-    const confirmed = confirm("Save changes to the table?");
+    const confirmed = confirm("تغییرات جدول ذخیره شود؟");
     if (!confirmed) return;
     
     // Build the changes payload
@@ -987,7 +987,7 @@ function saveTable() {
             row._isNew = false;
         });
         
-        alert(`✅ Changes saved successfully!\n\nLast modified: ${new Date(lastModificationDate).toLocaleString()}`);
+        alert(`✅ Changes saved successfully!\n\nآخرین تغییر: ${new Date(lastModificationDate).toLocaleString()}`);
     })
     .catch(err => {
         console.error("SAVE ERROR:", err);

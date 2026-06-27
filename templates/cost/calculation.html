@@ -480,7 +480,7 @@
         100% { width: 100%; }
     }
     
-    /* BOM Details Button */
+    /* BOM جزئیات Button */
     .bom-details-btn {
         background: #f0c040;
         border: none;
@@ -597,10 +597,10 @@
 <div class="modal-overlay" id="csvLoadingModal">
     <div class="modal-loading">
         <div class="modal-spinner"></div>
-        <div class="modal-loading-text">📥 Preparing CSV Report<span class="loading-dots"></span></div>
-        <div class="modal-loading-subtext" id="modalProductCount">Processing products...</div>
+        <div class="modal-loading-text">📥 در حال آماده‌سازی گزارش CSV<span class="loading-dots"></span></div>
+        <div class="modal-loading-subtext" id="modalProductCount">در حال پردازش محصولات...</div>
         <div class="modal-loading-subtext" style="font-size: 0.8rem; color: #2c7da0;">
-            This may take a moment for large datasets
+            ممکن است برای مجموعه‌داده‌های بزرگ کمی زمان ببرد
         </div>
         <div class="modal-progress-bar">
             <div class="modal-progress-fill"></div>
@@ -608,11 +608,11 @@
     </div>
 </div>
 
-<!-- BOM Details Modal -->
+<!-- BOM جزئیات Modal -->
 <div class="modal-overlay" id="bomDetailsModal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>🧱 BOM Cost Details</h3>
+            <h3>🧱 جزئیات هزینه BOM</h3>
             <button class="modal-close-btn" onclick="closeBOMDetails()">&times;</button>
         </div>
         <div id="bomDetailsBody">
@@ -622,30 +622,30 @@
 </div>
 
 <div class="app-container">
-    <button class="btn-secondary" onclick="history.back()">← Back</button>
+    <button class="btn-secondary" onclick="history.back()">بازگشت</button>
 
-    <h2>📦 Product Catalog</h2>
+    <h2>📦 فهرست محصولات</h2>
     
     <div class="filter-header">
         <div class="filter-section">
-            <input id="searchInput" type="text" placeholder="🔍 Search Product Name..." />
+            <input id="searchInput" type="text" placeholder="🔍 جستجوی نام محصول..." />
         </div>
         <button id="exportCSVBtn" class="export-btn">
-            📥 Download CSV Report
+            📥 دانلود گزارش CSV
         </button>
     </div>
     
     <div class="dropdown-filters">
         <div class="dropdown">
-            <button class="dropbtn">🏭 Factory ▾</button>
+            <button class="dropbtn">🏭 کارخانه ▾</button>
             <div class="dropdown-content" id="factoryDropdown"></div>
         </div>
         <div class="dropdown">
-            <button class="dropbtn">📂 Category ▾</button>
+            <button class="dropbtn">📂 دسته ▾</button>
             <div class="dropdown-content" id="categoryDropdown"></div>
         </div>
         <div class="dropdown">
-            <button class="dropbtn">📁 Subcategory ▾</button>
+            <button class="dropbtn">📁 زیردسته ▾</button>
             <div class="dropdown-content" id="subcategoryDropdown"></div>
         </div>
         <div id="filterStats" class="filter-stats"></div>
@@ -655,44 +655,44 @@
         <table id="productTable">
             <thead>
                 <tr>
-                    <th>Product Name</th>
-                    <th>Factory</th>
-                    <th>Category</th>
-                    <th>Subcategory</th>
-                    <th>Select</th>
+                    <th>نام محصول</th>
+                    <th>کارخانه</th>
+                    <th>دسته</th>
+                    <th>زیردسته</th>
+                    <th>انتخاب</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
         </table>
     </div>
     <div class="pagination">
-        <button id="prevPage">◀ Previous</button>
+        <button id="prevPage">قبلی</button>
         <span id="pageInfo"></span>
-        <button id="nextPage">Next ▶</button>
+        <button id="nextPage">بعدی</button>
     </div>
 
     <!-- COST CALCULATION SECTION -->
     <div class="calculation-area">
         <div class="calc-header">
-            <h3>💰 Total Cost Breakdown</h3>
-            <div class="selected-product-badge" id="selectedProductLabel">No product selected</div>
+            <h3>💰 تفکیک کل هزینه</h3>
+            <div class="selected-product-badge" id="selectedProductLabel">محصولی انتخاب نشده است</div>
         </div>
         <div class="total-cost-card">
-            <span class="total-label">🏁 Total Calculated Cost (per unit)</span>
+            <span class="total-label">🏁 کل هزینه محاسبه‌شده (برای هر واحد)</span>
             <span class="total-value" id="totalCostDisplay">$0.00</span>
         </div>
         <div class="step-container">
-            <div class="step-title">⚙️ Step‑by‑step cost components</div>
+            <div class="step-title">⚙️ اجزای هزینه به تفکیک مرحله</div>
             <div id="stepsContainer" class="steps-list">
                 <div class="empty-selection">
-                    ✨ Select a product from the table above to see detailed cost structure based on:<br>
-                    • Raw Material<br> • Payroll<br> • Overhead<br> • Depreciation<br>
-                    • Administrative & Research<br> • Financial Costs<br> • Non-Operational Costs & Incomes
+                    ✨ انتخاب a product from the table above to see detailed cost structure based on:<br>
+                    • مواد اولیه<br> • حقوق و دستمزد<br> • سربار<br> • استهلاک<br>
+                    • اداری و پژوهشی<br> • هزینه‌های مالی<br> • هزینه‌ها و درآمدهای غیرعملیاتی
                 </div>
             </div>
         </div>
         <div class="helper-note">
-            💡 Each cost component is retrieved from the backend. Click "📋 Details" next to BOM for material‑level breakdown.
+            💡 Each cost component is retrieved from the backend. Click "📋 جزئیات" next to BOM for material‑level breakdown.
         </div>
     </div>
 </div>
@@ -771,7 +771,7 @@
             <div class="loading-container">
                 <div class="spinner"></div>
                 <div class="loading-text">${message}<span class="loading-dots"></span></div>
-                <div class="loading-subtext">Please wait while we process your request</div>
+                <div class="loading-subtext">لطفاً تا پایان پردازش صبر کنید</div>
             </div>
         `;
     }
@@ -875,7 +875,7 @@
     function renderTable() {
         if (!tbody) return;
         if (!hasData) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">⚠️ No product data available. Check JSON format.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">⚠️ داده محصول موجود نیست. قالب JSON را بررسی کنید.</td></tr>';
             return;
         }
         const filtered = getFilteredData();
@@ -885,7 +885,7 @@
         const pageRows = filtered.slice(start, end);
         tbody.innerHTML = "";
         if (pageRows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">✨ No products match filters</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">✨ هیچ محصولی با فیلترها مطابقت ندارد</td></tr>';
         } else {
             pageRows.forEach(row => {
                 const tr = document.createElement("tr");
@@ -904,7 +904,7 @@
                 tbody.appendChild(tr);
             });
         }
-        document.querySelectorAll(".open-btn").forEach(btn => {
+        document.queryانتخابorAll(".open-btn").forEach(btn => {
             btn.addEventListener("click", (e) => {
                 try {
                     const productRaw = btn.getAttribute("data-product");
@@ -923,7 +923,7 @@
     async function exportToCSV() {
         const filteredProducts = getFilteredData();
         if (filteredProducts.length === 0) {
-            alert("⚠️ No products to export. Please adjust your filters.");
+            alert("⚠️ محصولی برای خروجی وجود ندارد. فیلترها را تغییر دهید.");
             return;
         }
     
@@ -937,10 +937,10 @@
             await new Promise(resolve => setTimeout(resolve, delay));
             
             const headers = [
-                "Product Name", "Factory", "Category", "Subcategory",
-                "Total Cost (per unit)", "BOM", "Payroll", "Overhead",
-                "Depreciation", "Administrative & Research", "Financial Costs",
-                "Non-Operational Costs & Incomes"
+                "نام محصول", "کارخانه", "دسته", "زیردسته",
+                "کل هزینه (هر واحد)", "BOM", "حقوق و دستمزد", "سربار",
+                "استهلاک", "اداری و پژوهشی", "هزینه‌های مالی",
+                "هزینه‌ها و درآمدهای غیرعملیاتی"
             ];
             const rows = [headers];
             for (const product of filteredProducts) {
@@ -953,8 +953,8 @@
                     `"${(product.Subcategory || "").replace(/"/g, '""')}"`,
                     (costs.Final_Production_Cost ?? 0).toFixed(2),
                     (costs.BOM ?? 0).toFixed(2),
-                    (costs.Payroll ?? 0).toFixed(2),
-                    (costs.Overhead ?? 0).toFixed(2),
+                    (costs.حقوق و دستمزد ?? 0).toFixed(2),
+                    (costs.سربار ?? 0).toFixed(2),
                     (costs.Depriciation ?? 0).toFixed(2),
                     (costs.AdministrativeandResearch ?? 0).toFixed(2),
                     (costs.FinancialCosts ?? 0).toFixed(2),
@@ -985,7 +985,7 @@
         } catch (error) {
             hideCSVLoadingModal();
             console.error("Export failed:", error);
-            alert("❌ Failed to export CSV. Please try again.");
+            alert("❌ خروجی CSV ناموفق بود. دوباره تلاش کنید.");
         } finally {
             exportBtn.disabled = false;
         }
@@ -998,9 +998,9 @@
         let val = e.target.dataset.value;
         if (val === "__all__") {
             filters[col] = [];
-            document.querySelectorAll(`input[data-column="${col}"]`).forEach(cb => cb.checked = (cb.dataset.value === "__all__"));
+            document.queryانتخابorAll(`input[data-column="${col}"]`).forEach(cb => cb.checked = (cb.dataset.value === "__all__"));
         } else {
-            const allBox = document.querySelector(`input[data-column="${col}"][data-value="__all__"]`);
+            const allBox = document.queryانتخابor(`input[data-column="${col}"][data-value="__all__"]`);
             if (allBox) allBox.checked = false;
             if (filters[col].includes(val)) filters[col] = filters[col].filter(v => v !== val);
             else filters[col].push(val);
@@ -1020,7 +1020,7 @@
     // ======================
     function openBOMDetails() {
         if (!currentCostData || !currentCostData.BOM_Details) {
-            alert("No BOM details available for the current product.");
+            alert("جزئیات BOM برای محصول فعلی موجود نیست.");
             return;
         }
         
@@ -1028,7 +1028,7 @@
         
         // Build table from BOM_Details object
         let html = `<table class="bom-table">
-            <thead><tr><th>Material</th><th>Cost</th></tr></thead>
+            <thead><tr><th>ماده</th><th>Cost</th></tr></thead>
             <tbody>`;
         
         let totalBOM = 0;
@@ -1047,7 +1047,7 @@
         const finalTotal = bomDetails.Total_BOM_Cost || totalBOM;
         
         html += `<tr class="bom-total-row">
-            <td><strong>Total BOM Cost</strong></td>
+            <td><strong>کل هزینه BOM</strong></td>
             <td><strong>$${Number(finalTotal).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
         </tr>`;
         html += `</tbody></table>`;
@@ -1078,9 +1078,9 @@
     async function updateCostCalculation(product) {
         if (!product || !product.Product_Name) {
             currentCostData = null;
-            selectedProductLabel.innerText = "No product selected";
+            selectedProductLabel.innerText = "محصولی انتخاب نشده است";
             totalCostDisplay.innerText = "$0.00";
-            stepsContainer.innerHTML = `<div class="empty-selection">✨ Select a product to see detailed cost breakdown.</div>`;
+            stepsContainer.innerHTML = `<div class="empty-selection">✨ انتخاب a product to see detailed cost breakdown.</div>`;
             return;
         }
     
@@ -1099,7 +1099,7 @@
         if (!costs) {
             selectedProductLabel.innerText = `⚠️ ${product.Product_Name}`;
             totalCostDisplay.innerText = "Error";
-            stepsContainer.innerHTML = `<div class="empty-selection">❌ Could not load cost data. Backend may be unreachable.</div>`;
+            stepsContainer.innerHTML = `<div class="empty-selection">❌ داده‌های هزینه بارگذاری نشد. ممکن است Backend در دسترس نباشد.</div>`;
             return;
         }
     
@@ -1119,7 +1119,7 @@
         // Determine if BOM details button should be shown
         const hasBOMDetails = costs.BOM_Details && Object.keys(costs.BOM_Details).length > 0;
         const bomDetailsButton = hasBOMDetails 
-            ? `<button class="bom-details-btn" onclick="openBOMDetails()">📋 Details</button>` 
+            ? `<button class="bom-details-btn" onclick="openBOMDetails()">📋 جزئیات</button>`
             : '';
     
         const stepsHtml = `
@@ -1128,31 +1128,31 @@
                 <span class="step-cost">$${Number(costs.BOM ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </li>
             <li class="step-item">
-                <span class="step-desc"><span class="step-icon">👥</span><strong>Payroll</strong></span>
-                <span class="step-cost">$${Number(costs.Payroll ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                <span class="step-desc"><span class="step-icon">👥</span><strong>حقوق و دستمزد</strong></span>
+                <span class="step-cost">$${Number(costs.حقوق و دستمزد ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </li>
             <li class="step-item">
-                <span class="step-desc"><span class="step-icon">⚡</span><strong>Overhead</strong></span>
-                <span class="step-cost">$${Number(costs.Overhead ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                <span class="step-desc"><span class="step-icon">⚡</span><strong>سربار</strong></span>
+                <span class="step-cost">$${Number(costs.سربار ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </li>
             <li class="step-item">
-                <span class="step-desc"><span class="step-icon">🏭</span><strong>Depreciation</strong></span>
+                <span class="step-desc"><span class="step-icon">🏭</span><strong>استهلاک</strong></span>
                 <span class="step-cost">$${Number(costs.Depriciation ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </li>
             <li class="step-item">
-                <span class="step-desc"><span class="step-icon">📋</span><strong>Administrative & Research</strong></span>
+                <span class="step-desc"><span class="step-icon">📋</span><strong>اداری و پژوهشی</strong></span>
                 <span class="step-cost">$${Number(costs.AdministrativeandResearch ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </li>
             <li class="step-item">
-                <span class="step-desc"><span class="step-icon">💰</span><strong>Financial Costs</strong></span>
+                <span class="step-desc"><span class="step-icon">💰</span><strong>هزینه‌های مالی</strong></span>
                 <span class="step-cost">$${Number(costs.FinancialCosts ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </li>
             <li class="step-item">
-                <span class="step-desc"><span class="step-icon">📈</span><strong>Non-Operational</strong></span>
+                <span class="step-desc"><span class="step-icon">📈</span><strong>غیرعملیاتی</strong></span>
                 <span class="step-cost">$${Number(costs.NonOperationalCostsandIncomes ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </li>
             <li class="step-item total-step">
-                <span class="step-desc"><span class="step-icon">🏁</span><strong>TOTAL COST</strong></span>
+                <span class="step-desc"><span class="step-icon">🏁</span><strong>کل هزینه</strong></span>
                 <span class="step-cost" style="background:#2c7da0; color:white;">$${Number(total).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </li>
         `;
@@ -1180,8 +1180,8 @@
         initFilters();
         renderTable();
     } else {
-        if(tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#c0392b;">⚠️ No data received. Ensure table_json is properly passed.</td></tr>';
-        stepsContainer.innerHTML = `<div class="empty-selection">⚠️ Product data not available.</div>`;
+        if(tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#c0392b;">⚠️ داده‌ای دریافت نشد. ارسال صحیح table_json را بررسی کنید.</td></tr>';
+        stepsContainer.innerHTML = `<div class="empty-selection">⚠️ داده محصول موجود نیست.</div>`;
     }
     updateCostCalculation(null);
 </script>

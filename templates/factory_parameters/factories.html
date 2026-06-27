@@ -4,15 +4,15 @@
 
 <div class="page-container">
     <button class="btn btn-secondary mb-3" onclick="history.back()">
-        ← Back
+        بازگشت
     </button>
 
     <div class="header-section">
         <div class="title-badge">
             <span class="badge-icon">🏭</span>
-            <h2>Factories Directory</h2>
+            <h2>فهرست کارخانه‌ها</h2>
         </div>
-        <p class="subtitle">Manage and tune the factory-related parameters of cost determination</p>
+        <p class="subtitle">مدیریت و تنظیم پارامترهای مرتبط با کارخانه در محاسبه بهای تمام‌شده</p>
     </div>
 
     <div class="stats-cards">
@@ -20,21 +20,21 @@
             <div class="stat-icon">🏭</div>
             <div class="stat-info">
                 <span class="stat-value" id="totalFactories">0</span>
-                <span class="stat-label">Total Factories</span>
+                <span class="stat-label">تعداد کارخانه‌ها</span>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon">👥</div>
             <div class="stat-info">
                 <span class="stat-value" id="totalManagers">0</span>
-                <span class="stat-label">Managers</span>
+                <span class="stat-label">مدیران</span>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon">📍</div>
             <div class="stat-info">
                 <span class="stat-value" id="totalCities">0</span>
-                <span class="stat-label">Cities</span>
+                <span class="stat-label">شهرها</span>
             </div>
         </div>
     </div>
@@ -140,7 +140,7 @@
 
         // view column header
         const viewHead = document.createElement("th");
-        viewHead.innerHTML = `👁️ View`;
+        viewHead.innerHTML = `👁️ مشاهده`;
         viewHead.className = 'col-header view-col';
         thead.appendChild(viewHead);
 
@@ -192,7 +192,7 @@
                 <form method="POST" action="/factory_parameters/${encodeURIComponent(factoryName)}" style="margin:0;">
                     <input type="hidden" name="factory name" value="${factoryName ?? ""}">
                     <button type="submit" class="view-btn">
-                        <span class="btn-icon">🔍</span> View Details
+                        <span class="btn-icon">🔍</span> مشاهده Details
                     </button>
                 </form>
             `;
@@ -432,7 +432,7 @@
         box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
     }
 
-    /* View Button */
+    /* مشاهده Button */
     .view-btn {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
