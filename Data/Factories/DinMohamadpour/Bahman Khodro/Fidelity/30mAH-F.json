@@ -1,0 +1,51 @@
+{
+    "_order": [
+        "materials",
+        "unit",
+        "usage",
+        "lost_percentage",
+        "recycability_percentage",
+        "cost_per_unit_in_currency",
+        "cost_currency",
+        "cost_of_material_in_its_currency",
+        "cost_of_material_in_rial"
+    ],
+    "data": {
+        "materials": [
+            "iron",
+            "Coil"
+        ],
+        "unit": [
+            "Kilogram (kg)",
+            "Kilogram (kg)"
+        ],
+        "usage": [
+            2,
+            1
+        ],
+        "lost_percentage": [
+            "",
+            ""
+        ],
+        "recycability_percentage": [
+            "",
+            ""
+        ],
+        "cost_per_unit_in_currency": [
+            12000000,
+            4300000
+        ],
+        "cost_currency": [
+            1,
+            2030000
+        ],
+        "cost_of_material_in_its_currency": [
+            24000000,
+            4300000
+        ],
+        "cost_of_material_in_rial": [
+            24000000,
+            8729000000000
+        ]
+    }
+}

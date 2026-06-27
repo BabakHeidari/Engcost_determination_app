@@ -1,0 +1,18 @@
+{
+    "_order": [
+        "username",
+        "password_hash",
+        "access_level"
+    ],
+    "data": {
+        "username": [
+            "Babak"
+        ],
+        "password_hash": [
+            NaN
+        ],
+        "access_level": [
+            "admin"
+        ]
+    }
+}

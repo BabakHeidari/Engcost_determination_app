@@ -1,0 +1,51 @@
+{
+    "_order": [
+        "materials",
+        "unit",
+        "usage",
+        "lost_percentage",
+        "recycability_percentage",
+        "cost_per_unit",
+        "cost_currency",
+        "cost_of_material_in_its_currency",
+        "cost_of_material_in_rial"
+    ],
+    "data": {
+        "materials": [
+            "m4",
+            "m4"
+        ],
+        "unit": [
+            "Gram (g)",
+            "Gram (g)"
+        ],
+        "usage": [
+            22,
+            5
+        ],
+        "lost_percentage": [
+            "NaN",
+            0.13
+        ],
+        "recycability_percentage": [
+            "NaN",
+            0.1
+        ],
+        "cost_per_unit": [
+            "NaN",
+            122
+        ],
+        "cost_currency": [
+            1,
+            1
+        ],
+        "cost_of_material_in_its_currency": [
+            9460000,
+            2122050
+        ],
+        "cost_of_material_in_rial": [
+            9460000,
+            2122050
+        ]
+    }
+}

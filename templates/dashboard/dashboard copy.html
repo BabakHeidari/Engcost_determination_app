@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<button class="btn btn-secondary mb-3" onclick="history.back()">Back</button>
+<div class="dashboard-page">
+
+    <h3 class="mb-4">Battery Manufacturing Cost Dashboard</h3>
+
+    <div class="kpi-grid">
+        <div class="dash-card">
+            <h6>Revenue</h6>
+            <p id="revenue"></p>
+        </div>
+
+        <div class="dash-card">
+            <h6>Cost</h6>
+            <p id="cost"></p>
+        </div>
+
+        <div class="dash-card">
+            <h6>Profit</h6>
+            <p id="profit"></p>
+        </div>
+
+        <div class="dash-card">
+            <h6>Profit Margin</h6>
+            <p id="margin"></p>
+        </div>
+    </div>
+
+    <div class="charts">
+        <div class="chart-box">
+            <div id="monthlyChart" class="chart"></div>
+        </div>
+
+        <div class="chart-box">
+            <div id="factoryChart" class="chart"></div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+.dashboard-page {
+    background: #f4f6f8;
+    padding: 24px;
+    border-radius: 12px;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.dash-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.dash-card h6 {
+    color: #666;
+    font-size: 14px;
+}
+
+.dash-card p {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 10px 0 0;
+}
+
+.charts {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+}
+
+.chart-box {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    height: 400px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.chart {
+    width: 100%;
+    height: 100%;
+}
+
+@media (max-width: 768px) {
+    .kpi-grid,
+    .charts {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<script>
+const dashboardData = {{ dashboard_data|tojson }};
+function formatNumber(num) {
+    return num.toLocaleString("en-US");
+}
+
+document.getElementById("revenue").textContent = formatNumber(dashboardData.kpis.revenue);
+document.getElementById("cost").textContent = formatNumber(dashboardData.kpis.cost);
+document.getElementById("profit").textContent = formatNumber(dashboardData.kpis.profit);
+document.getElementById("margin").textContent = dashboardData.kpis.margin + "%";
+
+const monthlyChart = echarts.init(document.getElementById("monthlyChart"));
+
+monthlyChart.setOption({
+    title: { text: "Monthly Revenue vs Cost" },
+    tooltip: { trigger: "axis" },
+    legend: { data: ["Revenue", "Cost"] },
+    xAxis: {
+        type: "category",
+        data: dashboardData.monthly.map(item => item.month)
+    },
+    yAxis: { type: "value" },
+    series: [
+        {
+            name: "Revenue",
+            type: "bar",
+            data: dashboardData.monthly.map(item => item.revenue)
+        },
+        {
+            name: "Cost",
+            type: "bar",
+            data: dashboardData.monthly.map(item => item.cost)
+        }
+    ]
+});
+
+const factoryChart = echarts.init(document.getElementById("factoryChart"));
+
+factoryChart.setOption({
+    title: { text: "Cost by Factory" },
+    tooltip: { trigger: "item" },
+    series: [
+        {
+            type: "pie",
+            radius: "65%",
+            data: dashboardData.factories.map(item => ({
+                name: item.name,
+                value: item.cost
+            }))
+        }
+    ]
+});
+
+window.addEventListener("resize", function () {
+    monthlyChart.resize();
+    factoryChart.resize();
+});
+</script>
+
+{% endblock %}

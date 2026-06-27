@@ -1,0 +1,18 @@
+{
+    "_order": [
+        "column_1",
+        "column_2",
+        "column_3"
+    ],
+    "data": {
+        "column_1": [
+            "c1"
+        ],
+        "column_2": [
+            "c2"
+        ],
+        "column_3": [
+            "c3"
+        ]
+    }
+}

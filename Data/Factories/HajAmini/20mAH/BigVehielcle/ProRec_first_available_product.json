@@ -1,0 +1,51 @@
+{
+    "_order": [
+        "materials",
+        "unit",
+        "usage",
+        "lost_percentage",
+        "recycability_percentage",
+        "cost_per_unit",
+        "cost_currency",
+        "cost_of_material_in_its_currency",
+        "cost_of_material_in_rial"
+    ],
+    "data": {
+        "materials": [
+            "m4",
+            "m2"
+        ],
+        "unit": [
+            "gr",
+            "ltr"
+        ],
+        "usage": [
+            "",
+            5
+        ],
+        "lost_percentage": [
+            "",
+            0.13
+        ],
+        "recycability_percentage": [
+            "",
+            0.1
+        ],
+        "cost_per_unit": [
+            "",
+            122
+        ],
+        "cost_currency": [
+            "",
+            ""
+        ],
+        "cost_of_material_in_its_currency": [
+            "",
+            ""
+        ],
+        "cost_of_material_in_rial": [
+            "",
+            2500
+        ]
+    }
+}

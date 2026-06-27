@@ -1,0 +1,42 @@
+{
+    "_order": [
+        "materials",
+        "unit",
+        "usage",
+        "lost_percentage",
+        "recycability_percentage",
+        "cost_per_unit",
+        "cost_currency",
+        "cost_of_material_in_its_currency",
+        "cost_of_material_in_rial"
+    ],
+    "data": {
+        "materials": [
+            ""
+        ],
+        "unit": [
+            ""
+        ],
+        "usage": [
+            ""
+        ],
+        "lost_percentage": [
+            ""
+        ],
+        "recycability_percentage": [
+            ""
+        ],
+        "cost_per_unit": [
+            ""
+        ],
+        "cost_currency": [
+            ""
+        ],
+        "cost_of_material_in_its_currency": [
+            ""
+        ],
+        "cost_of_material_in_rial": [
+            ""
+        ]
+    }
+}

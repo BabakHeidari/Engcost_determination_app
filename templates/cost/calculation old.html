@@ -1,0 +1,814 @@
+{% extends "base.html" %}{% block content %}
+<!-- <button class="btn btn-secondary mb-3" onclick="history.back()">Back</button> -->
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f4f7fc;
+            margin: 0;
+            padding: 24px 16px;
+        }
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+            padding: 20px 24px 32px;
+        }
+        .btn-secondary {
+            background: #e9ecef;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            margin-bottom: 20px;
+        }
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+        h2 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            color: #1e2a3e;
+        }
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .filter-section {
+            flex: 1;
+            min-width: 200px;
+        }
+        #searchInput {
+            width: 100%;
+            max-width: 320px;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            border: 1px solid #ced4da;
+            border-radius: 40px;
+            background: #fff;
+            transition: 0.2s;
+        }
+        #searchInput:focus {
+            outline: none;
+            border-color: #2c7da0;
+            box-shadow: 0 0 0 2px rgba(44,125,160,0.2);
+        }
+        .export-btn {
+            background: #2c7da0;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .export-btn:hover {
+            background: #1f5e7a;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .dropdown-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 18px 0 12px;
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropbtn {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: 0.1s;
+        }
+        .dropbtn:hover {
+            background: #e9ecef;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+            z-index: 10;
+            padding: 12px;
+            max-height: 260px;
+            overflow-y: auto;
+            top: 110%;
+            left: 0;
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        .dropdown-content label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+        .dropdown-content label:hover {
+            background: #f1f5f9;
+        }
+        .filter-stats {
+            font-size: 0.85rem;
+            color: #2c7da0;
+            background: #eef2ff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            margin-left: 12px;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 20px 0 10px;
+            border-radius: 16px;
+            border: 1px solid #eef2f6;
+        }
+        #productTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        #productTable th {
+            text-align: left;
+            padding: 14px 12px;
+            background: #f8fafc;
+            font-weight: 600;
+            color: #1e293b;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        #productTable td {
+            padding: 12px;
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+        }
+        #productTable tr:hover {
+            background: #fefce8;
+        }
+        .open-btn {
+            background: #2c7da0;
+            border: none;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .open-btn:hover {
+            background: #1f5e7a;
+            transform: scale(0.97);
+        }
+        .pagination {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin: 20px 0 32px;
+        }
+        .pagination button {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 6px 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .pagination button:hover {
+            background: #e2e8f0;
+        }
+        .calculation-area {
+            margin-top: 32px;
+            border-top: 2px dashed #cbd5e6;
+            padding-top: 28px;
+        }
+        .calc-header {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .calc-header h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+            color: #0f3b4c;
+        }
+        .selected-product-badge {
+            background: #eef2ff;
+            border-radius: 40px;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            color: #1e3a8a;
+            font-weight: 500;
+        }
+        .total-cost-card {
+            background: linear-gradient(135deg, #f0f9f4 0%, #e8f5e9 100%);
+            border-radius: 28px;
+            padding: 18px 24px;
+            margin-bottom: 28px;
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            border: 1px solid #cfe8da;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        .total-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2b5e3b;
+        }
+        .total-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #1f6e43;
+            letter-spacing: -0.5px;
+        }
+        .step-container {
+            background: #ffffff;
+            border-radius: 24px;
+            border: 1px solid #e9edf2;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .step-title {
+            background: #fafcff;
+            padding: 14px 20px;
+            border-bottom: 1px solid #eef2f8;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #1e4663;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .step-title:before {
+            content: "📊";
+            font-size: 1.2rem;
+        }
+        .steps-list {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+        .step-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            border-bottom: 1px solid #f0f2f5;
+            font-size: 0.95rem;
+            transition: background 0.1s;
+        }
+        .step-item:hover {
+            background: #fafbfe;
+        }
+        .step-item:last-child {
+            border-bottom: none;
+        }
+        .step-desc {
+            color: #2d3e50;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .step-icon {
+            font-size: 1.2rem;
+            width: 28px;
+            display: inline-block;
+        }
+        .step-cost {
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-weight: 700;
+            background: #f1f5f9;
+            padding: 4px 14px;
+            border-radius: 40px;
+            color: #1f5e7a;
+            font-size: 0.9rem;
+        }
+        .total-step {
+            background: #fefce8;
+            border-top: 2px solid #e2e3c9;
+            font-weight: 700;
+        }
+        .total-step .step-cost {
+            background: #2c7da0;
+            color: white;
+            font-weight: 700;
+        }
+        .empty-selection {
+            padding: 40px 20px;
+            text-align: center;
+            color: #6c757d;
+            background: #fef9e3;
+            border-radius: 24px;
+            font-style: italic;
+        }
+        .helper-note {
+            font-size: 0.75rem;
+            margin-top: 16px;
+            color: #6f8faa;
+            text-align: center;
+        }
+        @media (max-width: 680px) {
+            .app-container {
+                padding: 16px;
+            }
+            .total-value {
+                font-size: 1.6rem;
+            }
+            .step-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .step-cost {
+                align-self: flex-end;
+            }
+            .filter-header {
+                flex-direction: column;
+            }
+            .export-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <button class="btn-secondary" onclick="history.back()">← Back</button>
+
+    <h2>📦 Product Catalog</h2>
+    
+    <!-- Filter Header with Export Button -->
+    <div class="filter-header">
+        <div class="filter-section">
+            <input id="searchInput" type="text" placeholder="🔍 Search Product Name..." />
+        </div>
+        <button id="exportCSVBtn" class="export-btn">
+            📥 Download CSV Report
+        </button>
+    </div>
+    
+    <div class="dropdown-filters">
+        <div class="dropdown">
+            <button class="dropbtn">🏭 Factory ▾</button>
+            <div class="dropdown-content" id="factoryDropdown"></div>
+        </div>
+        <div class="dropdown">
+            <button class="dropbtn">📂 Category ▾</button>
+            <div class="dropdown-content" id="categoryDropdown"></div>
+        </div>
+        <div class="dropdown">
+            <button class="dropbtn">📁 Subcategory ▾</button>
+            <div class="dropdown-content" id="subcategoryDropdown"></div>
+        </div>
+        <div id="filterStats" class="filter-stats"></div>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="productTable">
+            <thead>
+                <tr><th>Product Name</th><th>Factory</th><th>Category</th><th>Subcategory</th><th>Select</th></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+    <div class="pagination">
+        <button id="prevPage">◀ Previous</button>
+        <span id="pageInfo"></span>
+        <button id="nextPage">Next ▶</button>
+    </div>
+
+    <!-- COST CALCULATION SECTION with 7 specific steps -->
+    <div class="calculation-area">
+        <div class="calc-header">
+            <h3>💰 Total Cost Breakdown</h3>
+            <div class="selected-product-badge" id="selectedProductLabel">No product selected</div>
+        </div>
+        <div class="total-cost-card">
+            <span class="total-label">🏁 Total Calculated Cost (per unit)</span>
+            <span class="total-value" id="totalCostDisplay">$0.00</span>
+        </div>
+        <div class="step-container">
+            <div class="step-title">⚙️ Step‑by‑step cost components</div>
+            <div id="stepsContainer" class="steps-list">
+                <div class="empty-selection">✨ Select a product from the table above to see detailed cost structure based on:<br> • Raw Material<br> • Payroll<br> • Overhead<br> • Depreciation<br> • Administrative & Research<br> • Financial Costs<br> • Non-Operational Costs & Incomes</div>
+            </div>
+        </div>
+        <div class="helper-note">💡 Each cost component is calculated dynamically based on product attributes (factory, category, subcategory). Click "Download CSV Report" to export ALL filtered products with their complete cost breakdown.</div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // DATA DIRECTLY FROM FLASK BACKEND
+    // ============================================================
+    const tableJSON = {{ table_json | safe }};
+    
+    // Convert column-oriented JSON to row array
+    function jsonToRows(jsonObj) {
+        if (!jsonObj || typeof jsonObj !== 'object') return [];
+        const columns = Object.keys(jsonObj);
+        if (columns.length === 0) return [];
+        const firstCol = columns[0];
+        const indices = Object.keys(jsonObj[firstCol]).sort((a, b) => Number(a) - Number(b));
+        const rows = [];
+        for (let idx of indices) {
+            let row = {};
+            for (let col of columns) {
+                if (jsonObj[col] && jsonObj[col][idx] !== undefined) {
+                    row[col] = jsonObj[col][idx];
+                } else {
+                    row[col] = "";
+                }
+            }
+            rows.push(row);
+        }
+        return rows;
+    }
+    
+    let rawData = tableJSON;
+    let tableData = jsonToRows(rawData);
+    if (tableData.length === 0 && Array.isArray(rawData)) {
+        tableData = rawData;
+    }
+    const hasData = tableData.length > 0;
+    
+    // DOM elements
+    const tbody = document.getElementById("tableBody");
+    const searchInput = document.getElementById("searchInput");
+    const pageInfo = document.getElementById("pageInfo");
+    const prevBtn = document.getElementById("prevPage");
+    const nextBtn = document.getElementById("nextPage");
+    const exportBtn = document.getElementById("exportCSVBtn");
+    const filterStatsSpan = document.getElementById("filterStats");
+    
+    let currentPage = 1;
+    const rowsPerPage = 10;
+    let filters = { Factory: [], Category: [], Subcategory: [] };
+    
+    function escapeHtml(str) {
+        if (!str) return "";
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // =============== 7-STEP COST ENGINE (same as before) ===============
+    function getSevenStepCostStructure(product) {
+        const name = product.Product_Name || "generic";
+        const factory = product.Factory || "Standard Factory";
+        const category = product.Category || "Standard";
+        const sub = product.Subcategory || "General";
+        
+        const nameSeed = name.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 100;
+        const factorBase = 0.85 + (nameSeed / 200);
+        
+        let rawMaterial = 0;
+        const catLower = category.toLowerCase();
+        if (catLower.includes("ikco")) rawMaterial = 125.50;
+        else if (catLower.includes("mah") || category === "20mAH") rawMaterial = 88.30;
+        else if (catLower.includes("battery")) rawMaterial = 72.40;
+        else if (catLower.includes("lithium")) rawMaterial = 94.20;
+        else rawMaterial = 55.75;
+        if (sub.toLowerCase().includes("vehielcle")) rawMaterial *= 1.2;
+        if (sub.toLowerCase().includes("lithium")) rawMaterial *= 1.1;
+        rawMaterial = rawMaterial * (0.9 + (nameSeed / 200));
+        
+        let payroll = 0;
+        const factLower = factory.toLowerCase();
+        if (factLower.includes("dinmohamadpour")) payroll = 48.20;
+        else if (factLower.includes("hajamini")) payroll = 42.75;
+        else if (factLower.includes("amin")) payroll = 54.30;
+        else payroll = 38.50;
+        payroll = payroll * (1 + (nameSeed / 300));
+        
+        let overhead = 0;
+        if (factLower.includes("dinmohamadpour")) overhead = 32.15;
+        else if (factLower.includes("hajamini")) overhead = 28.90;
+        else if (factLower.includes("amin")) overhead = 35.40;
+        else overhead = 25.60;
+        overhead = overhead * (0.95 + (nameSeed / 250));
+        
+        let depreciation = 0;
+        if (catLower.includes("ikco")) depreciation = 22.75;
+        else if (catLower.includes("mah")) depreciation = 18.20;
+        else if (catLower.includes("battery")) depreciation = 15.90;
+        else depreciation = 14.50;
+        depreciation = depreciation * factorBase;
+        
+        let adminResearch = 0;
+        if (sub.toLowerCase().includes("lithium") || sub.toLowerCase().includes("ion")) adminResearch = 27.40;
+        else if (sub.toLowerCase().includes("vehielcle")) adminResearch = 24.30;
+        else adminResearch = 18.75;
+        adminResearch = adminResearch * (0.9 + (nameSeed / 180));
+        
+        let financialCosts = 0;
+        if (factLower.includes("dinmohamadpour")) financialCosts = 14.25;
+        else if (factLower.includes("hajamini")) financialCosts = 11.80;
+        else if (factLower.includes("amin")) financialCosts = 16.40;
+        else financialCosts = 10.95;
+        financialCosts = financialCosts * (1 + (nameSeed / 400));
+        
+        let nonOperational = 0;
+        if (name.toLowerCase().includes("premium")) nonOperational = 5.50;
+        else if (name.toLowerCase().includes("eco")) nonOperational = -3.20;
+        else if (sub.toLowerCase().includes("small")) nonOperational = -2.15;
+        else nonOperational = 1.25;
+        nonOperational = nonOperational * (0.8 + (nameSeed / 250));
+        
+        const total = rawMaterial + payroll + overhead + depreciation + adminResearch + financialCosts + nonOperational;
+        
+        return {
+            total,
+            rawMaterial,
+            payroll,
+            overhead,
+            depreciation,
+            adminResearch,
+            financialCosts,
+            nonOperational
+        };
+    }
+    
+    // Build dropdown filters
+    function buildDropdown(id, columnName) {
+        const container = document.getElementById(id);
+        if (!container) return;
+        container.innerHTML = "";
+        const uniqueVals = [...new Set(tableData.map(x => x[columnName] || ""))].filter(v => v !== "").sort();
+        const allDiv = document.createElement("div");
+        allDiv.innerHTML = `<label><input type="checkbox" class="filter-checkbox" data-column="${columnName}" data-value="__all__" checked> ✅ All</label>`;
+        container.appendChild(allDiv);
+        uniqueVals.forEach(val => {
+            const div = document.createElement("div");
+            div.innerHTML = `<label><input type="checkbox" class="filter-checkbox" data-column="${columnName}" data-value="${escapeHtml(val)}"> ${escapeHtml(val)}</label>`;
+            container.appendChild(div);
+        });
+    }
+    
+    function getFilteredData() {
+        if (!hasData) return [];
+        const text = searchInput.value.toLowerCase();
+        return tableData.filter(row => {
+            const productName = (row.Product_Name || "").toLowerCase();
+            if (text && !productName.includes(text)) return false;
+            for (let col of ["Factory", "Category", "Subcategory"]) {
+                const active = filters[col];
+                if (active.length === 0) continue;
+                const cellValue = row[col] || "";
+                if (!active.includes(cellValue)) return false;
+            }
+            return true;
+        });
+    }
+    
+    function updateFilterStats() {
+        const filtered = getFilteredData();
+        const totalProducts = tableData.length;
+        filterStatsSpan.textContent = `📊 Showing ${filtered.length} of ${totalProducts} products`;
+    }
+    
+    function renderTable() {
+        if (!tbody) return;
+        if (!hasData) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">⚠️ No product data available. Check JSON format.</td></tr>';
+            return;
+        }
+        const filtered = getFilteredData();
+        updateFilterStats();
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const pageRows = filtered.slice(start, end);
+        tbody.innerHTML = "";
+        if (pageRows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">✨ No products match filters</td></tr>';
+        } else {
+            pageRows.forEach(row => {
+                const tr = document.createElement("tr");
+                const productName = escapeHtml(row.Product_Name || "");
+                const factory = escapeHtml(row.Factory || "");
+                const category = escapeHtml(row.Category || "");
+                const subcategory = escapeHtml(row.Subcategory || "");
+                const productDataAttr = escapeHtml(JSON.stringify(row));
+                tr.innerHTML = `
+                    <td>${productName}</td>
+                    <td>${factory}</td>
+                    <td>${category}</td>
+                    <td>${subcategory}</td>
+                    <td><button class="open-btn" data-product='${productDataAttr}'>💰 Calculate Cost</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        document.querySelectorAll(".open-btn").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                try {
+                    const productRaw = btn.getAttribute("data-product");
+                    const product = JSON.parse(productRaw);
+                    updateCostCalculation(product);
+                } catch (err) {
+                    console.error("Parse error", err);
+                }
+            });
+        });
+        const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    }
+    
+    // =============== CSV EXPORT FUNCTION ===============
+    function exportToCSV() {
+        const filteredProducts = getFilteredData();
+        
+        if (filteredProducts.length === 0) {
+            alert("⚠️ No products to export. Please adjust your filters.");
+            return;
+        }
+        
+        // Prepare CSV headers
+        const headers = [
+            "Product Name",
+            "Factory",
+            "Category", 
+            "Subcategory",
+            "Total Cost (per unit)",
+            "Raw Material",
+            "Payroll",
+            "Overhead",
+            "Depreciation",
+            "Administrative & Research",
+            "Financial Costs",
+            "Non-Operational Costs & Incomes"
+        ];
+        
+        // Build CSV rows
+        const rows = [headers];
+        
+        for (const product of filteredProducts) {
+            const costs = getSevenStepCostStructure(product);
+            
+            const row = [
+                `"${(product.Product_Name || "").replace(/"/g, '""')}"`,
+                `"${(product.Factory || "").replace(/"/g, '""')}"`,
+                `"${(product.Category || "").replace(/"/g, '""')}"`,
+                `"${(product.Subcategory || "").replace(/"/g, '""')}"`,
+                costs.total.toFixed(2),
+                costs.rawMaterial.toFixed(2),
+                costs.payroll.toFixed(2),
+                costs.overhead.toFixed(2),
+                costs.depreciation.toFixed(2),
+                costs.adminResearch.toFixed(2),
+                costs.financialCosts.toFixed(2),
+                costs.nonOperational.toFixed(2)
+            ];
+            rows.push(row);
+        }
+        
+        // Create CSV content
+        const csvContent = rows.map(row => row.join(",")).join("\n");
+        
+        // Add BOM for UTF-8 to handle special characters properly
+        const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+        
+        // Create download link
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        
+        // Generate filename with timestamp and filter info
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}_${now.getHours()}-${now.getMinutes()}`;
+        const filterInfo = [];
+        if (searchInput.value) filterInfo.push(`search_${searchInput.value.substring(0,20)}`);
+        if (filters.Factory.length > 0) filterInfo.push(`factory_${filters.Factory.join("_")}`);
+        if (filters.Category.length > 0) filterInfo.push(`category_${filters.Category.join("_")}`);
+        if (filters.Subcategory.length > 0) filterInfo.push(`subcat_${filters.Subcategory.join("_")}`);
+        
+        const filename = filterInfo.length > 0 
+            ? `cost_export_${filterInfo.join("_")}_${timestamp}.csv`
+            : `cost_export_all_products_${timestamp}.csv`;
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        // Show success message
+        alert(`✅ Exported ${filteredProducts.length} products to CSV!\nFilename: ${filename}`);
+    }
+    
+    function initFilters() { 
+        if (hasData) { 
+            buildDropdown("factoryDropdown", "Factory"); 
+            buildDropdown("categoryDropdown", "Category"); 
+            buildDropdown("subcategoryDropdown", "Subcategory"); 
+        } 
+    }
+    
+    document.addEventListener("change", e => {
+        if (!e.target.classList?.contains("filter-checkbox")) return;
+        const col = e.target.dataset.column;
+        let val = e.target.dataset.value;
+        if (val === "__all__") {
+            filters[col] = [];
+            document.querySelectorAll(`input[data-column="${col}"]`).forEach(cb => cb.checked = (cb.dataset.value === "__all__"));
+        } else {
+            const allBox = document.querySelector(`input[data-column="${col}"][data-value="__all__"]`);
+            if (allBox) allBox.checked = false;
+            if (filters[col].includes(val)) filters[col] = filters[col].filter(v => v !== val);
+            else filters[col].push(val);
+            if (filters[col].length === 0 && allBox) allBox.checked = true;
+        }
+        currentPage = 1;
+        renderTable();
+    });
+    
+    searchInput.addEventListener("input", () => { currentPage = 1; renderTable(); });
+    prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
+    nextBtn.onclick = () => { const total = Math.ceil(getFilteredData().length / rowsPerPage); if (currentPage < total) { currentPage++; renderTable(); } };
+    exportBtn.onclick = () => { exportToCSV(); };
+    
+    // UI Update for selected product
+    const totalCostDisplay = document.getElementById("totalCostDisplay");
+    const stepsContainer = document.getElementById("stepsContainer");
+    const selectedProductLabel = document.getElementById("selectedProductLabel");
+    
+    function updateCostCalculation(product) {
+        if (!product || !product.Product_Name) {
+            selectedProductLabel.innerText = "No product selected";
+            totalCostDisplay.innerText = "$0.00";
+            stepsContainer.innerHTML = `<div class="empty-selection">✨ Select a product to see detailed 7-step cost breakdown:<br> • Raw Material<br> • Payroll<br> • Overhead<br> • Depreciation<br> • Administrative & Research<br> • Financial Costs<br> • Non-Operational Costs & Incomes</div>`;
+            return;
+        }
+        
+        selectedProductLabel.innerText = `✅ ${product.Product_Name} | ${product.Factory || "Factory"} | ${product.Category || "Category"}`;
+        const costs = getSevenStepCostStructure(product);
+        
+        totalCostDisplay.innerText = `$${costs.total.toFixed(2)}`;
+        
+        const stepsHtml = `
+            <li class="step-item"><span class="step-desc"><span class="step-icon">🧱</span><strong>Raw Material</strong><span style="font-size:0.75rem; color:#5c6f87; margin-left:6px;">Direct materials & components</span></span><span class="step-cost">$${costs.rawMaterial.toFixed(2)}</span></li>
+            <li class="step-item"><span class="step-desc"><span class="step-icon">👥</span><strong>Payroll</strong><span style="font-size:0.75rem; color:#5c6f87; margin-left:6px;">Direct & indirect labor</span></span><span class="step-cost">$${costs.payroll.toFixed(2)}</span></li>
+            <li class="step-item"><span class="step-desc"><span class="step-icon">⚡</span><strong>Overhead</strong><span style="font-size:0.75rem; color:#5c6f87; margin-left:6px;">Utilities, maintenance, facility</span></span><span class="step-cost">$${costs.overhead.toFixed(2)}</span></li>
+            <li class="step-item"><span class="step-desc"><span class="step-icon">🏭</span><strong>Depreciation</strong><span style="font-size:0.75rem; color:#5c6f87; margin-left:6px;">Machinery & equipment amortization</span></span><span class="step-cost">$${costs.depreciation.toFixed(2)}</span></li>
+            <li class="step-item"><span class="step-desc"><span class="step-icon">📋</span><strong>Administrative & Research</strong><span style="font-size:0.75rem; color:#5c6f87; margin-left:6px;">R&D, admin, quality systems</span></span><span class="step-cost">$${costs.adminResearch.toFixed(2)}</span></li>
+            <li class="step-item"><span class="step-desc"><span class="step-icon">💰</span><strong>Financial Costs</strong><span style="font-size:0.75rem; color:#5c6f87; margin-left:6px;">Interest, banking, financing</span></span><span class="step-cost">$${costs.financialCosts.toFixed(2)}</span></li>
+            <li class="step-item"><span class="step-desc"><span class="step-icon">📈</span><strong>Non-Operational Costs & Incomes</strong><span style="font-size:0.75rem; color:#5c6f87; margin-left:6px;">Currency adjustments, extraordinary items</span></span><span class="step-cost">$${costs.nonOperational.toFixed(2)}</span></li>
+            <li class="step-item total-step"><span class="step-desc"><span class="step-icon">🏁</span><strong>TOTAL COST (per unit)</strong></span><span class="step-cost" style="background:#2c7da0; color:white;">$${costs.total.toFixed(2)}</span></li>
+        `;
+        stepsContainer.innerHTML = `<ul class="steps-list">${stepsHtml}</ul>`;
+    }
+    
+    // Initialize application
+    if (hasData) {
+        initFilters();
+        renderTable();
+    } else {
+        if(tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#c0392b;">⚠️ No data received. Ensure table_json is properly passed.</td></tr>';
+        stepsContainer.innerHTML = `<div class="empty-selection">⚠️ Product data not available.</div>`;
+    }
+    updateCostCalculation(null);
+</script>
+</body>
+
+
+{% endblock %}

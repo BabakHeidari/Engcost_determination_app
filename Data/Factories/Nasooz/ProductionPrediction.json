@@ -1,0 +1,16 @@
+{
+    "_order": [
+        "Product Name",
+        "Predicted Production"
+    ],
+    "data": {
+        "Product Name": [
+            "nasooz_prod_1",
+            "nasooz_prod_2"
+        ],
+        "Predicted Production": [
+            40,
+            80
+        ]
+    }
+}

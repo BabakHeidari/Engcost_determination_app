@@ -1,0 +1,1690 @@
+{% extends "base.html" %}
+{% block content %}
+
+<button class="btn btn-secondary mb-3" onclick="history.back()">
+    <i class="fas fa-arrow-left"></i> Back
+</button>
+
+<div class="page-container">
+    <div class="page-header">
+        <h2>Editable Table</h2>
+        <div class="header-actions">
+            <button class="btn btn-add" id="addRowBtn">
+                <i class="fas fa-plus"></i> Add Row
+            </button>
+            <button class="btn btn-add" id="addColumnBtn">
+                <i class="fas fa-columns"></i> Add Column
+            </button>
+            <button class="btn btn-save" id="saveBtn">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </div>
+
+    <div class="search-bar">
+        <i class="fas fa-search search-icon"></i>
+        <input id="searchInput" type="text" placeholder="Search by first column">
+    </div>
+
+    <div id="filtersContainer" class="dropdown-filters"></div>
+
+    <div class="table-wrapper">
+        <table id="dataTable">
+            <thead>
+                <tr id="tableHeader"></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="pagination-container">
+        <div class="pagination-info">
+            Showing <span id="showingStart">0</span>-<span id="showingEnd">0</span> of <span id="totalRows">0</span> rows
+        </div>
+        <div class="pagination-controls">
+            <button class="btn-page" id="prevPage" disabled>
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span id="pageInfo" class="page-info">Page 1</span>
+            <button class="btn-page" id="nextPage">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Last Modified Info -->
+    <div class="last-modified-info" id="lastModifiedInfo" style="display:none;">
+        <i class="fas fa-clock"></i>
+        Last modified: <span id="lastModifiedDate"></span>
+    </div>
+</div>
+
+<!-- Add Row Modal -->
+<div id="addRowModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Add New Row</h3>
+            <button class="modal-close" onclick="closeAddModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="addModalFields"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+                <button class="btn btn-save" onclick="submitNewRow()">
+                    <i class="fas fa-plus"></i> Add Row
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Row Modal -->
+<div id="editRowModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Edit Row</h3>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="editModalFields"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-save" onclick="submitEditRow()">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== CURRENCY AND UNIT OPTIONS =====
+const currencies = [
+    "IRR - Iranian Rial",
+    "CNY - Chinese Yuan",
+    "USD - US Dollar",
+    "EUR - Euro",
+    "TRY - Turkish Lira",
+    "INR - Indian Rupee",
+    "RUB - Russian Ruble",
+    "AED - UAE Dirham",
+    "SAR - Saudi Riyal",
+    "OMR - Omani Rial",
+    "KWD - Kuwaiti Dinar",
+    "IQD - Iraqi Dinar",
+    "AFN - Afghan Afghani",
+    "PKR - Pakistani Rupee",
+    "AZN - Azerbaijani Manat",
+    "AMD - Armenian Dram",
+    "TMT - Turkmenistan Manat",
+    "GBP - British Pound",
+    "JPY - Japanese Yen",
+    "CHF - Swiss Franc",
+    "CAD - Canadian Dollar",
+    "AUD - Australian Dollar",
+];
+
+const units = [
+    "Kilogram (kg)",
+    "No Unit: Currency",
+    "Metric Ton (t)",
+    "Meter (m)",
+    "Centimeter (cm)",
+    "Millimeter (mm)",
+    "Package (pkg)",
+    "Box (box)",
+    "Pallet (plt)",
+    "Set (set)",
+    "Pair (pr)",
+    "Roll (roll)",
+    "Sheet (sht)",
+    "Inch (in)",
+    "Gram (g)",
+    "Pound (lb)",
+    "Ounce (oz)",
+    "Foot (ft)",
+    "Yard (yd)",
+    "Square Meter (m²)",
+    "Square Foot (ft²)",
+    "Cubic Meter (m³)",
+    "Liter (L)",
+    "Milliliter (mL)",
+    "Gallon (gal)",
+    "Barrel (bbl)",
+    "Piece (pc)",
+    "Dozen (doz)",
+    "Hour (hr)",
+    "Day (day)"
+];
+
+// ===== DATA FROM FLASK =====
+const tableJSON = {{ table_json | safe }};
+
+// headers follow _order exactly
+let headers = [...tableJSON._order];
+
+// Define the first 4 columns as non-editable headers
+const FIXED_HEADERS = headers.slice(0, 4);
+
+// Track changes
+let addedRows = [];
+let editedRows = new Map(); // Map of original index -> updated row data
+let deletedRows = new Set(); // Set of original row indices
+
+// Handle last_modification_date with proper fallback
+let lastModificationDate = null;
+
+// Check if metadata exists, if not create it
+if (tableJSON.last_modification_date) {
+    lastModificationDate = tableJSON.last_modification_date;
+    updateLastModifiedDisplay();
+} else {
+    // If no metadata exists, set it to current date/time
+    lastModificationDate = new Date().toISOString();
+    console.log("No last_modification_date found. Setting initial timestamp:", lastModificationDate);
+    updateLastModifiedDisplay();
+}
+
+// Convert column data -> row objects
+function buildRows() {
+    const rows = [];
+    
+    // Check if data exists and has the expected structure
+    if (!tableJSON.data || headers.length === 0) {
+        console.warn("No data or headers found in tableJSON");
+        return rows;
+    }
+    
+    const data = tableJSON.data;
+    
+    // Get row count from first column
+    const firstCol = headers[0];
+    if (!data[firstCol]) {
+        console.warn(`No data found for column "${firstCol}"`);
+        return rows;
+    }
+    
+    const rowCount = data[firstCol].length;
+    
+    for (let i = 0; i < rowCount; i++) {
+        const row = {};
+        headers.forEach(h => {
+            row[h] = data[h] ? data[h][i] : '';
+        });
+        row._originalIndex = i; // Track original position
+        rows.push(row);
+    }
+    
+    return rows;
+}
+
+let rows = buildRows();
+let searchColumn = headers[0] || '';
+
+// ===== SORTING STATE =====
+let currentSort = {
+    column: null,
+    direction: 'asc' // 'asc' or 'desc'
+};
+
+// ===== FILTER STATE =====
+let filters = {};
+if (headers.length > 1) {
+    headers.slice(1).forEach(c => filters[c] = []);
+}
+
+// ===== DOM =====
+const tbody = document.querySelector("#dataTable tbody");
+const thead = document.getElementById("tableHeader");
+const filterBox = document.getElementById("filtersContainer");
+const addModal = document.getElementById("addRowModal");
+const editModal = document.getElementById("editRowModal");
+
+// ===== HELPER FUNCTIONS TO IDENTIFY COLUMN TYPES =====
+function isCurrencyDropdown(headerName, colIndex) {
+    const lowerName = headerName.toLowerCase();
+    return colIndex < 4 && 
+           lowerName.includes("currency") && 
+           lowerName !== "cost_per_unit_in_currency";
+}
+
+function isUnitDropdown(headerName, colIndex) {
+    const lowerName = headerName.toLowerCase();
+    return colIndex < 4 && lowerName.includes("unit");
+}
+
+function isCostColumn(headerName) {
+    return headerName === "cost_per_unit_in_currency";
+}
+
+// ===== UPDATE LAST MODIFIED DISPLAY =====
+function updateLastModifiedDisplay() {
+    const displayElement = document.getElementById("lastModifiedInfo");
+    const dateElement = document.getElementById("lastModifiedDate");
+    
+    if (lastModificationDate) {
+        try {
+            const date = new Date(lastModificationDate);
+            if (!isNaN(date.getTime())) {
+                dateElement.textContent = date.toLocaleString();
+                displayElement.style.display = 'flex';
+            } else {
+                dateElement.textContent = 'Invalid date';
+                displayElement.style.display = 'flex';
+            }
+        } catch (e) {
+            console.error("Error parsing last modification date:", e);
+            dateElement.textContent = lastModificationDate;
+            displayElement.style.display = 'flex';
+        }
+    }
+}
+
+// ===== BUILD TABLE =====
+function buildTable() {
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+    
+    // Update search placeholder
+    const searchInput = document.getElementById("searchInput");
+    if (searchInput && headers.length > 0) {
+        searchInput.placeholder = "Search by " + headers[0];
+        searchColumn = headers[0];
+    }
+    
+    // Headers
+    headers.forEach((h, i) => {
+        const th = document.createElement("th");
+        const isFixed = i < 4;
+        
+        const headerContent = document.createElement("div");
+        headerContent.className = "header-content";
+        
+        if (isFixed) {
+            const span = document.createElement("span");
+            span.innerText = h;
+            span.className = "header-text fixed";
+            headerContent.appendChild(span);
+        } else {
+            const span = document.createElement("span");
+            span.contentEditable = true;
+            span.innerText = h;
+            span.className = "header-text";
+            
+            span.onblur = () => {
+                const oldName = headers[i];
+                const newName = span.innerText.trim();
+                
+                if (!newName || oldName === newName) return;
+                
+                if (headers.includes(newName)) {
+                    alert("Column name already exists!");
+                    span.innerText = oldName;
+                    return;
+                }
+                
+                headers[i] = newName;
+                
+                // Rename key in rows
+                rows.forEach(r => {
+                    r[newName] = r[oldName];
+                    delete r[oldName];
+                });
+                
+                // Rename filter state
+                if (filters[oldName]) {
+                    filters[newName] = filters[oldName];
+                    delete filters[oldName];
+                }
+                
+                buildTable();
+            };
+            
+            headerContent.appendChild(span);
+        }
+        
+        // Add sorting indicator for the cost_per_unit_in_currency column
+        if (isCostColumn(h)) {
+            const sortIcon = document.createElement("i");
+            sortIcon.className = "fas fa-sort sort-icon";
+            sortIcon.style.marginLeft = "8px";
+            sortIcon.style.cursor = "pointer";
+            sortIcon.style.color = currentSort.column === h ? "#3b82f6" : "#94a3b8";
+            
+            if (currentSort.column === h) {
+                sortIcon.className = currentSort.direction === 'asc' 
+                    ? "fas fa-sort-up sort-icon active" 
+                    : "fas fa-sort-down sort-icon active";
+            }
+            
+            sortIcon.onclick = (e) => {
+                e.stopPropagation();
+                toggleSort(h);
+            };
+            
+            headerContent.appendChild(sortIcon);
+        }
+        
+        // Only show delete for non-fixed columns
+        if (!isFixed && headers.length > 4) {
+            const del = document.createElement("button");
+            del.innerHTML = '<i class="fas fa-times"></i>';
+            del.className = "delete-btn";
+            del.title = "Delete column";
+            del.onclick = () => removeColumn(i);
+            headerContent.appendChild(del);
+        }
+        
+        th.appendChild(headerContent);
+        thead.appendChild(th);
+    });
+    
+    // Actions column header
+    const emptyTh = document.createElement("th");
+    emptyTh.className = "actions-column";
+    emptyTh.innerHTML = "Actions";
+    thead.appendChild(emptyTh);
+    
+    buildFilters();
+    renderTable();
+}
+
+// ===== TOGGLE SORT =====
+function toggleSort(column) {
+    if (currentSort.column === column) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        currentSort.direction = 'asc';
+    }
+    
+    renderTable();
+}
+
+// ===== SORT DATA =====
+function sortData(data) {
+    if (!currentSort.column) return data;
+    
+    return [...data].sort((a, b) => {
+        const valA = parseFloat(a[currentSort.column]) || 0;
+        const valB = parseFloat(b[currentSort.column]) || 0;
+        
+        if (currentSort.direction === 'asc') {
+            return valA - valB;
+        } else {
+            return valB - valA;
+        }
+    });
+}
+
+// ===== FILTER UI =====
+function buildFilters() {
+    filterBox.innerHTML = "";
+    
+    if (headers.length <= 1) return;
+    
+    const filterableHeaders = headers.slice(1, 3);
+    
+    filterableHeaders.forEach(col => {
+        const dropdown = document.createElement("div");
+        dropdown.className = "dropdown";
+        
+        dropdown.innerHTML = `
+            <button class="dropbtn">${col} <i class="fas fa-chevron-down"></i></button>
+            <div class="dropdown-content" id="drop_${col}"></div>
+        `;
+        
+        filterBox.appendChild(dropdown);
+        
+        const container = document.getElementById(`drop_${col}`);
+        const unique = [...new Set(rows.map(r => r[col]))].filter(v => v !== undefined && v !== '');
+        
+        const allOption = document.createElement("div");
+        allOption.className = "filter-option";
+        allOption.innerHTML = `
+            <label>
+                <input type="checkbox" 
+                       data-col="${col}" 
+                       data-val="__all__" 
+                       class="filter-checkbox" 
+                       checked>
+                All
+            </label>
+        `;
+        container.appendChild(allOption);
+        
+        if (unique.length > 0) {
+            unique.forEach(v => {
+                const option = document.createElement("div");
+                option.className = "filter-option";
+                option.innerHTML = `
+                    <label>
+                        <input type="checkbox" 
+                               data-col="${col}" 
+                               data-val="${v}" 
+                               class="filter-checkbox">
+                        ${v || '(empty)'}
+                    </label>
+                `;
+                container.appendChild(option);
+            });
+        } else {
+            const noData = document.createElement("div");
+            noData.className = "filter-empty";
+            noData.innerText = "No data available";
+            container.appendChild(noData);
+        }
+    });
+}
+
+// ===== FILTER LOGIC =====
+document.addEventListener("change", e => {
+    if (!e.target.classList.contains("filter-checkbox")) return;
+    
+    const col = e.target.dataset.col;
+    const val = e.target.dataset.val;
+    
+    if (val === "__all__") {
+        filters[col] = [];
+        document.querySelectorAll(`input[data-col="${col}"]`)
+            .forEach(cb => cb.checked = (cb.dataset.val === "__all__"));
+    } else {
+        const allCheckbox = document.querySelector(`input[data-col="${col}"][data-val="__all__"]`);
+        if (allCheckbox) allCheckbox.checked = false;
+        
+        if (filters[col].includes(val)) {
+            filters[col] = filters[col].filter(v => v !== val);
+        } else {
+            filters[col].push(val);
+        }
+        
+        if (filters[col].length === 0) {
+            const allCheckbox = document.querySelector(`input[data-col="${col}"][data-val="__all__"]`);
+            if (allCheckbox) allCheckbox.checked = true;
+        }
+    }
+    
+    currentPage = 1;
+    renderTable();
+});
+
+// ===== FILTERING =====
+function getFiltered() {
+    const text = document.getElementById("searchInput").value.toLowerCase();
+    
+    let filteredData = rows.filter(r => {
+        if (text && searchColumn && !String(r[searchColumn] || '').toLowerCase().includes(text)) {
+            return false;
+        }
+        
+        for (let c of Object.keys(filters)) {
+            const active = filters[c];
+            if (active && active.length > 0 && !active.includes(r[c])) {
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    filteredData = sortData(filteredData);
+    
+    return filteredData;
+}
+
+// ===== PAGINATION =====
+let currentPage = 1;
+const rowsPerPage = 10;
+
+// ===== RENDER =====
+function renderTable() {
+    tbody.innerHTML = "";
+    
+    const filteredData = getFiltered();
+    const totalFiltered = filteredData.length;
+    const totalPages = Math.ceil(totalFiltered / rowsPerPage);
+    
+    if (currentPage > totalPages) {
+        currentPage = Math.max(1, totalPages);
+    }
+    
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = Math.min(start + rowsPerPage, totalFiltered);
+    
+    document.getElementById("showingStart").innerText = totalFiltered > 0 ? start + 1 : 0;
+    document.getElementById("showingEnd").innerText = end;
+    document.getElementById("totalRows").innerText = totalFiltered;
+    document.getElementById("pageInfo").innerText = `Page ${currentPage} of ${totalPages || 1}`;
+    
+    document.getElementById("prevPage").disabled = currentPage <= 1;
+    document.getElementById("nextPage").disabled = currentPage >= totalPages || totalFiltered === 0;
+    
+    filteredData.slice(start, end).forEach((row, globalIndex) => {
+        const tr = document.createElement("tr");
+        
+        headers.forEach((h, colIndex) => {
+            const td = document.createElement("td");
+            
+            // Make all cells read-only
+            if (isCostColumn(h)) {
+                td.className = "float-column read-only";
+                const value = parseFloat(row[h]);
+                td.innerText = !isNaN(value) ? value.toFixed(2) : (row[h] || '0.00');
+            } else if (isCurrencyDropdown(h, colIndex) || isUnitDropdown(h, colIndex)) {
+                td.className = "read-only";
+                td.innerText = row[h] || '';
+            } else {
+                td.className = "read-only";
+                td.innerText = row[h] !== undefined ? row[h] : '';
+            }
+            
+            tr.appendChild(td);
+        });
+        
+        // Action buttons
+        const actionTd = document.createElement("td");
+        actionTd.className = "action-cell";
+        actionTd.innerHTML = `
+            <button class="btn-edit-row" title="Edit row">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-delete-row" title="Delete row">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+        
+        actionTd.querySelector('.btn-edit-row').onclick = () => openEditRowModal(row);
+        actionTd.querySelector('.btn-delete-row').onclick = () => removeRow(row, start + globalIndex);
+        
+        tr.appendChild(actionTd);
+        
+        tbody.appendChild(tr);
+    });
+}
+
+// ===== ROW MANAGEMENT =====
+function addColumn() {
+    const name = prompt("Column name:");
+    if (!name) return;
+    
+    if (headers.includes(name)) {
+        alert("Column name already exists!");
+        return;
+    }
+    
+    headers.push(name);
+    rows.forEach(r => r[name] = "");
+    
+    if (!isCostColumn(name)) {
+        filters[name] = [];
+    }
+    
+    buildTable();
+}
+
+function removeColumn(i) {
+    if (i < 4) {
+        alert("Cannot delete fixed columns (first 4 columns).");
+        return;
+    }
+    
+    const name = headers[i];
+    const confirmed = confirm(`Delete column "${name}"? This will remove all data in this column.`);
+    
+    if (!confirmed) return;
+    
+    headers.splice(i, 1);
+    rows.forEach(r => delete r[name]);
+    delete filters[name];
+    
+    buildTable();
+}
+
+// ===== ADD ROW MODAL =====
+function openAddRowModal() {
+    const modalFields = document.getElementById("addModalFields");
+    modalFields.innerHTML = '';
+    
+    headers.forEach((h, index) => {
+        const fieldGroup = document.createElement("div");
+        fieldGroup.className = "modal-field";
+        
+        let inputHtml = '';
+        
+        if (isCostColumn(h)) {
+            inputHtml = `
+                <label for="add_field_${h}">${h} (number) <span class="required">*</span></label>
+                <input type="number" 
+                       id="add_field_${h}" 
+                       class="modal-input" 
+                       step="0.01"
+                       min="0"
+                       placeholder="Enter cost value (e.g., 15.99)" 
+                       required>
+            `;
+        } else if (isCurrencyDropdown(h, index)) {
+            inputHtml = `
+                <label for="add_field_${h}">${h} <span class="required">*</span></label>
+                <select id="add_field_${h}" class="modal-input modal-select" required>
+                    <option value="">Select currency...</option>
+                    ${currencies.map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
+            `;
+        } else if (isUnitDropdown(h, index)) {
+            inputHtml = `
+                <label for="add_field_${h}">${h} <span class="required">*</span></label>
+                <select id="add_field_${h}" class="modal-input modal-select" required>
+                    <option value="">Select unit...</option>
+                    ${units.map(u => `<option value="${u}">${u}</option>`).join('')}
+                </select>
+            `;
+        } else {
+            inputHtml = `
+                <label for="add_field_${h}">${h} <span class="required">*</span></label>
+                <input type="text" 
+                       id="add_field_${h}" 
+                       class="modal-input" 
+                       placeholder="Enter ${h}" 
+                       required>
+            `;
+        }
+        
+        fieldGroup.innerHTML = inputHtml;
+        modalFields.appendChild(fieldGroup);
+    });
+    
+    addModal.style.display = "block";
+    
+    setTimeout(() => {
+        const firstInput = modalFields.querySelector('input, select');
+        if (firstInput) firstInput.focus();
+    }, 100);
+}
+
+function closeAddModal() {
+    addModal.style.display = "none";
+}
+
+function submitNewRow() {
+    const newRow = {};
+    let hasError = false;
+    
+    headers.forEach((h, index) => {
+        const input = document.getElementById(`add_field_${h}`);
+        const value = input.value.trim();
+        
+        if (!value) {
+            input.style.borderColor = '#ef4444';
+            input.style.backgroundColor = '#fef2f2';
+            hasError = true;
+        } else {
+            input.style.borderColor = '#d1d5db';
+            input.style.backgroundColor = '#ffffff';
+            
+            if (isCostColumn(h)) {
+                const floatValue = parseFloat(value);
+                if (isNaN(floatValue) || floatValue < 0) {
+                    input.style.borderColor = '#ef4444';
+                    input.style.backgroundColor = '#fef2f2';
+                    hasError = true;
+                } else {
+                    newRow[h] = parseFloat(floatValue.toFixed(2));
+                }
+            } else {
+                newRow[h] = value;
+            }
+        }
+    });
+    
+    if (hasError) {
+        alert("Please fill all fields correctly. All fields are required.");
+        return;
+    }
+    
+    // Mark as new row
+    newRow._isNew = true;
+    newRow._originalIndex = rows.length + addedRows.length;
+    
+    addedRows.push(newRow);
+    rows.push(newRow);
+    
+    currentPage = Math.ceil(rows.length / rowsPerPage);
+    renderTable();
+    closeAddModal();
+}
+
+// ===== EDIT ROW MODAL =====
+let currentEditingRow = null;
+
+function openEditRowModal(row) {
+    currentEditingRow = row;
+    
+    const modalFields = document.getElementById("editModalFields");
+    modalFields.innerHTML = '';
+    
+    headers.forEach((h, index) => {
+        const fieldGroup = document.createElement("div");
+        fieldGroup.className = "modal-field";
+        
+        let inputHtml = '';
+        
+        if (isCostColumn(h)) {
+            const value = parseFloat(row[h]) || 0;
+            inputHtml = `
+                <label for="edit_field_${h}">${h} (number) <span class="required">*</span></label>
+                <input type="number" 
+                       id="edit_field_${h}" 
+                       class="modal-input" 
+                       step="0.01"
+                       min="0"
+                       value="${value.toFixed(2)}"
+                       placeholder="Enter cost value" 
+                       required>
+            `;
+        } else if (isCurrencyDropdown(h, index)) {
+            inputHtml = `
+                <label for="edit_field_${h}">${h} <span class="required">*</span></label>
+                <select id="edit_field_${h}" class="modal-input modal-select" required>
+                    <option value="">Select currency...</option>
+                    ${currencies.map(c => `<option value="${c}" ${row[h] === c ? 'selected' : ''}>${c}</option>`).join('')}
+                </select>
+            `;
+        } else if (isUnitDropdown(h, index)) {
+            inputHtml = `
+                <label for="edit_field_${h}">${h} <span class="required">*</span></label>
+                <select id="edit_field_${h}" class="modal-input modal-select" required>
+                    <option value="">Select unit...</option>
+                    ${units.map(u => `<option value="${u}" ${row[h] === u ? 'selected' : ''}>${u}</option>`).join('')}
+                </select>
+            `;
+        } else {
+            inputHtml = `
+                <label for="edit_field_${h}">${h} <span class="required">*</span></label>
+                <input type="text" 
+                       id="edit_field_${h}" 
+                       class="modal-input" 
+                       value="${row[h] || ''}"
+                       placeholder="Enter ${h}" 
+                       required>
+            `;
+        }
+        
+        fieldGroup.innerHTML = inputHtml;
+        modalFields.appendChild(fieldGroup);
+    });
+    
+    editModal.style.display = "block";
+    
+    setTimeout(() => {
+        const firstInput = modalFields.querySelector('input, select');
+        if (firstInput) firstInput.focus();
+    }, 100);
+}
+
+function closeEditModal() {
+    editModal.style.display = "none";
+    currentEditingRow = null;
+}
+
+function submitEditRow() {
+    if (!currentEditingRow) return;
+    
+    const updatedRow = {};
+    let hasError = false;
+    
+    headers.forEach((h, index) => {
+        const input = document.getElementById(`edit_field_${h}`);
+        const value = input.value.trim();
+        
+        if (!value) {
+            input.style.borderColor = '#ef4444';
+            input.style.backgroundColor = '#fef2f2';
+            hasError = true;
+        } else {
+            input.style.borderColor = '#d1d5db';
+            input.style.backgroundColor = '#ffffff';
+            
+            if (isCostColumn(h)) {
+                const floatValue = parseFloat(value);
+                if (isNaN(floatValue) || floatValue < 0) {
+                    input.style.borderColor = '#ef4444';
+                    input.style.backgroundColor = '#fef2f2';
+                    hasError = true;
+                } else {
+                    updatedRow[h] = parseFloat(floatValue.toFixed(2));
+                }
+            } else {
+                updatedRow[h] = value;
+            }
+        }
+    });
+    
+    if (hasError) {
+        alert("Please fill all fields correctly. All fields are required.");
+        return;
+    }
+    
+    // Update the row in place
+    Object.assign(currentEditingRow, updatedRow);
+    
+    // Track the edit
+    if (currentEditingRow._isNew) {
+        // If it's a newly added row, update it in addedRows
+        const newRowIndex = addedRows.findIndex(r => r._originalIndex === currentEditingRow._originalIndex);
+        if (newRowIndex !== -1) {
+            addedRows[newRowIndex] = currentEditingRow;
+        }
+    } else {
+        // If it's an existing row, track it as edited
+        editedRows.set(currentEditingRow._originalIndex, currentEditingRow);
+    }
+    
+    renderTable();
+    closeEditModal();
+}
+
+function removeRow(row, displayIndex) {
+    const confirmed = confirm(`Delete this row? This action cannot be undone.`);
+    if (!confirmed) return;
+    
+    if (row._isNew) {
+        // Remove from addedRows and rows
+        addedRows = addedRows.filter(r => r._originalIndex !== row._originalIndex);
+        rows = rows.filter(r => r._originalIndex !== row._originalIndex);
+    } else {
+        // Mark existing row for deletion
+        deletedRows.add(row._originalIndex);
+        rows = rows.filter(r => r._originalIndex !== row._originalIndex);
+        
+        // Remove from edits if it was edited
+        editedRows.delete(row._originalIndex);
+    }
+    
+    renderTable();
+}
+
+// ===== SAVE FUNCTIONALITY =====
+function saveTable() {
+    if (addedRows.length === 0 && editedRows.size === 0 && deletedRows.size === 0) {
+        alert("No changes to save.");
+        return;
+    }
+    
+    const confirmed = confirm("Save changes to the table?");
+    if (!confirmed) return;
+    
+    // Build the changes payload
+    const changes = {
+        added: addedRows.map(row => {
+            const cleanRow = {};
+            headers.forEach(h => {
+                cleanRow[h] = row[h];
+            });
+            return cleanRow;
+        }),
+        edited: Array.from(editedRows.entries()).map(([originalIndex, row]) => {
+            const cleanRow = {
+                _originalIndex: originalIndex
+            };
+            headers.forEach(h => {
+                cleanRow[h] = row[h];
+            });
+            return cleanRow;
+        }),
+        deleted: Array.from(deletedRows),
+        last_modification_date: new Date().toISOString(),
+        headers: headers
+    };
+    
+    // Update display
+    lastModificationDate = changes.last_modification_date;
+    updateLastModifiedDisplay();
+    
+    // Show loading state
+    const saveBtn = document.getElementById("saveBtn");
+    const originalHTML = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
+    
+    console.log("Saving changes:", {
+        added: changes.added.length,
+        edited: changes.edited.length,
+        deleted: changes.deleted.length,
+        last_modification_date: changes.last_modification_date
+    });
+    
+    fetch("/save_materials", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(changes)
+    })
+    .then(async response => {
+        const responseText = await response.text();
+        
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status} - ${responseText}`);
+        }
+        
+        try {
+            return JSON.parse(responseText);
+        } catch {
+            return { message: responseText };
+        }
+    })
+    .then(data => {
+        console.log("Save successful:", data);
+        
+        // Clear change tracking
+        addedRows = [];
+        editedRows.clear();
+        deletedRows.clear();
+        
+        // Update rows with new indices
+        rows.forEach((row, index) => {
+            row._originalIndex = index;
+            row._isNew = false;
+        });
+        
+        alert(`✅ Changes saved successfully!\n\nLast modified: ${new Date(lastModificationDate).toLocaleString()}`);
+    })
+    .catch(err => {
+        console.error("SAVE ERROR:", err);
+        alert("❌ Save failed. Please check the console (F12) for details.\n\nError: " + err.message);
+    })
+    .finally(() => {
+        saveBtn.innerHTML = originalHTML;
+        saveBtn.disabled = false;
+    });
+}
+
+// ===== PAGINATION CONTROLS =====
+document.getElementById("prevPage").onclick = () => {
+    if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+    }
+};
+
+document.getElementById("nextPage").onclick = () => {
+    const totalPages = Math.ceil(getFiltered().length / rowsPerPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+    }
+};
+
+// ===== EVENT LISTENERS =====
+document.getElementById("searchInput").oninput = () => {
+    currentPage = 1;
+    renderTable();
+};
+
+document.getElementById("addColumnBtn").onclick = addColumn;
+document.getElementById("addRowBtn").onclick = openAddRowModal;
+document.getElementById("saveBtn").onclick = saveTable;
+
+// Close modals when clicking outside
+window.onclick = (event) => {
+    if (event.target === addModal) {
+        closeAddModal();
+    }
+    if (event.target === editModal) {
+        closeEditModal();
+    }
+};
+
+// Close modals with Escape key
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        if (addModal.style.display === 'block') {
+            closeAddModal();
+        }
+        if (editModal.style.display === 'block') {
+            closeEditModal();
+        }
+    }
+});
+
+// ===== INITIALIZATION =====
+console.log("Table initialized with:", {
+    headers: headers,
+    totalRows: rows.length,
+    lastModified: lastModificationDate,
+    fixedHeaders: FIXED_HEADERS
+});
+
+buildTable();
+</script>
+
+<style>
+/* Global Styles */
+* {
+    box-sizing: border-box;
+}
+
+.page-container {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Last Modified Info */
+.last-modified-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #0369a1;
+    font-weight: 500;
+}
+
+.last-modified-info i {
+    font-size: 14px;
+}
+
+/* Search Bar */
+.search-bar {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 12px 16px 12px 40px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: #ffffff;
+}
+
+.search-bar input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 16px;
+}
+
+/* Table Styles */
+.table-wrapper {
+    overflow-x: auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 800px;
+}
+
+th, td {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    text-align: left;
+}
+
+th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 100px;
+}
+
+.header-text {
+    font-weight: 600;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.header-text.fixed {
+    color: #1a1a2e;
+    font-weight: 700;
+    cursor: default;
+}
+
+.header-text:not(.fixed):hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+}
+
+.header-text:not(.fixed):focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #ffffff;
+}
+
+.sort-icon {
+    font-size: 16px;
+    transition: all 0.2s;
+    cursor: pointer;
+    color: #94a3b8;
+}
+
+.sort-icon:hover {
+    color: #3b82f6;
+}
+
+.sort-icon.active {
+    color: #3b82f6;
+}
+
+td {
+    font-size: 14px;
+    color: #334155;
+    transition: background-color 0.2s;
+}
+
+/* Read-only cells */
+td.read-only {
+    cursor: default;
+    user-select: text;
+}
+
+td.read-only:hover {
+    background-color: #f8fafc;
+}
+
+.float-column {
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    text-align: right !important;
+    color: #059669;
+    font-weight: 500;
+}
+
+.actions-column {
+    width: 120px;
+    text-align: center;
+}
+
+.action-cell {
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Filter Styles */
+.dropdown-filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.dropdown {
+    position: relative;
+}
+
+.dropbtn {
+    padding: 8px 16px;
+    border: 2px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #475569;
+    font-weight: 500;
+}
+
+.dropbtn:hover {
+    border-color: #3b82f6;
+    background: #f8fafc;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    min-width: 200px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.filter-option {
+    padding: 6px 0;
+}
+
+.filter-option label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #475569;
+}
+
+.filter-option input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+.filter-empty {
+    padding: 8px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+    font-style: italic;
+}
+
+/* Pagination Styles */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.pagination-info {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-page {
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #475569;
+    font-size: 14px;
+}
+
+.btn-page:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+}
+
+.btn-page:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-info {
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
+    min-width: 100px;
+    text-align: center;
+}
+
+/* Button Styles */
+.btn {
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+.btn-add {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-add:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+}
+
+.btn-save {
+    background: #10b981;
+    color: white;
+    font-weight: 600;
+}
+
+.btn-save:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+}
+
+.btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.delete-btn {
+    background: transparent;
+    color: #ef4444;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.delete-btn:hover {
+    background: #fef2f2;
+    transform: scale(1.1);
+}
+
+.btn-edit-row {
+    background: transparent;
+    color: #3b82f6;
+    border: none;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.btn-edit-row:hover {
+    background: #eff6ff;
+    transform: scale(1.1);
+}
+
+.btn-delete-row {
+    background: transparent;
+    color: #ef4444;
+    border: none;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-size: 14px;
+    margin-left: 4px;
+}
+
+.btn-delete-row:hover {
+    background: #fef2f2;
+    transform: scale(1.1);
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #1a1a2e;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #94a3b8;
+    transition: all 0.2s;
+    padding: 4px;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #475569;
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 24px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.modal-field {
+    margin-bottom: 20px;
+}
+
+.modal-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.required {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s;
+    background: #ffffff;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.modal-input.error {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.modal-select {
+    cursor: pointer;
+    appearance: auto;
+    padding-right: 30px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+    position: sticky;
+    bottom: 0;
+    background: white;
+}
+
+/* Loading Spinner */
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .header-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .pagination-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .table-wrapper {
+        font-size: 13px;
+    }
+    
+    th, td {
+        padding: 8px 10px;
+    }
+    
+    .modal-content {
+        margin: 10% auto;
+        width: 95%;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .btn, .delete-btn, .btn-edit-row, .btn-delete-row, .pagination-container, 
+    .search-bar, .dropdown-filters, .header-actions, .modal {
+        display: none !important;
+    }
+    
+    .table-wrapper {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    .last-modified-info {
+        display: flex !important;
+    }
+}
+</style>
+
+{% endblock %}

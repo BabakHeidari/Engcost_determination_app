@@ -1,0 +1,16 @@
+{
+    "_order": [
+        "subject",
+        "cost"
+    ],
+    "data": {
+        "subject": [
+            "Manufacturing Instruments"
+        ],
+        "cost": [
+            134
+        ]
+    },
+    "last_modification_date": "2026-06-12T17:38:25.497Z",
+    "saving_file": "subfield"
+}

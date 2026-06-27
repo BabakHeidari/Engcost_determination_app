@@ -1,0 +1,16 @@
+{
+    "_order": [
+        "subject",
+        "cost"
+    ],
+    "data": {
+        "subject": [
+            "VD Loan"
+        ],
+        "cost": [
+            11500
+        ]
+    },
+    "last_modification_date": "2026-06-19T17:28:02.794Z",
+    "saving_file": "subfield"
+}

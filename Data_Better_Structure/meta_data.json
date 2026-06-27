@@ -1,0 +1,7 @@
+factories
+categories: {factory:caegtories}
+subcategories: {factory:caegtory:subcaegtories}
+products: {factory:caegtory:subcaegtory:products}
+
+or
+JUST products: {factory:caegtory:subcaegtory:products}

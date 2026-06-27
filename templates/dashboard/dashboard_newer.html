@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<button class="btn btn-secondary mb-3" onclick="history.back()">Back</button>
+
+<div class="dashboard-page">
+
+    <h3 class="mb-4">Battery Manufacturing Cost Dashboard</h3>
+
+    <div class="filter-grid mb-4">
+
+        <div>
+            <label>Factory</label>
+            <select id="factoryFilter" class="form-select">
+                <option value="">All Factories</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Category</label>
+            <select id="categoryFilter" class="form-select">
+                <option value="">All Categories</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Subcategory</label>
+            <select id="subcategoryFilter" class="form-select">
+                <option value="">All Subcategories</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Product</label>
+            <select id="productFilter" class="form-select">
+                <option value="">All Products</option>
+            </select>
+        </div>
+
+    </div>
+
+    <div class="kpi-grid">
+        <div class="dash-card">
+            <h6>Revenue</h6>
+            <p id="revenue"></p>
+        </div>
+
+        <div class="dash-card">
+            <h6>Cost</h6>
+            <p id="cost"></p>
+        </div>
+
+        <div class="dash-card">
+            <h6>Profit</h6>
+            <p id="profit"></p>
+        </div>
+
+        <div class="dash-card">
+            <h6>Profit Margin</h6>
+            <p id="margin"></p>
+        </div>
+    </div>
+
+    <div class="result-card mb-4">
+        <h5>Selected Products</h5>
+        <p id="resultCount"></p>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Factory</th>
+                        <th>Category</th>
+                        <th>Subcategory</th>
+                    </tr>
+                </thead>
+                <tbody id="productsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="charts">
+        <div class="chart-box">
+            <div id="monthlyChart" class="chart"></div>
+        </div>
+
+        <div class="chart-box">
+            <div id="factoryChart" class="chart"></div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+.dashboard-page {
+    background: #f4f6f8;
+    padding: 24px;
+    border-radius: 12px;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+}
+
+.filter-grid label {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.dash-card,
+.result-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.dash-card h6 {
+    color: #666;
+    font-size: 14px;
+}
+
+.dash-card p {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 10px 0 0;
+}
+
+.charts {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+}
+
+.chart-box {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    height: 400px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.chart {
+    width: 100%;
+    height: 100%;
+}
+
+@media (max-width: 768px) {
+    .kpi-grid,
+    .charts,
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<script>
+const dashboardData = {{ dashboard_data|tojson }};
+const productsRaw = {{ products|tojson }};
+
+function objectColumnsToRows(obj) {
+    const keys = Object.keys(obj);
+    const rowIds = Object.keys(obj[keys[0]] || {});
+
+    return rowIds.map(id => {
+        const row = {};
+        keys.forEach(key => {
+            row[key] = obj[key][id];
+        });
+        return row;
+    });
+}
+
+const productsData = objectColumnsToRows(productsRaw);
+
+const factoryFilter = document.getElementById("factoryFilter");
+const categoryFilter = document.getElementById("categoryFilter");
+const subcategoryFilter = document.getElementById("subcategoryFilter");
+const productFilter = document.getElementById("productFilter");
+
+function uniqueValues(data, field) {
+    return [...new Set(data.map(x => x[field]).filter(Boolean))].sort();
+}
+
+function setOptions(select, values, placeholder) {
+    const currentValue = select.value;
+
+    select.innerHTML = `<option value="">${placeholder}</option>`;
+
+    values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+    });
+
+    if (values.includes(currentValue)) {
+        select.value = currentValue;
+    }
+}
+
+function getFilteredProducts() {
+    return productsData.filter(item => {
+        return (
+            (!factoryFilter.value || item.Factory === factoryFilter.value) &&
+            (!categoryFilter.value || item.Category === categoryFilter.value) &&
+            (!subcategoryFilter.value || item.Subcategory === subcategoryFilter.value) &&
+            (!productFilter.value || item.Product_Name === productFilter.value)
+        );
+    });
+}
+
+function refreshFilterOptions() {
+    const selectedFactory = factoryFilter.value;
+    const selectedCategory = categoryFilter.value;
+    const selectedSubcategory = subcategoryFilter.value;
+    const selectedProduct = productFilter.value;
+
+    const factoryScoped = productsData.filter(item =>
+        (!selectedCategory || item.Category === selectedCategory) &&
+        (!selectedSubcategory || item.Subcategory === selectedSubcategory) &&
+        (!selectedProduct || item.Product_Name === selectedProduct)
+    );
+
+    const categoryScoped = productsData.filter(item =>
+        (!selectedFactory || item.Factory === selectedFactory) &&
+        (!selectedSubcategory || item.Subcategory === selectedSubcategory) &&
+        (!selectedProduct || item.Product_Name === selectedProduct)
+    );
+
+    const subcategoryScoped = productsData.filter(item =>
+        (!selectedFactory || item.Factory === selectedFactory) &&
+        (!selectedCategory || item.Category === selectedCategory) &&
+        (!selectedProduct || item.Product_Name === selectedProduct)
+    );
+
+    const productScoped = productsData.filter(item =>
+        (!selectedFactory || item.Factory === selectedFactory) &&
+        (!selectedCategory || item.Category === selectedCategory) &&
+        (!selectedSubcategory || item.Subcategory === selectedSubcategory)
+    );
+
+    setOptions(factoryFilter, uniqueValues(factoryScoped, "Factory"), "All Factories");
+    setOptions(categoryFilter, uniqueValues(categoryScoped, "Category"), "All Categories");
+    setOptions(subcategoryFilter, uniqueValues(subcategoryScoped, "Subcategory"), "All Subcategories");
+    setOptions(productFilter, uniqueValues(productScoped, "Product_Name"), "All Products");
+}
+
+function renderProductsTable(data) {
+    const tbody = document.getElementById("productsTableBody");
+    const resultCount = document.getElementById("resultCount");
+
+    resultCount.textContent = `${data.length} product(s) found`;
+
+    tbody.innerHTML = "";
+
+    data.forEach(item => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${item.Product_Name}</td>
+            <td>${item.Factory}</td>
+            <td>${item.Category}</td>
+            <td>${item.Subcategory}</td>
+        `;
+
+        tbody.appendChild(row);
+    });
+}
+
+function formatNumber(num) {
+    return Number(num).toLocaleString("en-US");
+}
+
+document.getElementById("revenue").textContent = formatNumber(dashboardData.kpis.revenue);
+document.getElementById("cost").textContent = formatNumber(dashboardData.kpis.cost);
+document.getElementById("profit").textContent = formatNumber(dashboardData.kpis.profit);
+document.getElementById("margin").textContent = dashboardData.kpis.margin + "%";
+
+const monthlyChart = echarts.init(document.getElementById("monthlyChart"));
+
+monthlyChart.setOption({
+    title: { text: "Monthly Revenue vs Cost" },
+    tooltip: { trigger: "axis" },
+    legend: { data: ["Revenue", "Cost"] },
+    xAxis: {
+        type: "category",
+        data: dashboardData.monthly.map(item => item.month)
+    },
+    yAxis: { type: "value" },
+    series: [
+        {
+            name: "Revenue",
+            type: "bar",
+            data: dashboardData.monthly.map(item => item.revenue)
+        },
+        {
+            name: "Cost",
+            type: "bar",
+            data: dashboardData.monthly.map(item => item.cost)
+        }
+    ]
+});
+
+const factoryChart = echarts.init(document.getElementById("factoryChart"));
+
+factoryChart.setOption({
+    title: { text: "Product Count by Factory" },
+    tooltip: { trigger: "item" },
+    series: [
+        {
+            type: "pie",
+            radius: "65%",
+            data: []
+        }
+    ]
+});
+
+function updateFactoryChart(filteredProducts) {
+    const counts = {};
+
+    filteredProducts.forEach(item => {
+        counts[item.Factory] = (counts[item.Factory] || 0) + 1;
+    });
+
+    factoryChart.setOption({
+        series: [
+            {
+                data: Object.entries(counts).map(([name, value]) => ({
+                    name,
+                    value
+                }))
+            }
+        ]
+    });
+}
+
+function updateDashboard() {
+    refreshFilterOptions();
+
+    const filteredProducts = getFilteredProducts();
+
+    renderProductsTable(filteredProducts);
+    updateFactoryChart(filteredProducts);
+}
+
+[factoryFilter, categoryFilter, subcategoryFilter, productFilter].forEach(filter => {
+    filter.addEventListener("change", updateDashboard);
+});
+
+updateDashboard();
+
+window.addEventListener("resize", function () {
+    monthlyChart.resize();
+    factoryChart.resize();
+});
+</script>
+
+{% endblock %}

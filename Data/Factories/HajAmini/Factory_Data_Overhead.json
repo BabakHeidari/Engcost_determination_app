@@ -1,0 +1,16 @@
+{
+    "_order": [
+        "subject",
+        "cost"
+    ],
+    "data": {
+        "subject": [
+            "Electricity",
+            "Gas"
+        ],
+        "cost": [
+            40,
+            22
+        ]
+    }
+}

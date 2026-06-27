@@ -1,0 +1,1062 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-container">
+    <button class="btn btn-secondary mb-3" onclick="history.back()">
+        ← Back to Factories
+    </button>
+
+    <!-- Factory Details Header -->
+    <div class="header-section">
+        <div class="title-badge">
+            <span class="badge-icon">🏭</span>
+            <div>
+                <h2>{{factory_name}} Site</h2>
+                <p class="subtitle">Cost breakdown and expense distribution analysis</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cost Structure Table -->
+    <div class="table-section">
+        <div class="section-header">
+            <div class="section-title">
+                <span class="section-icon">💰</span>
+                <h3>Cost Structure</h3>
+            </div>
+            <p class="section-description">Detailed breakdown of costs by subfield</p>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="dataTable">
+                <thead>
+                    <tr id="tableHeader"></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="button-bar">
+            <button class="btn btn-save" id="saveBtn">
+                <span class="btn-icon">💾</span> Save Changes
+            </button>
+        </div>
+    </div>
+
+    <!-- Category Weight Distribution Table -->
+    <div class="table-section">
+        <div class="section-header">
+            <div class="section-title">
+                <span class="section-icon">📊</span>
+                <h3>Category Weight Distribution</h3>
+            </div>
+            <p class="section-description">Expense allocation percentages by category (must sum to 100%)</p>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="categoryDataTable">
+                <thead>
+                    <tr id="categoryTableHeader"></tr>
+                </thead>
+                <tbody id="categoryTbody"></tbody>
+            </table>
+        </div>
+
+        <div class="button-bar">
+            <button class="btn btn-save" id="saveCategoryBtn">
+                <span class="btn-icon">💾</span> Save Category Weights
+            </button>
+        </div>
+    </div>
+
+    <!-- Prediction of Production Per Capita Table -->
+    <div class="table-section">
+        <div class="section-header">
+            <div class="section-title">
+                <span class="section-icon">📈</span>
+                <h3>Prediction of Production Per Capita</h3>
+            </div>
+            <p class="section-description">Production predictions for the following year by product</p>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="preditcionOfProductionPerCapitaDataTable">
+                <thead>
+                    <tr id="predictionTableHeader"></tr>
+                </thead>
+                <tbody id="predictionTbody"></tbody>
+            </table>
+        </div>
+
+        <div class="button-bar">
+            <button class="btn btn-save" id="savePredictionBtn">
+                <span class="btn-icon">💾</span> Save Predictions
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== MAIN TABLE =====
+    const tableJSON = {{ table_json | safe }};
+    let headers = [...tableJSON._order];
+
+    // Column icons mapping for main table
+    const columnIcons = {
+        'subfield': '📂',
+        'cost': '💵',
+        'percentageofall': '📊',
+        'view': '👁️'
+    };
+
+    function buildRows() {
+        const rows = [];
+        const data = tableJSON.data;
+        const rowCount = data[headers[0]].length;
+        for (let i = 0; i < rowCount; i++) {
+            const row = {};
+            headers.forEach(h => {
+                row[h] = data[h][i];
+            });
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    let rows = buildRows();
+    const tbody = document.querySelector("#dataTable tbody");
+    const thead = document.getElementById("tableHeader");
+
+    function getColumnIcon(columnName) {
+        const lowerName = columnName.toLowerCase();
+        return columnIcons[lowerName] || '📋';
+    }
+
+    function formatCurrency(value) {
+        const num = parseFloat(value);
+        if (isNaN(num)) return value;
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2
+        }).format(num);
+    }
+
+    function formatPercentage(value) {
+        const num = parseFloat(value);
+        if (isNaN(num)) return value;
+        return num.toFixed(2) + '%';
+    }
+
+    function buildTable() {
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
+        
+        headers.forEach((h, i) => {
+            const th = document.createElement("th");
+            const icon = getColumnIcon(h);
+            const displayName = h.charAt(0).toUpperCase() + h.slice(1);
+            th.innerHTML = `${icon} ${displayName}`;
+            th.className = 'col-header';
+            thead.appendChild(th);
+        });
+        
+        const viewHead = document.createElement("th");
+        viewHead.innerHTML = `👁️ Actions`;
+        viewHead.className = 'col-header';
+        thead.appendChild(viewHead);
+        renderTable();
+    }
+
+    function renderTable() {
+        tbody.innerHTML = "";
+        
+        rows.forEach((row, rowIndex) => {
+            const tr = document.createElement("tr");
+            tr.className = 'data-row';
+            tr.style.animationDelay = `${rowIndex * 0.05}s`;
+            
+            headers.forEach(h => {
+                const td = document.createElement("td");
+                let value = row[h] ?? "";
+                
+                // Format based on column
+                const lowerName = h.toLowerCase();
+                if (lowerName === 'cost') {
+                    value = formatCurrency(value);
+                    td.className = 'cell-currency';
+                } else if (lowerName === 'percentageofall') {
+                    value = formatPercentage(value);
+                    td.className = 'cell-percentage';
+                } else if (lowerName === 'subfield') {
+                    td.className = 'cell-subfield';
+                }
+                
+                td.innerText = value;
+                tr.appendChild(td);
+            });
+            
+            const view = document.createElement("td");
+            const firstKey = headers[0];
+            const firstValue = row[firstKey];
+            
+            view.innerHTML = `
+                <form method="POST" action="/factory_parameters/{{factory_name}}/${encodeURIComponent(firstValue)}" style="margin:0;">
+                    <input type="hidden" name="${headers[0]}" value="${row[headers[0]]}">
+                    <input type="hidden" name="${headers[1]}" value="${row[headers[1]] ?? ""}">
+                    <button type="submit" class="view-btn">
+                        <span class="btn-icon">🔍</span> Details
+                    </button>
+                </form>
+            `;
+            view.className = 'view-cell';
+            tr.appendChild(view);
+            tbody.appendChild(tr);
+        });
+    }
+
+    function buildColumnData() {
+        const data = {};
+        headers.forEach(h => {
+            data[h] = rows.map(r => {
+                const v = r[h];
+                if (!isNaN(v) && v !== "") return Number(v);
+                return v;
+            });
+        });
+        return { _order: headers, data: data };
+    }
+
+    function saveTable() {
+        const confirmed = confirm("Save all changes to the cost structure?");
+        if (!confirmed) return;
+        
+        const payload = buildColumnData();
+        fetch("/save_factories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        .then(async response => {
+            const text = await response.text();
+            if (!response.ok) throw new Error("Server error: " + response.status);
+            try { return JSON.parse(text); } catch { return text; }
+        })
+        .then(data => {
+            showNotification("Cost structure saved successfully!", "success");
+        })
+        .catch(err => {
+            console.error("SAVE ERROR:", err);
+            showNotification("Save failed. Check console.", "error");
+        });
+    }
+
+    document.getElementById("saveBtn").onclick = saveTable;
+
+    // ===== CATEGORY TABLE =====
+    const categoryJSON = {{ category_table | safe }};
+    let categoryHeaders = [...categoryJSON._order];
+
+    // Category column icons
+    const categoryIcons = {
+        'category': '📁',
+        'selling_share_of_category': '⚖️'
+    };
+
+    function buildCategoryRows() {
+        const rows = [];
+        const data = categoryJSON.data;
+        const rowCount = data[categoryHeaders[0]].length;
+        for (let i = 0; i < rowCount; i++) {
+            const row = {};
+            categoryHeaders.forEach(h => { row[h] = data[h][i]; });
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    let categoryRows = buildCategoryRows();
+    const categoryTbody = document.getElementById("categoryTbody");
+    const categoryThead = document.getElementById("categoryTableHeader");
+
+    function getCategoryIcon(columnName) {
+        const lowerName = columnName.toLowerCase();
+        return categoryIcons[lowerName] || '📋';
+    }
+
+    function getDisplayName(columnName) {
+        const lowerName = columnName.toLowerCase();
+        if (lowerName === 'selling_share_of_category') return 'Weight (%)';
+        if (lowerName === 'category') return 'Category';
+        return columnName.charAt(0).toUpperCase() + columnName.slice(1);
+    }
+
+    function buildCategoryTable() {
+        categoryThead.innerHTML = "";
+        
+        categoryHeaders.forEach(h => {
+            const th = document.createElement("th");
+            const icon = getCategoryIcon(h);
+            const displayName = getDisplayName(h);
+            th.innerHTML = `${icon} ${displayName}`;
+            th.className = 'col-header';
+            categoryThead.appendChild(th);
+        });
+        
+        renderCategoryTable();
+    }
+
+    function calculateTotalWeight() {
+        let sum = 0;
+        for (let row of categoryRows) {
+            const val = parseFloat(row["selling_share_of_category"]);
+            if (!isNaN(val)) {
+                sum += val;
+            }
+        }
+        return sum;
+    }
+
+    function updateTotalIndicator() {
+        const total = calculateTotalWeight();
+        const indicator = document.getElementById('totalWeightIndicator');
+        if (indicator) {
+            if (Math.abs(total - 100) <= 0.001) {
+                indicator.innerHTML = '✓ Total: 100%';
+                indicator.className = 'total-indicator valid';
+            } else {
+                indicator.innerHTML = `⚠ Total: ${total.toFixed(2)}% (must be 100%)`;
+                indicator.className = 'total-indicator invalid';
+            }
+        }
+    }
+
+    function renderCategoryTable() {
+        categoryTbody.innerHTML = "";
+        
+        categoryRows.forEach((row, index) => {
+            const tr = document.createElement("tr");
+            tr.className = 'data-row';
+            tr.style.animationDelay = `${index * 0.05}s`;
+            
+            categoryHeaders.forEach(h => {
+                const td = document.createElement("td");
+                const value = row[h] ?? "";
+                const lowerName = h.toLowerCase();
+                
+                if (lowerName === 'category') {
+                    td.innerText = value;
+                    td.className = 'cell-category';
+                } else if (lowerName === 'selling_share_of_category') {
+                    td.innerHTML = `<input type="number" class="weight-input" step="0.01" value="${value}" data-category="${row['category']}">`;
+                    td.className = 'cell-weight';
+                    const input = td.querySelector('input');
+                    input.oninput = (e) => {
+                        row[h] = e.target.value;
+                        updateTotalIndicator();
+                    };
+                } else {
+                    td.innerText = value;
+                }
+                
+                tr.appendChild(td);
+            });
+            categoryTbody.appendChild(tr);
+        });
+        
+        // Add total indicator row
+        const totalRow = document.createElement("tr");
+        totalRow.className = 'total-row';
+        const totalCell = document.createElement("td");
+        totalCell.colSpan = categoryHeaders.length;
+        totalCell.innerHTML = '<div id="totalWeightIndicator" class="total-indicator"></div>';
+        totalRow.appendChild(totalCell);
+        categoryTbody.appendChild(totalRow);
+        updateTotalIndicator();
+    }
+
+    function buildCategoryColumnData() {
+        const data = {};
+        categoryHeaders.forEach(h => {
+            data[h] = categoryRows.map(r => {
+                const v = r[h];
+                if (!isNaN(v) && v !== "") return Number(v);
+                return v;
+            });
+        });
+        return { _order: categoryHeaders, data: data };
+    }
+
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <span class="notification-icon">${type === 'success' ? '✓' : '⚠'}</span>
+            <span>${message}</span>
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }, 100);
+    }
+
+    function saveCategoryTable() {
+        const sum = calculateTotalWeight();
+        
+        if (Math.abs(sum - 100) > 0.001) {
+            showNotification(`Error: Category weights must sum to 100%. Current sum: ${sum.toFixed(2)}%`, "error");
+            return;
+        }
+
+        const confirmed = confirm("Save changes to category weight distribution?");
+        if (!confirmed) return;
+        
+        const payload = buildCategoryColumnData();
+        fetch("/save_category_table", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        .then(async response => {
+            const text = await response.text();
+            if (!response.ok) throw new Error("Server error: " + response.status);
+            try { return JSON.parse(text); } catch { return text; }
+        })
+        .then(data => {
+            showNotification("Category weights saved successfully!", "success");
+        })
+        .catch(err => {
+            console.error("CATEGORY SAVE ERROR:", err);
+            showNotification("Category save failed. Check console.", "error");
+        });
+    }
+
+    document.getElementById("saveCategoryBtn").onclick = saveCategoryTable;
+
+    // ===== PREDICTION OF PRODUCTION PER CAPITA TABLE =====
+    const predictionJSON = {{ preditcionOfProductionPerCapitaData | safe }};
+    let predictionHeaders = [...predictionJSON._order];
+
+    // Prediction column icons
+    const predictionIcons = {
+        'Product Name': '📦',
+        'Predicted Production': '🔮'
+    };
+
+    function buildPredictionRows() {
+        const rows = [];
+        const data = predictionJSON.data;
+        const rowCount = data[predictionHeaders[0]].length;
+        for (let i = 0; i < rowCount; i++) {
+            const row = {};
+            predictionHeaders.forEach(h => { 
+                row[h] = data[h] ? data[h][i] : 0;
+            });
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    let predictionRows = buildPredictionRows();
+    const predictionTbody = document.getElementById("predictionTbody");
+    const predictionThead = document.getElementById("predictionTableHeader");
+
+    function getPredictionIcon(columnName) {
+        return predictionIcons[columnName] || '📋';
+    }
+
+    function getPredictionDisplayName(columnName) {
+        if (columnName === 'Product Name') return 'Product';
+        if (columnName === 'Predicted Production') return 'Prediction Value';
+        return columnName.charAt(0).toUpperCase() + columnName.slice(1);
+    }
+
+    function buildPredictionTable() {
+        predictionThead.innerHTML = "";
+        
+        predictionHeaders.forEach(h => {
+            const th = document.createElement("th");
+            const icon = getPredictionIcon(h);
+            const displayName = getPredictionDisplayName(h);
+            th.innerHTML = `${icon} ${displayName}`;
+            th.className = 'col-header';
+            predictionThead.appendChild(th);
+        });
+        
+        renderPredictionTable();
+    }
+
+    function renderPredictionTable() {
+        predictionTbody.innerHTML = "";
+        
+        if (predictionRows.length === 0) {
+            const tr = document.createElement("tr");
+            const td = document.createElement("td");
+            td.colSpan = predictionHeaders.length;
+            td.style.textAlign = "center";
+            td.style.padding = "20px";
+            td.style.color = "#999";
+            td.innerHTML = "No prediction data available.";
+            tr.appendChild(td);
+            predictionTbody.appendChild(tr);
+            return;
+        }
+        
+        predictionRows.forEach((row, index) => {
+            const tr = document.createElement("tr");
+            tr.className = 'data-row';
+            tr.style.animationDelay = `${index * 0.05}s`;
+            
+            predictionHeaders.forEach(h => {
+                const td = document.createElement("td");
+                const value = row[h] ?? 0;
+                
+                if (h === 'Product Name') {
+                    td.innerText = value;
+                    td.className = 'cell-product';
+                } else if (h === 'Predicted Production') {
+                    td.innerHTML = `<input type="number" class="prediction-input" min="0" step="1" value="${value}" data-product="${row['Product Name']}">`;
+                    td.className = 'cell-prediction';
+                    const input = td.querySelector('input');
+                    input.oninput = (e) => {
+                        // Allow only positive integers
+                        let val = e.target.value;
+                        // Remove any non-numeric characters except minus sign
+                        val = val.replace(/[^\d-]/g, '');
+                        // Convert to integer
+                        let intVal = parseInt(val);
+                        // If negative or NaN, set to 0
+                        if (isNaN(intVal) || intVal < 0) {
+                            intVal = 0;
+                        }
+                        // Update the input value and row data
+                        e.target.value = intVal;
+                        row[h] = intVal;
+                    };
+                    input.onkeydown = (e) => {
+                        // Prevent decimal point, minus sign (except at start), and non-numeric keys
+                        if (e.key === '.' || e.key === ',' || e.key === 'e' || e.key === 'E' || e.key === '+' || e.key === '-') {
+                            e.preventDefault();
+                        }
+                    };
+                    input.onblur = (e) => {
+                        // Ensure value is a valid positive integer when leaving the field
+                        let val = parseInt(e.target.value);
+                        if (isNaN(val) || val < 0) {
+                            val = 0;
+                        }
+                        e.target.value = val;
+                        row[h] = val;
+                    };
+                } else {
+                    td.innerText = value;
+                }
+                
+                tr.appendChild(td);
+            });
+            predictionTbody.appendChild(tr);
+        });
+    }
+
+    function buildPredictionColumnData() {
+        const data = {};
+        predictionHeaders.forEach(h => {
+            data[h] = predictionRows.map(r => {
+                const v = r[h];
+                // For Predicted Production, ensure it's a positive integer
+                if (h === 'Predicted Production') {
+                    const intVal = parseInt(v);
+                    return (!isNaN(intVal) && intVal >= 0) ? intVal : 0;
+                }
+                if (!isNaN(v) && v !== "") return Number(v);
+                return v;
+            });
+        });
+        return { _order: predictionHeaders, data: data };
+    }
+
+    function savePredictionTable() {
+        const confirmed = confirm("Save changes to production predictions?");
+        if (!confirmed) return;
+        
+        const payload = buildPredictionColumnData();
+        fetch("/save_prediction_production_per_capita", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        .then(async response => {
+            const text = await response.text();
+            if (!response.ok) throw new Error("Server error: " + response.status);
+            try { return JSON.parse(text); } catch { return text; }
+        })
+        .then(data => {
+            showNotification("Production predictions saved successfully!", "success");
+        })
+        .catch(err => {
+            console.error("PREDICTION SAVE ERROR:", err);
+            showNotification("Prediction save failed. Check console.", "error");
+        });
+    }
+
+    document.getElementById("savePredictionBtn").onclick = savePredictionTable;
+
+    // ===== INIT =====
+    buildTable();
+    buildCategoryTable();
+    buildPredictionTable();
+</script>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    .page-container {
+        padding: 30px;
+        max-width: 1400px;
+        margin: 0 auto;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        border-radius: 30px;
+    }
+
+    /* Header Section */
+    .header-section {
+        margin-bottom: 40px;
+        animation: slideDown 0.5s ease-out;
+    }
+
+    .title-badge {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .badge-icon {
+        font-size: 54px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 25px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        animation: bounce 2s infinite;
+    }
+
+    h2 {
+        font-size: 36px;
+        margin: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+    }
+
+    .subtitle {
+        color: #666;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+
+    /* Table Sections */
+    .table-section {
+        background: white;
+        border-radius: 20px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .section-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .section-icon {
+        font-size: 28px;
+    }
+
+    .section-title h3 {
+        font-size: 22px;
+        margin: 0;
+        color: #333;
+        font-weight: 600;
+    }
+
+    .section-description {
+        color: #666;
+        font-size: 13px;
+        margin: 0;
+    }
+
+    /* Table Styles */
+    .table-wrapper {
+        overflow-x: auto;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    th {
+        color: white;
+        padding: 15px 12px;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: sticky;
+        top: 0;
+        background: transparent;
+        text-align: left;
+    }
+
+    .col-header {
+        font-size: 13px;
+    }
+
+    td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        color: #555;
+    }
+
+    .data-row {
+        animation: fadeInRow 0.4s ease-out forwards;
+        opacity: 0;
+        transition: background-color 0.3s ease;
+    }
+
+    .data-row:hover {
+        background: linear-gradient(90deg, #f8f9ff 0%, #ffffff 100%);
+    }
+
+    /* Cell specific styling */
+    .cell-subfield {
+        font-weight: 600;
+        color: #667eea;
+    }
+
+    .cell-currency {
+        color: #10b981;
+        font-weight: 500;
+    }
+
+    .cell-percentage {
+        color: #e74c3c;
+        font-weight: 500;
+    }
+
+    .cell-category {
+        font-weight: 500;
+        color: #764ba2;
+    }
+
+    .cell-product {
+        font-weight: 600;
+        color: #667eea;
+    }
+
+    .cell-weight {
+        text-align: center;
+    }
+
+    .cell-prediction {
+        text-align: center;
+    }
+
+    .view-cell {
+        text-align: center;
+    }
+
+    /* Weight Input */
+    .weight-input {
+        width: 100px;
+        padding: 6px 10px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .weight-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    /* Prediction Input */
+    .prediction-input {
+        width: 120px;
+        padding: 6px 10px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .prediction-input:focus {
+        outline: none;
+        border-color: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    /* Total Indicator */
+    .total-row td {
+        background: #f8f9fa;
+        padding: 12px;
+    }
+
+    .total-indicator {
+        text-align: right;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 8px;
+        border-radius: 8px;
+    }
+
+    .total-indicator.valid {
+        color: #10b981;
+        background: #d1fae5;
+    }
+
+    .total-indicator.invalid {
+        color: #e74c3c;
+        background: #fee2e2;
+    }
+
+    /* Buttons */
+    .button-bar {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    .btn {
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-secondary {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+
+    .btn-secondary:hover {
+        background: #667eea;
+        color: white;
+        transform: translateX(-5px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-save {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .view-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 14px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .view-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-icon {
+        font-size: 14px;
+    }
+
+    /* Notification */
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: -300px;
+        padding: 15px 20px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 500;
+        z-index: 1000;
+        transition: right 0.3s ease;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    }
+
+    .notification.show {
+        right: 20px;
+    }
+
+    .notification.success {
+        background: #10b981;
+        color: white;
+    }
+
+    .notification.error {
+        background: #e74c3c;
+        color: white;
+    }
+
+    .notification-icon {
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    /* Animations */
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInRow {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes bounce {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .page-container {
+            padding: 15px;
+        }
+        
+        h2 {
+            font-size: 24px;
+        }
+        
+        .badge-icon {
+            width: 60px;
+            height: 60px;
+            font-size: 36px;
+        }
+        
+        .title-badge {
+            gap: 15px;
+        }
+        
+        .table-section {
+            padding: 15px;
+        }
+        
+        .section-title h3 {
+            font-size: 18px;
+        }
+        
+        th, td {
+            padding: 8px;
+            font-size: 12px;
+        }
+        
+        .weight-input,
+        .prediction-input {
+            width: 80px;
+            font-size: 12px;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+    }
+
+    /* Scrollbar Styling */
+    .table-wrapper::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+    }
+</style>
+
+{% endblock %}

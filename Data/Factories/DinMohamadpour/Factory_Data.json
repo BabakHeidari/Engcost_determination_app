@@ -1,0 +1,33 @@
+{
+    "_order": [
+        "Subfield",
+        "Cost",
+        "PercentageOfAll"
+    ],
+    "data": {
+        "Subfield": [
+            "AdministrativeandResearch",
+            "Payroll",
+            "Overhead",
+            "FinancialCosts",
+            "Depriciation",
+            "NonOperationalCostsandIncomes"
+        ],
+        "Cost": [
+            3000,
+            0,
+            420,
+            11500,
+            0,
+            0
+        ],
+        "PercentageOfAll": [
+            20.10723860589812,
+            0.0,
+            2.815013404825737,
+            77.07774798927613,
+            0.0,
+            0.0
+        ]
+    }
+}

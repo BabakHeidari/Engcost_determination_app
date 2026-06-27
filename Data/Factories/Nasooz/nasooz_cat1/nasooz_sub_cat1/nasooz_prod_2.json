@@ -1,0 +1,42 @@
+{
+    "_order": [
+        "materials",
+        "unit",
+        "usage",
+        "lost_percentage",
+        "recycability_percentage",
+        "cost_per_unit_in_currency",
+        "cost_currency",
+        "cost_of_material_in_its_currency",
+        "cost_of_material_in_rial"
+    ],
+    "data": {
+        "materials": [
+            "iron"
+        ],
+        "unit": [
+            "Kilogram (kg)"
+        ],
+        "usage": [
+            0.5
+        ],
+        "lost_percentage": [
+            ""
+        ],
+        "recycability_percentage": [
+            ""
+        ],
+        "cost_per_unit_in_currency": [
+            12000000
+        ],
+        "cost_currency": [
+            1
+        ],
+        "cost_of_material_in_its_currency": [
+            6000000
+        ],
+        "cost_of_material_in_rial": [
+            6000000
+        ]
+    }
+}

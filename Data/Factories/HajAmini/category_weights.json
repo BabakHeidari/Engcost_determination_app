@@ -1,0 +1,20 @@
+{
+    "_order": [
+        "category",
+        "selling_share_of_category"
+    ],
+    "data": {
+        "category": [
+            "20mAH",
+            "30mAH",
+            "cat2",
+            "HajAmini"
+        ],
+        "selling_share_of_category": [
+            26,
+            24,
+            25,
+            25
+        ]
+    }
+}

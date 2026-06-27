@@ -1,0 +1,67 @@
+{
+    "_order": [
+        "material",
+        "unit",
+        "currency",
+        "cost_per_unit_in_currency"
+    ],
+    "data": {
+        "material": [
+            "mat1",
+            "mat2",
+            "mat3",
+            "m4",
+            "m5",
+            "iron",
+            "sample_material",
+            "USD - US Dollar",
+            "EUR - Euro",
+            "Coil",
+            "Hg",
+            "coffee"
+        ],
+        "unit": [
+            "Kilogram (kg)",
+            "ltr",
+            "Gram (g)",
+            "Gram (g)",
+            "Kilogram (kg)",
+            "Kilogram (kg)",
+            "sample_unit",
+            "No Unit: Currency",
+            "No Unit: Currency",
+            "Kilogram (kg)",
+            "Gram (g)",
+            "Kilogram (kg)"
+        ],
+        "currency": [
+            "IRR - Iranian Rial",
+            "IRR - Iranian Rial",
+            "EUR - Euro",
+            "IRR - Iranian Rial",
+            "USD - US Dollar",
+            "IRR - Iranian Rial",
+            "USD - US Dollar",
+            "IRR - Iranian Rial",
+            "IRR - Iranian Rial",
+            "EUR - Euro",
+            "USD - US Dollar",
+            "USD - US Dollar"
+        ],
+        "cost_per_unit_in_currency": [
+            210,
+            55000000,
+            0.43,
+            430000,
+            100.32,
+            12000000,
+            1,
+            1790000,
+            2030000,
+            4300000,
+            0.5,
+            200
+        ]
+    },
+    "last_modification_date": "2026-06-08T14:19:20.586Z"
+}

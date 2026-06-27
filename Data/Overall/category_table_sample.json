@@ -1,0 +1,18 @@
+{
+    "_order": [
+        "category",
+        "selling_share_of_category"
+    ],
+    "data": {
+        "category": [
+            "Cat1",
+            "Cat2",
+            "Cat3"
+        ],
+        "selling_share_of_category":[
+            23,
+            33,
+            44
+        ]
+    }
+}

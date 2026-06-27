@@ -1,0 +1,545 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-container">
+    <button class="btn btn-secondary mb-3" onclick="history.back()">
+        ← Back
+    </button>
+
+    <div class="header-section">
+        <div class="title-badge">
+            <span class="badge-icon">🏭</span>
+            <h2>Factories Directory</h2>
+        </div>
+        <p class="subtitle">Manage and tune the factory-related parameters of cost determination</p>
+    </div>
+
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-icon">🏭</div>
+            <div class="stat-info">
+                <span class="stat-value" id="totalFactories">0</span>
+                <span class="stat-label">Total Factories</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+                <span class="stat-value" id="totalManagers">0</span>
+                <span class="stat-label">Managers</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📍</div>
+            <div class="stat-info">
+                <span class="stat-value" id="totalCities">0</span>
+                <span class="stat-label">Cities</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="dataTable">
+            <thead>
+                <tr id="tableHeader"><tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // ===== DATA FROM FLASK =====
+    const tableJSON = {{ table_json | safe }};
+
+    // headers follow _order exactly
+    let headers = [...tableJSON._order];
+
+    // Column icons mapping
+    const columnIcons = {
+        'factory name': '🏭',
+        'manager': '👨‍💼',
+        'city': '🌆',
+        'address': '📮',
+        'view': '👁️'
+    };
+
+    // convert column data -> row objects
+    function buildRows() {
+        const rows = [];
+        const data = tableJSON.data;
+        const rowCount = data[headers[0]].length;
+
+        for (let i = 0; i < rowCount; i++) {
+            const row = {};
+            headers.forEach(h => {
+                row[h] = data[h][i];
+            });
+            rows.push(row);
+        }
+
+        return rows;
+    }
+
+    let rows = buildRows();
+
+    // Update statistics
+    function updateStatistics() {
+        // Total factories
+        document.getElementById('totalFactories').textContent = rows.length;
+        
+        // Unique managers (assuming manager is the 2nd column - index 1)
+        const managerIndex = headers.findIndex(h => h.toLowerCase().includes('manager'));
+        if (managerIndex !== -1) {
+            const uniqueManagers = new Set(rows.map(row => row[headers[managerIndex]])).size;
+            document.getElementById('totalManagers').textContent = uniqueManagers;
+        }
+        
+        // Unique cities (assuming city is the 3rd column - index 2)
+        const cityIndex = headers.findIndex(h => h.toLowerCase().includes('city'));
+        if (cityIndex !== -1) {
+            const uniqueCities = new Set(rows.map(row => row[headers[cityIndex]])).size;
+            document.getElementById('totalCities').textContent = uniqueCities;
+        }
+    }
+
+    // ===== DOM =====
+    const tbody = document.querySelector("#dataTable tbody");
+    const thead = document.getElementById("tableHeader");
+
+    // Helper function to get icon for column
+    function getColumnIcon(columnName) {
+        const lowerName = columnName.toLowerCase();
+        return columnIcons[lowerName] || '📋';
+    }
+
+    // Helper function to get emoji for cell content
+    function getCellEmoji(columnName, value) {
+        const lowerName = columnName.toLowerCase();
+        if (lowerName === 'factory name') return '🏭';
+        if (lowerName === 'manager') return '👤';
+        if (lowerName === 'city') return '📍';
+        if (lowerName === 'address') return '🏠';
+        return '';
+    }
+
+    // ===== BUILD TABLE =====
+    function buildTable() {
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
+
+        // headers with icons
+        headers.forEach((h, i) => {
+            const th = document.createElement("th");
+            const icon = getColumnIcon(h);
+            th.innerHTML = `${icon} ${h.charAt(0).toUpperCase() + h.slice(1)}`;
+            th.className = 'col-header';
+            thead.appendChild(th);
+        });
+
+        // view column header
+        const viewHead = document.createElement("th");
+        viewHead.innerHTML = `👁️ View`;
+        viewHead.className = 'col-header view-col';
+        thead.appendChild(viewHead);
+
+        renderTable();
+        updateStatistics();
+    }
+
+    // ===== RENDER =====
+    function renderTable() {
+        tbody.innerHTML = "";
+
+        rows.forEach((row, index) => {
+            const tr = document.createElement("tr");
+            tr.className = 'data-row';
+            
+            // Add row number animation delay
+            tr.style.animationDelay = `${index * 0.05}s`;
+
+            headers.forEach(h => {
+                const td = document.createElement("td");
+                const value = row[h] ?? "";
+                const emoji = getCellEmoji(h, value);
+                
+                td.innerHTML = emoji ? `${emoji} ${value}` : value;
+                
+                // Add special styling for different columns
+                const lowerName = h.toLowerCase();
+                if (lowerName === 'factory name') {
+                    td.className = 'cell-factory';
+                } else if (lowerName === 'manager') {
+                    td.className = 'cell-manager';
+                } else if (lowerName === 'city') {
+                    td.className = 'cell-city';
+                } else if (lowerName === 'address') {
+                    td.className = 'cell-address';
+                }
+                
+                tr.appendChild(td);
+            });
+
+            // VIEW BUTTON with icon
+            const view = document.createElement("td");
+            
+            // Get factory name (first column) and manager name (second column)
+            const factoryName = row[headers[0]]; // First column - factory name
+            const managerName = row[headers[1]]; // Second column - manager
+            
+            view.innerHTML = `
+                <form method="POST" action="/factory_parameters/${encodeURIComponent(factoryName)}" style="margin:0;">
+                    <input type="hidden" name="factory name" value="${factoryName ?? ""}">
+                    <button type="submit" class="view-btn">
+                        <span class="btn-icon">🔍</span> View Details
+                    </button>
+                </form>
+            `;
+            view.className = 'view-cell';
+
+            tr.appendChild(view);
+            tbody.appendChild(tr);
+        });
+    }
+
+    // init
+    buildTable();
+</script>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    .page-container {
+        padding: 30px;
+        max-width: 1400px;
+        margin: 0 auto;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        border-radius: 30px;
+    }
+
+    /* Header Section */
+    .header-section {
+        margin-bottom: 30px;
+        animation: slideDown 0.5s ease-out;
+    }
+
+    .title-badge {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+
+    .badge-icon {
+        font-size: 48px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        width: 70px;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        animation: bounce 2s infinite;
+    }
+
+    h2 {
+        font-size: 36px;
+        margin: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+    }
+
+    .subtitle {
+        color: #666;
+        font-size: 16px;
+        margin-left: 85px;
+        margin-top: -5px;
+    }
+
+    /* Stats Cards */
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        cursor: pointer;
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    .stat-icon {
+        font-size: 40px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 28px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: #666;
+    }
+
+    /* Table Styles */
+    .table-wrapper {
+        overflow-x: auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        animation: fadeInUp 0.7s ease-out;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    thead tr {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    th {
+        color: white;
+        padding: 15px 12px;
+        font-weight: 600;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: sticky;
+        top: 0;
+        background: transparent;
+    }
+
+    /* Remove individual th backgrounds */
+    .col-header {
+        font-size: 14px;
+        background: transparent;
+    }
+
+    td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        color: #555;
+        transition: background-color 0.3s ease;
+    }
+
+    .data-row {
+        animation: fadeInRow 0.4s ease-out forwards;
+        opacity: 0;
+    }
+
+    @keyframes fadeInRow {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .data-row:hover {
+        background: linear-gradient(90deg, #f8f9ff 0%, #ffffff 100%);
+        transform: scale(1.01);
+        transition: all 0.3s ease;
+    }
+
+    /* Cell specific styling */
+    .cell-factory {
+        font-weight: 600;
+        color: #667eea;
+        font-size: 15px;
+    }
+
+    .cell-manager {
+        color: #764ba2;
+        font-weight: 500;
+    }
+
+    .cell-city {
+        color: #e74c3c;
+    }
+
+    .cell-address {
+        color: #2c3e50;
+        font-style: italic;
+    }
+
+    .view-cell {
+        text-align: center;
+    }
+
+    /* Back Button */
+    .btn-secondary {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .btn-secondary:hover {
+        background: #667eea;
+        color: white;
+        transform: translateX(-5px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    /* View Button */
+    .view-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 6px 15px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .view-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-icon {
+        font-size: 12px;
+    }
+
+    /* Animations */
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes bounce {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .page-container {
+            padding: 15px;
+        }
+        
+        h2 {
+            font-size: 24px;
+        }
+        
+        .badge-icon {
+            width: 50px;
+            height: 50px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            margin-left: 65px;
+            font-size: 12px;
+        }
+        
+        .stats-cards {
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        
+        th, td {
+            padding: 8px;
+            font-size: 12px;
+        }
+        
+        .view-btn {
+            padding: 4px 10px;
+            font-size: 10px;
+        }
+    }
+
+    /* Scrollbar Styling */
+    .table-wrapper::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+    }
+</style>
+
+{% endblock %}

@@ -1,0 +1,18 @@
+{
+    "_order": [
+        "category",
+        "selling_share_of_category"
+    ],
+    "data": {
+        "category": [
+            "IKCO",
+            "Bahman Khodro",
+            "Saipa"
+        ],
+        "selling_share_of_category": [
+            60,
+            30,
+            10
+        ]
+    }
+}

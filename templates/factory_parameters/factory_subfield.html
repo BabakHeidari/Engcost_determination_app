@@ -1,0 +1,1390 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-container">
+    <button class="btn btn-secondary mb-3" onclick="history.back()">
+        ← Back
+    </button>
+
+    <!-- Subfield Header -->
+    <div class="header-section">
+        <div class="title-badge">
+            <span class="badge-icon">📂</span>
+            <div>
+                <h2>{{Subfield}}</h2>
+                <p class="subtitle">Subfield parameter management and configuration</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="search-section">
+        <div class="search-container">
+            <span class="search-icon">🔍</span>
+            <input id="searchInput" type="text" placeholder="Search..." class="search-input">
+        </div>
+        <div id="filtersContainer" class="dropdown-filters"></div>
+    </div>
+
+    <!-- Data Table Section -->
+    <div class="table-section">
+        <div class="section-header">
+            <div class="section-title">
+                <span class="section-icon">📊</span>
+                <h3>Subfield Data</h3>
+            </div>
+            <p class="section-description">Manage parameters and values for this subfield</p>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="dataTable">
+                <thead>
+                    <tr id="tableHeader"></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="button-bar">
+            <button class="btn btn-add" id="addColumnBtn">
+                <span class="btn-icon">➕</span> Add Column
+            </button>
+            <button class="btn btn-add" id="addRowBtn">
+                <span class="btn-icon">📝</span> Add Row
+            </button>
+            <button class="btn btn-save" id="saveBtn">
+                <span class="btn-icon">💾</span> Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Row Modal -->
+<div class="modal-overlay" id="addRowModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3>Add New Row</h3>
+            <button class="btn-close-modal" onclick="closeAddRowModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="addRowForm">
+                <div id="modalFieldsContainer" class="modal-fields-container"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" onclick="closeAddRowModal()">Cancel</button>
+                    <button type="submit" class="btn-save">Add Row</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+
+// ===== DATA FROM FLASK =====
+const tableJSON = {{ table_json | safe }};
+
+// headers follow _order exactly
+let headers = [...tableJSON._order];
+
+// Column icons mapping
+const columnIcons = {
+    'subject': '📋',
+    'cost': '💰',
+    'delete': '🗑️',
+    'view': '👁️'
+};
+
+// Convert column data -> row objects
+function buildRows(){
+    const rows = [];
+    const data = tableJSON.data;
+    const rowCount = data[headers[0]].length;
+
+    for(let i=0;i<rowCount;i++){
+        const row = {};
+        headers.forEach(h=>{
+            row[h] = data[h][i];
+        });
+        rows.push(row);
+    }
+    return rows;
+}
+
+let rows = buildRows();
+const searchColumn = headers[1] || headers[0];
+
+// ===== FILTER STATE =====
+let filters = {};
+headers.slice(1).forEach(c => filters[c] = []);
+
+// ===== DOM =====
+const tbody = document.querySelector("#dataTable tbody");
+const thead = document.getElementById("tableHeader");
+const filterBox = document.getElementById("filtersContainer");
+
+function getColumnIcon(columnName) {
+    const lowerName = columnName.toLowerCase();
+    return columnIcons[lowerName] || '📋';
+}
+
+function getDisplayName(columnName) {
+    const lowerName = columnName.toLowerCase();
+    if (lowerName === 'subject') return 'Subject';
+    if (lowerName === 'cost') return 'Cost';
+    return columnName.charAt(0).toUpperCase() + columnName.slice(1);
+}
+
+function formatCurrency(value) {
+    const num = parseFloat(value);
+    if (isNaN(num)) return value;
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2
+    }).format(num);
+}
+
+// ===== BUILD TABLE =====
+function buildTable(){
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+
+    // headers
+    headers.forEach((h,i)=>{
+        const th = document.createElement("th");
+        const icon = getColumnIcon(h);
+        const displayName = getDisplayName(h);
+        
+        const headerContent = document.createElement("div");
+        headerContent.className = "header-content";
+        
+        const titleSpan = document.createElement("span");
+        titleSpan.className = "header-title";
+        
+        // disable header editing for subject and cost columns
+        if([0, 1].includes(i)){
+            titleSpan.contentEditable = false;
+            titleSpan.innerHTML = `${icon} ${displayName}`;
+        } else {
+            titleSpan.contentEditable = true;
+            titleSpan.innerHTML = `${icon} ${displayName}`;
+            titleSpan.className += " editable";
+        }
+        
+        titleSpan.onblur = () => {
+            const oldName = headers[i];
+            const newName = titleSpan.innerText.replace(/[^a-zA-Z\s]/g, '').trim();
+            
+            if(!newName || oldName === newName) return;
+            
+            headers[i] = newName;
+            
+            // rename key in rows
+            rows.forEach(r=>{
+                r[newName] = r[oldName];
+                delete r[oldName];
+            });
+            
+            // rename filter state
+            filters[newName] = filters[oldName] || [];
+            delete filters[oldName];
+            
+            buildTable();
+        };
+        
+        headerContent.appendChild(titleSpan);
+        
+        // disable delete button for subject and cost columns
+        if(![0,1].includes(i)){
+            const del = document.createElement("button");
+            del.innerText = "✕";
+            del.className = "delete-col-btn";
+            del.title = "Delete column";
+            del.onclick = (e) => {
+                e.stopPropagation();
+                removeColumn(i);
+            };
+            headerContent.appendChild(del);
+        }
+        
+        th.appendChild(headerContent);
+        thead.appendChild(th);
+    });
+    
+    // Actions header (combined)
+    const actionsTh = document.createElement("th");
+    actionsTh.innerHTML = `<span class="header-title">✨ Actions</span>`;
+    actionsTh.className = "actions-header";
+    thead.appendChild(actionsTh);
+    
+    buildFilters();
+    renderTable();
+}
+
+// ===== FILTER UI =====
+function buildFilters(){
+    filterBox.innerHTML = "";
+    
+    headers.slice(1).forEach(col => {
+        const dropdown = document.createElement("div");
+        dropdown.className = "dropdown";
+        
+        dropdown.innerHTML = `
+            <button class="dropbtn">${getColumnIcon(col)} ${getDisplayName(col)} ▾</button>
+            <div class="dropdown-content" id="drop_${col.replace(/\s/g, '_')}"></div>
+        `;
+        
+        filterBox.appendChild(dropdown);
+        
+        const container = document.getElementById(`drop_${col.replace(/\s/g, '_')}`);
+        const unique = [...new Set(rows.map(r => r[col]))];
+        
+        const all = document.createElement("div");
+        all.className = "filter-option";
+        all.innerHTML = `
+            <label>
+                <input type="checkbox"
+                    data-col="${col}"
+                    data-val="__all__"
+                    class="filter-checkbox"
+                    checked>
+                <span>📋 All</span>
+            </label>
+        `;
+        container.appendChild(all);
+        
+        unique.forEach(v => {
+            const d = document.createElement("div");
+            d.className = "filter-option";
+            d.innerHTML = `
+                <label>
+                    <input type="checkbox"
+                        data-col="${col}"
+                        data-val="${v}"
+                        class="filter-checkbox">
+                    <span>${v}</span>
+                </label>
+            `;
+            container.appendChild(d);
+        });
+    });
+}
+
+// ===== FILTER LOGIC =====
+document.addEventListener("change", e => {
+    if(!e.target.classList.contains("filter-checkbox")) return;
+    
+    const col = e.target.dataset.col;
+    const val = e.target.dataset.val;
+    
+    if(val === "__all__"){
+        filters[col] = [];
+        document.querySelectorAll(`input[data-col="${col}"]`)
+            .forEach(cb => cb.checked = (cb.dataset.val === "__all__"));
+    } else {
+        document.querySelector(`input[data-col="${col}"][data-val="__all__"]`).checked = false;
+        
+        if(filters[col].includes(val))
+            filters[col] = filters[col].filter(v => v !== val);
+        else
+            filters[col].push(val);
+        
+        if(filters[col].length === 0)
+            document.querySelector(`input[data-col="${col}"][data-val="__all__"]`).checked = true;
+    }
+    
+    renderTable();
+});
+
+// ===== FILTERING =====
+function getFiltered(){
+    const text = document.getElementById("searchInput").value.toLowerCase();
+    
+    return rows.filter(r => {
+        if(text && !String(r[searchColumn]).toLowerCase().includes(text))
+            return false;
+        
+        for(let c of headers.slice(1)){
+            const active = filters[c];
+            if(active.length === 0) continue;
+            if(!active.includes(r[c])) return false;
+        }
+        return true;
+    });
+}
+
+// ===== RENDER =====
+function renderTable(){
+    tbody.innerHTML = "";
+    const data = getFiltered();
+    
+    if(data.length === 0){
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = headers.length + 1;
+        td.className = "empty-state";
+        td.innerHTML = `
+            <div class="empty-message">
+                <span class="empty-icon">📭</span>
+                <p>No data found</p>
+                <small>Try adjusting your search or filters</small>
+            </div>
+        `;
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+    }
+    
+    data.forEach((row, filteredIdx) => {
+        const tr = document.createElement("tr");
+        tr.className = 'data-row';
+        tr.style.animationDelay = `${filteredIdx * 0.03}s`;
+        
+        // Data cells
+        headers.forEach(h => {
+            const td = document.createElement("td");
+            let value = row[h] ?? "";
+            
+            // Format cost column
+            if(h.toLowerCase() === 'cost' && !isNaN(parseFloat(value))) {
+                value = formatCurrency(value);
+                td.className = 'cell-currency';
+            } else if(h.toLowerCase() === 'subject') {
+                td.className = 'cell-subject';
+            }
+            
+            td.contentEditable = true;
+            td.innerText = value;
+            
+            td.oninput = () => {
+                let newValue = td.innerText;
+                if(h.toLowerCase() === 'cost') {
+                    newValue = newValue.replace(/[^0-9.-]/g, '');
+                }
+                row[h] = newValue;
+                if(h.toLowerCase() === 'cost') {
+                    td.innerText = formatCurrency(newValue);
+                }
+            };
+            
+            tr.appendChild(td);
+        });
+        
+        // Combined Actions Cell (Delete + View)
+        const actionTd = document.createElement("td");
+        actionTd.className = "action-cell combined-actions";
+        
+        // Delete button
+        const delBtn = document.createElement("button");
+        delBtn.innerHTML = '<span class="btn-icon">🗑️</span> Delete';
+        delBtn.className = "delete-row-btn";
+        delBtn.onclick = () => removeRowByObject(row);
+        
+        // View button
+        const viewBtn = document.createElement("button");
+        viewBtn.innerHTML = '<span class="btn-icon">🔍</span> View';
+        viewBtn.className = "view-btn";
+        const firstKey = headers[0];
+        const firstValue = row[firstKey];
+        viewBtn.onclick = () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/factory_parameters/${encodeURIComponent(firstValue)}`;
+            form.style.display = 'none';
+            
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'id';
+            idInput.value = row[headers[0]];
+            
+            const nameInput = document.createElement('input');
+            nameInput.type = 'hidden';
+            nameInput.name = headers[0];
+            nameInput.value = row[headers[0]] ?? "";
+            
+            form.appendChild(idInput);
+            form.appendChild(nameInput);
+            document.body.appendChild(form);
+            form.submit();
+        };
+        
+        actionTd.appendChild(delBtn);
+        actionTd.appendChild(viewBtn);
+        tr.appendChild(actionTd);
+        
+        tbody.appendChild(tr);
+    });
+}
+
+// ===== ROW / COLUMN MANAGEMENT =====
+function addColumn(){
+    const name = prompt("Enter column name:");
+    if(!name || name.trim() === "") return;
+    
+    headers.push(name.trim());
+    rows.forEach(r => r[name.trim()] = "");
+    filters[name.trim()] = [];
+    buildTable();
+}
+
+function removeColumn(i){
+    const name = headers[i];
+    const confirmed = confirm(`Delete column "${getDisplayName(name)}"?`);
+    if(!confirmed) return;
+    
+    headers.splice(i,1);
+    rows.forEach(r => delete r[name]);
+    delete filters[name];
+    buildTable();
+}
+
+// Remove row by object reference
+function removeRowByObject(rowObj){
+    const confirmed = confirm(`Delete row?`);
+    if(!confirmed) return;
+    const index = rows.findIndex(r => r === rowObj);
+    if(index !== -1){
+        rows.splice(index, 1);
+        renderTable();
+    }
+}
+
+// ===== MODAL FOR ADD ROW =====
+function openAddRowModal(){
+    const modal = document.getElementById("addRowModal");
+    const container = document.getElementById("modalFieldsContainer");
+    if(!container) return;
+    
+    // Clear and rebuild form fields based on current headers
+    container.innerHTML = "";
+    
+    headers.forEach(header => {
+        const fieldDiv = document.createElement("div");
+        fieldDiv.className = "form-group";
+        
+        const label = document.createElement("label");
+        label.setAttribute("for", `field_${header.replace(/\s/g, '_')}`);
+        label.textContent = `${getColumnIcon(header)} ${getDisplayName(header)}`;
+        
+        const input = document.createElement("input");
+        input.type = "text";
+        input.id = `field_${header.replace(/\s/g, '_')}`;
+        input.placeholder = `Enter ${getDisplayName(header)}`;
+        input.dataset.header = header;
+        
+        // For cost column, add hint
+        if(header.toLowerCase() === 'cost'){
+            input.placeholder = "Enter numeric value (e.g., 19.99)";
+        }
+        
+        fieldDiv.appendChild(label);
+        fieldDiv.appendChild(input);
+        container.appendChild(fieldDiv);
+    });
+    
+    modal.classList.add("active");
+    // Focus on first field
+    setTimeout(() => {
+        const firstInput = container.querySelector("input");
+        if(firstInput) firstInput.focus();
+    }, 100);
+}
+
+function closeAddRowModal(){
+    const modal = document.getElementById("addRowModal");
+    modal.classList.remove("active");
+    document.getElementById("addRowForm").reset();
+}
+
+// Handle Add Row Form Submission
+document.getElementById("addRowForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    
+    const newRow = {};
+    let allFilled = true;
+    
+    headers.forEach(header => {
+        const fieldId = `field_${header.replace(/\s/g, '_')}`;
+        const input = document.getElementById(fieldId);
+        let value = input ? input.value.trim() : "";
+        
+        // Basic validation: subject and cost could be required optionally
+        if(header.toLowerCase() === 'subject' && value === ""){
+            showNotification("Subject field is required.", "error");
+            allFilled = false;
+            return;
+        }
+        
+        // For cost column, attempt to parse numeric
+        if(header.toLowerCase() === 'cost' && value !== ""){
+            const numVal = parseFloat(value.replace(/[^0-9.-]/g, ''));
+            if(!isNaN(numVal)){
+                value = numVal;
+            }
+        }
+        
+        newRow[header] = value;
+    });
+    
+    if(!allFilled) return;
+    
+    rows.push(newRow);
+    closeAddRowModal();
+    renderTable();
+    showNotification("New row added successfully!", "success");
+});
+
+// Close modal when clicking outside
+document.getElementById("addRowModal").addEventListener("click", function(e){
+    if(e.target === this){
+        closeAddRowModal();
+    }
+});
+
+// ===== SAVE FUNCTION =====
+function buildColumnData(){
+    const data = {};
+    headers.forEach(h => {
+        data[h] = rows.map(r => {
+            const v = r[h];
+            if(!isNaN(v) && v !== "") return Number(v);
+            return v;
+        });
+    });
+    
+    const now = new Date();
+    const modificationDate = now.toISOString();
+    
+    return {
+        _order: headers,
+        data: data,
+        last_modification_date: modificationDate
+    };
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span class="notification-icon">${type === 'success' ? '✓' : '⚠'}</span>
+        <span>${message}</span>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.classList.add('show');
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }, 100);
+}
+
+function saveTable() {
+    const confirmed = confirm("Save all changes to the table?");
+    if (!confirmed) return;
+    
+    const payload = buildColumnData();
+    payload.saving_file = "subfield";
+    
+    fetch("/save_factory_subfields", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(async response => {
+        const text = await response.text();
+        if (!response.ok) throw new Error("Server error: " + response.status);
+        try { return JSON.parse(text); } catch { return text; }
+    })
+    .then(data => {
+        showNotification("Table saved successfully!", "success");
+    })
+    .catch(err => {
+        console.error("SAVE ERROR:", err);
+        showNotification("Save failed. Check console.", "error");
+    });
+}
+
+// ===== HOOKS =====
+document.getElementById("searchInput").oninput = renderTable;
+document.getElementById("addColumnBtn").onclick = addColumn;
+document.getElementById("addRowBtn").onclick = openAddRowModal;
+document.getElementById("saveBtn").onclick = saveTable;
+
+// Set search placeholder
+document.getElementById("searchInput").placeholder = `Search ${getDisplayName(searchColumn)}...`;
+
+// init
+buildTable();
+
+</script>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    .page-container {
+        padding: 30px;
+        max-width: 1400px;
+        margin: 0 auto;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        border-radius: 30px;
+    }
+
+    /* Header Section */
+    .header-section {
+        margin-bottom: 40px;
+        animation: slideDown 0.5s ease-out;
+    }
+
+    .title-badge {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .badge-icon {
+        font-size: 54px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 25px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        animation: bounce 2s infinite;
+    }
+
+    h2 {
+        font-size: 36px;
+        margin: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+    }
+
+    .subtitle {
+        color: #666;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+
+    /* Search Section */
+    .search-section {
+        margin-bottom: 25px;
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .search-container {
+        flex: 1;
+        position: relative;
+        min-width: 250px;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 18px;
+        color: #999;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 15px 12px 45px;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    /* Dropdown Filters */
+    .dropdown-filters {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .dropdown {
+        position: relative;
+    }
+
+    .dropbtn {
+        padding: 10px 16px;
+        border: 2px solid #e0e0e0;
+        background: white;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        color: #555;
+    }
+
+    .dropbtn:hover {
+        border-color: #667eea;
+        background: #f8f9ff;
+        transform: translateY(-2px);
+    }
+
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        background: white;
+        border-radius: 12px;
+        padding: 12px;
+        min-width: 180px;
+        max-height: 300px;
+        overflow: auto;
+        z-index: 10;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        border: 1px solid #e0e0e0;
+        top: 100%;
+        left: 0;
+        margin-top: 5px;
+    }
+
+    .dropdown:hover .dropdown-content {
+        display: block;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    .filter-option {
+        padding: 6px 10px;
+        border-radius: 6px;
+        transition: background 0.2s ease;
+    }
+
+    .filter-option:hover {
+        background: #f8f9ff;
+    }
+
+    .filter-option label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #555;
+    }
+
+    /* Table Section */
+    .table-section {
+        background: white;
+        border-radius: 20px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .section-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .section-icon {
+        font-size: 28px;
+    }
+
+    .section-title h3 {
+        font-size: 22px;
+        margin: 0;
+        color: #333;
+        font-weight: 600;
+    }
+
+    .section-description {
+        color: #666;
+        font-size: 13px;
+        margin: 0;
+    }
+
+    /* Table Styles */
+    .table-wrapper {
+        overflow-x: auto;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    th {
+        color: white;
+        padding: 15px 12px;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: sticky;
+        top: 0;
+        background: transparent;
+        text-align: left;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .header-title {
+        flex: 1;
+        cursor: default;
+    }
+
+    .header-title.editable {
+        cursor: text;
+        padding: 2px 4px;
+        border-radius: 4px;
+        transition: background 0.2s ease;
+    }
+
+    .header-title.editable:hover {
+        background: rgba(255,255,255,0.1);
+    }
+
+    td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        color: #555;
+    }
+
+    .data-row {
+        animation: fadeInRow 0.4s ease-out forwards;
+        opacity: 0;
+        transition: background-color 0.3s ease;
+    }
+
+    .data-row:hover {
+        background: linear-gradient(90deg, #f8f9ff 0%, #ffffff 100%);
+    }
+
+    /* Cell specific styling */
+    .cell-subject {
+        font-weight: 600;
+        color: #667eea;
+    }
+
+    .cell-currency {
+        color: #10b981;
+        font-weight: 500;
+    }
+
+    .action-cell {
+        text-align: center;
+        white-space: nowrap;
+    }
+    
+    .combined-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .empty-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        opacity: 0.5;
+    }
+
+    .empty-message p {
+        margin: 0;
+        font-size: 16px;
+        color: #999;
+    }
+
+    .empty-message small {
+        color: #bbb;
+    }
+
+    /* Buttons */
+    .button-bar {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    .btn {
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-secondary {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+        margin-bottom: 20px;
+    }
+
+    .btn-secondary:hover {
+        background: #667eea;
+        color: white;
+        transform: translateX(-5px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-add {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-add:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-save {
+        background: #10b981;
+        color: white;
+    }
+
+    .btn-save:hover {
+        background: #059669;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .delete-col-btn {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 2px 6px;
+        cursor: pointer;
+        font-size: 11px;
+        transition: all 0.2s ease;
+    }
+
+    .delete-col-btn:hover {
+        background: #ef4444;
+        transform: scale(1.1);
+    }
+
+    .delete-row-btn {
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .delete-row-btn:hover {
+        background: #dc2626;
+        transform: scale(1.05);
+    }
+
+    .view-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 14px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .view-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-icon {
+        font-size: 14px;
+    }
+
+    /* Notification */
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: -300px;
+        padding: 15px 20px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 500;
+        z-index: 1000;
+        transition: right 0.3s ease;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    }
+
+    .notification.show {
+        right: 20px;
+    }
+
+    .notification.success {
+        background: #10b981;
+        color: white;
+    }
+
+    .notification.error {
+        background: #e74c3c;
+        color: white;
+    }
+
+    .notification-icon {
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+        pointer-events: none;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        pointer-events: auto;
+    }
+
+    .modal-dialog {
+        background: white;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 550px;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease;
+        pointer-events: auto;
+        position: relative;
+        z-index: 10000;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header {
+        padding: 20px 30px;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px 15px 0 0;
+    }
+
+    .modal-header h3 {
+        color: white;
+        font-size: 20px;
+        margin: 0;
+    }
+
+    .btn-close-modal {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: white;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+
+    .btn-close-modal:hover {
+        background: rgba(255,255,255,0.3);
+        transform: rotate(90deg);
+    }
+
+    .modal-body {
+        padding: 30px;
+    }
+
+    .modal-fields-container {
+        max-height: 50vh;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 25px;
+    }
+
+    .btn-cancel {
+        padding: 10px 20px;
+        background: #f0f0f0;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-cancel:hover {
+        background: #e0e0e0;
+    }
+
+    .btn-save {
+        padding: 10px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Animations */
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInRow {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes bounce {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .page-container {
+            padding: 15px;
+        }
+        
+        h2 {
+            font-size: 24px;
+        }
+        
+        .badge-icon {
+            width: 60px;
+            height: 60px;
+            font-size: 36px;
+        }
+        
+        .title-badge {
+            gap: 15px;
+        }
+        
+        .table-section {
+            padding: 15px;
+        }
+        
+        .section-title h3 {
+            font-size: 18px;
+        }
+        
+        th, td {
+            padding: 8px;
+            font-size: 12px;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .search-section {
+            flex-direction: column;
+        }
+        
+        .dropdown-filters {
+            width: 100%;
+        }
+        
+        .combined-actions {
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .modal-dialog {
+            width: 95%;
+            margin: 10px;
+        }
+    }
+
+    /* Scrollbar Styling */
+    .table-wrapper::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+    }
+    
+    .modal-fields-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .modal-fields-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .modal-fields-container::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 10px;
+    }
+</style>
+
+{% endblock %}

@@ -1,0 +1,60 @@
+{
+    "_order": [
+        "materials",
+        "unit",
+        "usage",
+        "lost_percentage",
+        "recycability_percentage",
+        "cost_per_unit_in_currency",
+        "cost_currency",
+        "cost_of_material_in_its_currency",
+        "cost_of_material_in_rial"
+    ],
+    "data": {
+        "materials": [
+            "mat3",
+            "acid230",
+            "paper"
+        ],
+        "unit": [
+            "Gram (g)",
+            "Liter (L)",
+            "Kilogram (kg)"
+        ],
+        "usage": [
+            12,
+            15,
+            20
+        ],
+        "lost_percentage": [
+            "",
+            "",
+            ""
+        ],
+        "recycability_percentage": [
+            "",
+            "",
+            ""
+        ],
+        "cost_per_unit_in_currency": [
+            0.43,
+            760000,
+            455000
+        ],
+        "cost_currency": [
+            2030000,
+            1,
+            1
+        ],
+        "cost_of_material_in_its_currency": [
+            5.16,
+            11400000,
+            9100000
+        ],
+        "cost_of_material_in_rial": [
+            10474800,
+            11400000,
+            9100000
+        ]
+    }
+}

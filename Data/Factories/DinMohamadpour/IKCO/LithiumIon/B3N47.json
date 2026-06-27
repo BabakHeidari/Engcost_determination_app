@@ -1,0 +1,87 @@
+{
+    "_order": [
+        "materials",
+        "unit",
+        "usage",
+        "lost_percentage",
+        "recycability_percentage",
+        "cost_per_unit_in_currency",
+        "cost_currency",
+        "cost_of_material_in_its_currency",
+        "cost_of_material_in_rial"
+    ],
+    "data": {
+        "materials": [
+            "mat1",
+            "mat2",
+            "m4",
+            "m4",
+            "m5",
+            "coffee"
+        ],
+        "unit": [
+            "Kilogram (kg)",
+            "ltr",
+            "Gram (g)",
+            "Gram (g)",
+            "Kilogram (kg)",
+            "Kilogram (kg)"
+        ],
+        "usage": [
+            "",
+            "",
+            "",
+            12,
+            3,
+            1000
+        ],
+        "lost_percentage": [
+            "",
+            "",
+            "",
+            "",
+            0.5,
+            0.5
+        ],
+        "recycability_percentage": [
+            "",
+            "",
+            "",
+            "",
+            0.2,
+            ""
+        ],
+        "cost_per_unit_in_currency": [
+            210,
+            55000000,
+            430000,
+            430000,
+            100.32,
+            200
+        ],
+        "cost_currency": [
+            1,
+            1,
+            1,
+            1,
+            1790000,
+            1790000
+        ],
+        "cost_of_material_in_its_currency": [
+            0,
+            0,
+            0,
+            5160000,
+            270.864,
+            200000
+        ],
+        "cost_of_material_in_rial": [
+            0,
+            0,
+            0,
+            5160000,
+            484846560,
+            358000000000
+        ]
+    }
+}

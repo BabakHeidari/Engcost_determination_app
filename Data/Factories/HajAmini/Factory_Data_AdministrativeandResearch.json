@@ -1,0 +1,24 @@
+{
+    "_order": [
+        "subject",
+        "cost"
+    ],
+    "data": {
+        "subject": [
+            "fava",
+            "marketing",
+            "kasri_projects",
+            "new research",
+            "new research 2",
+            "electrical proj"
+        ],
+        "cost": [
+            12,
+            43,
+            5,
+            118,
+            122,
+            40
+        ]
+    }
+}

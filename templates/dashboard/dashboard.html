@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block content %}
+<button class="btn btn-secondary mb-3" onclick="history.back()">← Back</button>
+<div class="dashboard-page">
+
+    <h3 class="mb-4">Battery Manufacturing Cost Dashboard</h3>
+
+    <!-- Analysis Tabs -->
+    <ul class="nav nav-tabs mb-4" id="analysisTab" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link" id="cost-tab" data-toggle="tab" href="#cost" role="tab">
+                💰 Cost Analysis
+            </a>
+        </li>
+        <!-- <li class="nav-item">
+            <a class="nav-link" id="sensitivity-tab" data-toggle="tab" href="#sensitivity" role="tab">
+                📈 Sensitivity Analysis
+            </a>
+        </li> -->
+    </ul>
+
+    <div class="tab-content">
+        <!-- Cost Analysis Tab -->
+        <div class="tab-pane fade show active" id="cost" role="tabpanel">
+            
+            <!-- Filter Card -->
+            <div class="filter-card">
+                <h5>Filter Data</h5>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="factorySelect">Factory</label>
+                        <select id="factorySelect" class="form-control">
+                            <option value="">All Factories</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="categorySelect">Category</label>
+                        <select id="categorySelect" class="form-control" multiple size="3">
+                            <!-- populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="subcategorySelect">Subcategory</label>
+                        <select id="subcategorySelect" class="form-control" multiple size="3">
+                            <!-- populated based on factory & category -->
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="productSelect">Product</label>
+                        <select id="productSelect" class="form-control" multiple size="3">
+                            <!-- populated based on subcategory -->
+                        </select>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <button id="analyzeBtn" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Analyze Cost
+                    </button>
+                    <button id="downloadCsvBtn" class="btn btn-success" disabled>
+                        <i class="fas fa-download"></i> Download CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Area (hidden until data loads) -->
+            <div id="costDashboard" style="display: none;">
+                <div class="kpi-grid mt-4">
+                    <div class="dash-card">
+                        <h6>Total Cost</h6>
+                        <p id="totalCost">--</p>
+                    </div>
+                    <div class="dash-card">
+                        <h6>Avg. Cost / Product</h6>
+                        <p id="avgCost">--</p>
+                    </div>
+                    <div class="dash-card">
+                        <h6>No. of Products</h6>
+                        <p id="productCount">--</p>
+                    </div>
+                    <div class="dash-card">
+                        <h6>Top Cost Driver</h6>
+                        <p id="topDriver">--</p>
+                    </div>
+                </div>
+
+                <div class="charts mt-4">
+                    <div class="chart-box">
+                        <div id="categoryBarChart" class="chart"></div>
+                    </div>
+                    <div class="chart-box">
+                        <div id="subcategoryPieChart" class="chart"></div>
+                    </div>
+                </div>
+
+                <div class="table-responsive mt-4">
+                    <h5>Detailed Cost Breakdown</h5>
+                    <table class="table table-striped table-hover" id="detailTable">
+                        <thead>
+                            <tr>
+                                <th>Factory</th>
+                                <th>Category</th>
+                                <th>Subcategory</th>
+                                <th>Product</th>
+                                <th>Cost ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Placeholder when no data -->
+            <div id="noDataPlaceholder" class="text-center py-5 text-muted">
+                <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                <h5>Select filters and click "Analyze Cost" to view breakdown</h5>
+            </div>
+        </div>
+
+        <!-- Sensitivity Analysis Tab (placeholder for next phase) -->
+        <div class="tab-pane fade" id="sensitivity" role="tabpanel">
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-sliders-h fa-3x mb-3"></i>
+                <h4>Sensitivity Analysis</h4>
+                <p>This section will be implemented next. You'll be able to run what-if scenarios on cost drivers.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Styles -->
+<style>
+.dashboard-page {
+    background: #f4f6f8;
+    padding: 24px;
+    border-radius: 12px;
+}
+
+.filter-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.dash-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.dash-card h6 {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.dash-card p {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.charts {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+}
+
+.chart-box {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    height: 400px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.chart {
+    width: 100%;
+    height: 100%;
+}
+
+.table {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .kpi-grid,
+    .charts {
+        grid-template-columns: 1fr;
+    }
+    .filter-card .row > div {
+        margin-bottom: 10px;
+    }
+}
+</style>
+
+<!-- External libraries -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+<script>
+// ---- Initial Filter Data from Backend ----
+const filterOptions = {{ filter_options|tojson }};  // { factories: [], categories: [] }
+let currentData = null;
+
+// ---- DOM Elements ----
+const factorySelect = document.getElementById('factorySelect');
+const categorySelect = document.getElementById('categorySelect');
+const subcategorySelect = document.getElementById('subcategorySelect');
+const productSelect = document.getElementById('productSelect');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+const costDashboard = document.getElementById('costDashboard');
+const noDataPlaceholder = document.getElementById('noDataPlaceholder');
+
+// ---- Populate Factory & Category Dropdowns on Load ----
+function populateInitialFilters() {
+    // Factories
+    filterOptions.factories.forEach(f => {
+        factorySelect.innerHTML += `<option value="${f}">${f}</option>`;
+    });
+    // Categories (multi-select, all options)
+    filterOptions.categories.forEach(c => {
+        categorySelect.innerHTML += `<option value="${c}">${c}</option>`;
+    });
+    // Clear subcategory and product (they will be fetched on change)
+    subcategorySelect.innerHTML = '';
+    productSelect.innerHTML = '';
+}
+
+// ---- Fetch Subcategories Based on Factory & Category ----
+async function loadSubcategories() {
+    const factory = factorySelect.value;
+    const categories = Array.from(categorySelect.selectedOptions).map(o => o.value);
+    const params = new URLSearchParams();
+    if (factory) params.append('factory', factory);
+    categories.forEach(c => params.append('category', c));
+
+    const response = await fetch(`/api/filter_options?${params.toString()}`);
+    const data = await response.json();
+    subcategorySelect.innerHTML = data.subcategories.map(s => `<option value="${s}">${s}</option>`).join('');
+    productSelect.innerHTML = ''; // reset products
+}
+
+// ---- Fetch Products Based on Subcategory ----
+async function loadProducts() {
+    const factory = factorySelect.value;
+    const categories = Array.from(categorySelect.selectedOptions).map(o => o.value);
+    const subcategories = Array.from(subcategorySelect.selectedOptions).map(o => o.value);
+    const params = new URLSearchParams();
+    if (factory) params.append('factory', factory);
+    categories.forEach(c => params.append('category', c));
+    subcategories.forEach(s => params.append('subcategory', s));
+
+    const response = await fetch(`/api/filter_options?${params.toString()}`);
+    const data = await response.json();
+    productSelect.innerHTML = data.products.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+// ---- Event Listeners for Cascading Filters ----
+factorySelect.addEventListener('change', () => {
+    loadSubcategories();
+    loadProducts();
+});
+categorySelect.addEventListener('change', () => {
+    loadSubcategories();
+    loadProducts();
+});
+subcategorySelect.addEventListener('change', loadProducts);
+
+// ---- Analyze Button: Fetch Cost Data and Render Dashboard ----
+analyzeBtn.addEventListener('click', async () => {
+    const factory = factorySelect.value;
+    const categories = Array.from(categorySelect.selectedOptions).map(o => o.value);
+    const subcategories = Array.from(subcategorySelect.selectedOptions).map(o => o.value);
+    const products = Array.from(productSelect.selectedOptions).map(o => o.value);
+
+    const params = new URLSearchParams();
+    if (factory) params.append('factory', factory);
+    categories.forEach(c => params.append('category', c));
+    subcategories.forEach(s => params.append('subcategory', s));
+    products.forEach(p => params.append('product', p));
+
+    try {
+        const response = await fetch(`/api/cost_analysis?${params.toString()}`);
+        if (!response.ok) throw new Error('Failed to fetch data');
+        const data = await response.json();
+        currentData = data;
+        renderDashboard(data);
+        downloadCsvBtn.disabled = false;
+    } catch (error) {
+        alert('Error loading cost data: ' + error.message);
+        console.error(error);
+    }
+});
+
+// ---- Render KPIs, Charts, and Table ----
+function renderDashboard(data) {
+    // Show dashboard, hide placeholder
+    costDashboard.style.display = 'block';
+    noDataPlaceholder.style.display = 'none';
+
+    // KPIs
+    document.getElementById('totalCost').textContent = '$ ' + formatNumber(data.kpis.total_cost);
+    document.getElementById('avgCost').textContent = '$ ' + formatNumber(data.kpis.avg_cost_per_product);
+    document.getElementById('productCount').textContent = data.kpis.product_count;
+    document.getElementById('topDriver').textContent = data.kpis.top_cost_driver || 'N/A';
+
+    // Breakdown Charts
+    renderCategoryBarChart(data.breakdown_by_category);
+    renderSubcategoryPieChart(data.breakdown_by_subcategory);
+
+    // Detail Table
+    renderDetailTable(data.detail_breakdown);
+}
+
+// ---- Category Bar Chart ----
+let categoryChartInstance = null;
+function renderCategoryBarChart(breakdown) {
+    const container = document.getElementById('categoryBarChart');
+    if (categoryChartInstance) categoryChartInstance.dispose();
+    categoryChartInstance = echarts.init(container);
+
+    const categories = breakdown.map(item => item.name);
+    const costs = breakdown.map(item => item.cost);
+
+    categoryChartInstance.setOption({
+        title: { text: 'Cost by Category', left: 'center' },
+        tooltip: { trigger: 'axis' },
+        xAxis: { type: 'category', data: categories, axisLabel: { rotate: 30 } },
+        yAxis: { type: 'value', name: 'Cost ($)' },
+        series: [{
+            name: 'Cost',
+            type: 'bar',
+            data: costs,
+            itemStyle: { color: '#5470c6' }
+        }]
+    });
+}
+
+// ---- Subcategory Pie Chart ----
+let subcategoryChartInstance = null;
+function renderSubcategoryPieChart(breakdown) {
+    const container = document.getElementById('subcategoryPieChart');
+    if (subcategoryChartInstance) subcategoryChartInstance.dispose();
+    subcategoryChartInstance = echarts.init(container);
+
+    const pieData = breakdown.map(item => ({
+        name: item.name,
+        value: item.cost
+    }));
+
+    subcategoryChartInstance.setOption({
+        title: { text: 'Cost by Subcategory', left: 'center' },
+        tooltip: { trigger: 'item', formatter: '{b}: ${c}' },
+        series: [{
+            type: 'pie',
+            radius: ['40%', '70%'],
+            data: pieData,
+            label: { show: true, formatter: '{b}: {d}%' }
+        }]
+    });
+}
+
+// ---- Detail Table ----
+function renderDetailTable(details) {
+    const tbody = document.querySelector('#detailTable tbody');
+    tbody.innerHTML = '';
+    details.forEach(row => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${row.factory || 'N/A'}</td>
+                <td>${row.category || 'N/A'}</td>
+                <td>${row.subcategory || 'N/A'}</td>
+                <td>${row.product || 'N/A'}</td>
+                <td>$${formatNumber(row.cost)}</td>
+            </tr>
+        `;
+    });
+}
+
+// ---- CSV Download ----
+downloadCsvBtn.addEventListener('click', () => {
+    if (!currentData || !currentData.detail_breakdown) return;
+
+    const rows = currentData.detail_breakdown;
+    const csvHeader = 'Factory,Category,Subcategory,Product,Cost\n';
+    const csvRows = rows.map(r =>
+        `"${r.factory || ''}","${r.category || ''}","${r.subcategory || ''}","${r.product || ''}",${r.cost}`
+    ).join('\n');
+    const csvContent = csvHeader + csvRows;
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cost_breakdown.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+});
+
+// ---- Utility ----
+function formatNumber(num) {
+    return Number(num).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// ---- Handle Window Resize for Charts ----
+window.addEventListener('resize', () => {
+    if (categoryChartInstance) categoryChartInstance.resize();
+    if (subcategoryChartInstance) subcategoryChartInstance.resize();
+});
+
+// ---- Initialize Page ----
+populateInitialFilters();
+</script>
+{% endblock %}

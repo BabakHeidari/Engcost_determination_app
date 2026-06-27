@@ -1,0 +1,63 @@
+{
+  "root_directory": "B:\\Courses\\Maktabkhooneh\\Python-Bigdeli\\Web_App\\Engcost_determination_app\\Data\\Factories",
+  "directory_hierarchy": {
+    "Arefi": [],
+    "DinMohamadpour": {
+      "IKCO": {
+        "LithiumIon": []
+      }
+    },
+    "HajAmini": {
+      "20mAH": {
+        "BigVehielcle": [],
+        "SmallVehiecle": []
+      },
+      "30mAH": [],
+      "Arefi": {
+        "HajAmini": []
+      },
+      "HajAmini": {
+        "HajAmini": []
+      }
+    },
+    "Nasooz": [],
+    "TajdidPazir": []
+  },
+  "folders_by_depth": {
+    "1": [
+      "Arefi",
+      "DinMohamadpour",
+      "HajAmini",
+      "Nasooz",
+      "TajdidPazir"
+    ],
+    "2": [
+      "IKCO",
+      "20mAH",
+      "30mAH",
+      "Arefi",
+      "HajAmini"
+    ],
+    "3": [
+      "LithiumIon",
+      "BigVehielcle",
+      "SmallVehiecle",
+      "HajAmini",
+      "HajAmini"
+    ]
+  },
+  "parent_relationships": {
+    "Arefi": "HajAmini",
+    "DinMohamadpour": "",
+    "IKCO": "DinMohamadpour",
+    "LithiumIon": "IKCO",
+    "HajAmini": "HajAmini",
+    "20mAH": "HajAmini",
+    "BigVehielcle": "20mAH",
+    "SmallVehiecle": "20mAH",
+    "30mAH": "HajAmini",
+    "Nasooz": "",
+    "TajdidPazir": ""
+  },
+  "total_folders": 11
+}

@@ -1,0 +1,14 @@
+factory_configs: manager, city, address
+factory_parameter_summery
+factory_parameter_details_L1: subfiedls at a glance
+factory_parameter_details_L2: each subfield dropdowns to components
+factory_parameter_details_L3: each component dropdowns to elements (if needed)
+factory_parameter_details_L4: each element dropdowns to ingredients (if needed)
+
+sample:
+"Arefi":["R&D":
+    ["Kaizen Cost Reduction Project":
+    ["Filed Project":
+    ["First Phase: Staff Performance": 240], 
+    "Research and Study":["Reserch":22, "Consulting":51]]], 
+    "Payroll":[]]

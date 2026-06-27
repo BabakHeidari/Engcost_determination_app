@@ -1,0 +1,28 @@
+{
+    "_order": [
+        "Product Name",
+        "Predicted Production"
+    ],
+    "data": {
+        "Product Name": [
+            "20mAH-F",
+            "30mAH-F",
+            "50AH-206",
+            "BT-207",
+            "B3N47",
+            "lithium3",
+            "55AH-Quick",
+            "Sild-22AH"
+        ],
+        "Predicted Production": [
+            20,
+            41,
+            122,
+            12,
+            5,
+            18,
+            19,
+            20
+        ]
+    }
+}

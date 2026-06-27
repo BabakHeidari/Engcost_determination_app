@@ -1,0 +1,111 @@
+{
+  "root_directory": "B:\\Courses\\Maktabkhooneh\\Python-Bigdeli\\Web_App\\Engcost_determination_app\\Data\\Factories",
+  "analysis_date": "2026-06-24T18:05:48.790841",
+  "product_hierarchy": {
+    "Arefi": {
+      "cat2arefi": [
+        "subcat2arefi"
+      ],
+      "new_cat_arefi": [
+        "new_sub_cat_arefi"
+      ],
+      "oo": []
+    },
+    "DinMohamadpour": {
+      "Bahman Khodro": [
+        "Fidelity"
+      ],
+      "IKCO": [
+        "Lead-Acid",
+        "LithiumIon"
+      ],
+      "Saipa": [
+        "Sild"
+      ]
+    },
+    "HajAmini": {
+      "20mAH": [
+        "BigVehielcle",
+        "SmallVehiecle"
+      ],
+      "30mAH": [],
+      "cat2": [
+        "BahmanCO"
+      ],
+      "HajAmini": []
+    },
+    "Nasooz": {
+      "nasooz_cat1": [
+        "nasooz_sub_cat1"
+      ]
+    },
+    "TajdidPazir": {}
+  },
+  "folders_by_level": {
+    "level_1": [
+      "Arefi",
+      "DinMohamadpour",
+      "HajAmini",
+      "Nasooz",
+      "TajdidPazir"
+    ],
+    "level_2": [
+      "20mAH",
+      "30mAH",
+      "Bahman Khodro",
+      "HajAmini",
+      "IKCO",
+      "Saipa",
+      "cat2",
+      "cat2arefi",
+      "nasooz_cat1",
+      "new_cat_arefi",
+      "oo"
+    ],
+    "level_3": [
+      "BahmanCO",
+      "BigVehielcle",
+      "Fidelity",
+      "Lead-Acid",
+      "LithiumIon",
+      "Sild",
+      "SmallVehiecle",
+      "nasooz_sub_cat1",
+      "new_sub_cat_arefi",
+      "subcat2arefi"
+    ]
+  },
+  "parent_relationships": {
+    "Arefi": "Factories",
+    "cat2arefi": "Arefi",
+    "subcat2arefi": "cat2arefi",
+    "new_cat_arefi": "Arefi",
+    "new_sub_cat_arefi": "new_cat_arefi",
+    "oo": "Arefi",
+    "DinMohamadpour": "Factories",
+    "Bahman Khodro": "DinMohamadpour",
+    "Fidelity": "Bahman Khodro",
+    "IKCO": "DinMohamadpour",
+    "Lead-Acid": "IKCO",
+    "LithiumIon": "IKCO",
+    "Saipa": "DinMohamadpour",
+    "Sild": "Saipa",
+    "HajAmini": "HajAmini",
+    "20mAH": "HajAmini",
+    "BigVehielcle": "20mAH",
+    "SmallVehiecle": "20mAH",
+    "30mAH": "HajAmini",
+    "cat2": "HajAmini",
+    "BahmanCO": "cat2",
+    "Nasooz": "Factories",
+    "nasooz_cat1": "Nasooz",
+    "nasooz_sub_cat1": "nasooz_cat1",
+    "TajdidPazir": "Factories"
+  },
+  "statistics": {
+    "total_folders": 26,
+    "level1_count": 5,
+    "level2_count": 11,
+    "level3_count": 10
+  }
+}

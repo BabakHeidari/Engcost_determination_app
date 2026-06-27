@@ -1,0 +1,11 @@
+<nav class="navbar navbar-light bg-light border-bottom px-4">
+<div><span id="welcomeMessage">Welcome, {{user}}</span></div>
+<div class="d-flex gap-4">
+<div><small>Last login:</small> <span id="lastLogin">2026-04-21</span></div>
+<div><small>Time:</small> <span id="currentTime"></span>
+<a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">
+Logout
+</a>
+</div>
+</div>
+</nav>

@@ -1,0 +1,51 @@
+{
+    "_order": [
+        "materials",
+        "unit",
+        "usage",
+        "lost_percentage",
+        "recycability_percentage",
+        "cost_per_unit_in_currency",
+        "cost_currency",
+        "cost_of_material_in_its_currency",
+        "cost_of_material_in_rial"
+    ],
+    "data": {
+        "materials": [
+            "coffee",
+            "iron"
+        ],
+        "unit": [
+            "Kilogram (kg)",
+            "Kilogram (kg)"
+        ],
+        "usage": [
+            1,
+            2
+        ],
+        "lost_percentage": [
+            0.8,
+            0.2
+        ],
+        "recycability_percentage": [
+            0.3,
+            0.1
+        ],
+        "cost_per_unit_in_currency": [
+            200,
+            12000000
+        ],
+        "cost_currency": [
+            1790000,
+            1
+        ],
+        "cost_of_material_in_its_currency": [
+            152,
+            23520000
+        ],
+        "cost_of_material_in_rial": [
+            272080000,
+            23520000
+        ]
+    }
+}

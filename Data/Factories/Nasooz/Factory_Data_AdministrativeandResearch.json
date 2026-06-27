@@ -1,0 +1,16 @@
+{
+    "_order": [
+        "subject",
+        "cost"
+    ],
+    "data": {
+        "subject": [
+            "some"
+        ],
+        "cost": [
+            22
+        ]
+    },
+    "last_modification_date": "2026-06-12T17:10:35.732Z",
+    "saving_file": "subfield"
+}

@@ -1,0 +1,18 @@
+{
+    "_order": [
+        "category",
+        "selling_share_of_category"
+    ],
+    "data": {
+        "category": [
+            "cat2arefi",
+            "new_cat_arefi",
+            "oo"
+        ],
+        "selling_share_of_category": [
+            33.333333333333336,
+            33.333333333333336,
+            33.333333333333336
+        ]
+    }
+}

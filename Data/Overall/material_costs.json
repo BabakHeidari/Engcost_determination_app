@@ -1,0 +1,83 @@
+{
+    "_order": [
+        "material",
+        "unit",
+        "currency",
+        "cost_per_unit_in_currency"
+    ],
+    "data": {
+        "material": [
+            "mat1",
+            "mat2",
+            "mat3",
+            "m4",
+            "m5",
+            "iron",
+            "sample_material",
+            "USD - US Dollar",
+            "EUR - Euro",
+            "Coil",
+            "coffee",
+            "cartoon-paper",
+            "acid230",
+            "paper",
+            "removable materials",
+            "mess"
+        ],
+        "unit": [
+            "Kilogram (kg)",
+            "ltr",
+            "Gram (g)",
+            "Gram (g)",
+            "Kilogram (kg)",
+            "Kilogram (kg)",
+            "sample_unit",
+            "No Unit: Currency",
+            "No Unit: Currency",
+            "Kilogram (kg)",
+            "Kilogram (kg)",
+            "Kilogram (kg)",
+            "Liter (L)",
+            "Kilogram (kg)",
+            "Kilogram (kg)",
+            "Kilogram (kg)"
+        ],
+        "currency": [
+            "IRR - Iranian Rial",
+            "IRR - Iranian Rial",
+            "EUR - Euro",
+            "IRR - Iranian Rial",
+            "USD - US Dollar",
+            "IRR - Iranian Rial",
+            "USD - US Dollar",
+            "IRR - Iranian Rial",
+            "IRR - Iranian Rial",
+            "EUR - Euro",
+            "USD - US Dollar",
+            "IRR - Iranian Rial",
+            "IRR - Iranian Rial",
+            "IRR - Iranian Rial",
+            "IRR - Iranian Rial",
+            "IRR - Iranian Rial"
+        ],
+        "cost_per_unit_in_currency": [
+            210,
+            55000000,
+            0.43,
+            430000,
+            100.32,
+            12000000,
+            1,
+            1790000,
+            2030000,
+            4300000,
+            245,
+            630000,
+            760000,
+            455000,
+            123,
+            5400000
+        ]
+    },
+    "last_modification_date": "2026-06-24T13:54:28.247Z"
+}
