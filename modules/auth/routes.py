@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from utils.auth import authenticate
+from utils.localization import t
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -16,7 +17,7 @@ def login():
             session["user"] = username
             return redirect(url_for("desk.workdesk"))
 
-        flash("Invalid username or password","danger")
+        flash(t("auth.invalid_credentials"),"danger")
 
     return render_template("auth/login.html")
 
