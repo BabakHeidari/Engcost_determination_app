@@ -1,53 +1,53 @@
 {% extends "base.html" %}
 
 {% block content %}
-<button class="btn btn-secondary mb-3" onclick="history.back()">← Back</button>
+<button class="btn btn-secondary mb-3" onclick="history.back()">بازگشت</button>
 <div class="dashboard-page">
 
-    <h3 class="mb-4">Battery Manufacturing Cost Dashboard</h3>
+    <h3 class="mb-4">داشبورد هزینه ساخت باتری</h3>
 
     <!-- Analysis Tabs -->
     <ul class="nav nav-tabs mb-4" id="analysisTab" role="tablist">
         <li class="nav-item">
             <a class="nav-link" id="cost-tab" data-toggle="tab" href="#cost" role="tab">
-                💰 Cost Analysis
+                💰 تحلیل هزینه
             </a>
         </li>
         <!-- <li class="nav-item">
             <a class="nav-link" id="sensitivity-tab" data-toggle="tab" href="#sensitivity" role="tab">
-                📈 Sensitivity Analysis
+                📈 تحلیل حساسیت
             </a>
         </li> -->
     </ul>
 
     <div class="tab-content">
-        <!-- Cost Analysis Tab -->
+        <!-- تحلیل هزینه Tab -->
         <div class="tab-pane fade show active" id="cost" role="tabpanel">
             
             <!-- Filter Card -->
             <div class="filter-card">
-                <h5>Filter Data</h5>
+                <h5>فیلتر داده‌ها</h5>
                 <div class="row">
                     <div class="col-md-3 mb-3">
-                        <label for="factorySelect">Factory</label>
+                        <label for="factorySelect">کارخانه</label>
                         <select id="factorySelect" class="form-control">
-                            <option value="">All Factories</option>
+                            <option value="">همه کارخانه‌ها</option>
                         </select>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <label for="categorySelect">Category</label>
+                        <label for="categorySelect">دسته</label>
                         <select id="categorySelect" class="form-control" multiple size="3">
                             <!-- populated dynamically -->
                         </select>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <label for="subcategorySelect">Subcategory</label>
+                        <label for="subcategorySelect">زیردسته</label>
                         <select id="subcategorySelect" class="form-control" multiple size="3">
                             <!-- populated based on factory & category -->
                         </select>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <label for="productSelect">Product</label>
+                        <label for="productSelect">محصول</label>
                         <select id="productSelect" class="form-control" multiple size="3">
                             <!-- populated based on subcategory -->
                         </select>
@@ -55,10 +55,10 @@
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
                     <button id="analyzeBtn" class="btn btn-primary">
-                        <i class="fas fa-search"></i> Analyze Cost
+                        <i class="fas fa-search"></i> تحلیل هزینه
                     </button>
                     <button id="downloadCsvBtn" class="btn btn-success" disabled>
-                        <i class="fas fa-download"></i> Download CSV
+                        <i class="fas fa-download"></i> دانلود CSV
                     </button>
                 </div>
             </div>
@@ -67,19 +67,19 @@
             <div id="costDashboard" style="display: none;">
                 <div class="kpi-grid mt-4">
                     <div class="dash-card">
-                        <h6>Total Cost</h6>
+                        <h6>کل هزینه</h6>
                         <p id="totalCost">--</p>
                     </div>
                     <div class="dash-card">
-                        <h6>Avg. Cost / Product</h6>
+                        <h6>میانگین هزینه / محصول</h6>
                         <p id="avgCost">--</p>
                     </div>
                     <div class="dash-card">
-                        <h6>No. of Products</h6>
+                        <h6>تعداد محصولات</h6>
                         <p id="productCount">--</p>
                     </div>
                     <div class="dash-card">
-                        <h6>Top Cost Driver</h6>
+                        <h6>مهم‌ترین عامل هزینه</h6>
                         <p id="topDriver">--</p>
                     </div>
                 </div>
@@ -94,15 +94,15 @@
                 </div>
 
                 <div class="table-responsive mt-4">
-                    <h5>Detailed Cost Breakdown</h5>
+                    <h5>ریز تفکیک هزینه</h5>
                     <table class="table table-striped table-hover" id="detailTable">
                         <thead>
                             <tr>
-                                <th>Factory</th>
-                                <th>Category</th>
-                                <th>Subcategory</th>
-                                <th>Product</th>
-                                <th>Cost ($)</th>
+                                <th>کارخانه</th>
+                                <th>دسته</th>
+                                <th>زیردسته</th>
+                                <th>محصول</th>
+                                <th>هزینه (ریال)</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -113,16 +113,16 @@
             <!-- Placeholder when no data -->
             <div id="noDataPlaceholder" class="text-center py-5 text-muted">
                 <i class="fas fa-chart-bar fa-3x mb-3"></i>
-                <h5>Select filters and click "Analyze Cost" to view breakdown</h5>
+                <h5>برای مشاهده ریزتفکیک، فیلترها را انتخاب کرده و روی «تحلیل هزینه» کلیک کنید</h5>
             </div>
         </div>
 
-        <!-- Sensitivity Analysis Tab (placeholder for next phase) -->
+        <!-- تحلیل حساسیت Tab (placeholder for next phase) -->
         <div class="tab-pane fade" id="sensitivity" role="tabpanel">
             <div class="text-center py-5 text-muted">
                 <i class="fas fa-sliders-h fa-3x mb-3"></i>
-                <h4>Sensitivity Analysis</h4>
-                <p>This section will be implemented next. You'll be able to run what-if scenarios on cost drivers.</p>
+                <h4>تحلیل حساسیت</h4>
+                <p>این بخش در مرحله بعد پیاده‌سازی می‌شود و امکان اجرای سناریوهای فرضی روی عوامل هزینه را فراهم می‌کند.</p>
             </div>
         </div>
     </div>
@@ -209,7 +209,7 @@
 <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 
 <script>
-// ---- Initial Filter Data from Backend ----
+// ---- Initial فیلتر داده‌ها from Backend ----
 const filterOptions = {{ filter_options|tojson }};  // { factories: [], categories: [] }
 let currentData = null;
 
@@ -223,7 +223,7 @@ const downloadCsvBtn = document.getElementById('downloadCsvBtn');
 const costDashboard = document.getElementById('costDashboard');
 const noDataPlaceholder = document.getElementById('noDataPlaceholder');
 
-// ---- Populate Factory & Category Dropdowns on Load ----
+// ---- Populate کارخانه & دسته Dropdowns on Load ----
 function populateInitialFilters() {
     // Factories
     filterOptions.factories.forEach(f => {
@@ -238,7 +238,7 @@ function populateInitialFilters() {
     productSelect.innerHTML = '';
 }
 
-// ---- Fetch Subcategories Based on Factory & Category ----
+// ---- Fetch Subcategories Based on کارخانه & دسته ----
 async function loadSubcategories() {
     const factory = factorySelect.value;
     const categories = Array.from(categorySelect.selectedOptions).map(o => o.value);
@@ -252,8 +252,8 @@ async function loadSubcategories() {
     productSelect.innerHTML = ''; // reset products
 }
 
-// ---- Fetch Products Based on Subcategory ----
-async function loadProducts() {
+// ---- Fetch محصولs Based on زیردسته ----
+async function loadمحصولs() {
     const factory = factorySelect.value;
     const categories = Array.from(categorySelect.selectedOptions).map(o => o.value);
     const subcategories = Array.from(subcategorySelect.selectedOptions).map(o => o.value);
@@ -270,13 +270,13 @@ async function loadProducts() {
 // ---- Event Listeners for Cascading Filters ----
 factorySelect.addEventListener('change', () => {
     loadSubcategories();
-    loadProducts();
+    loadمحصولs();
 });
 categorySelect.addEventListener('change', () => {
     loadSubcategories();
-    loadProducts();
+    loadمحصولs();
 });
-subcategorySelect.addEventListener('change', loadProducts);
+subcategorySelect.addEventListener('change', loadمحصولs);
 
 // ---- Analyze Button: Fetch Cost Data and Render Dashboard ----
 analyzeBtn.addEventListener('click', async () => {
@@ -299,7 +299,7 @@ analyzeBtn.addEventListener('click', async () => {
         renderDashboard(data);
         downloadCsvBtn.disabled = false;
     } catch (error) {
-        alert('Error loading cost data: ' + error.message);
+        alert('خطا در بارگذاری داده‌های هزینه: ' + error.message);
         console.error(error);
     }
 });
@@ -317,16 +317,16 @@ function renderDashboard(data) {
     document.getElementById('topDriver').textContent = data.kpis.top_cost_driver || 'N/A';
 
     // Breakdown Charts
-    renderCategoryBarChart(data.breakdown_by_category);
-    renderSubcategoryPieChart(data.breakdown_by_subcategory);
+    renderدستهBarChart(data.breakdown_by_category);
+    renderزیردستهPieChart(data.breakdown_by_subcategory);
 
     // Detail Table
     renderDetailTable(data.detail_breakdown);
 }
 
-// ---- Category Bar Chart ----
+// ---- دسته Bar Chart ----
 let categoryChartInstance = null;
-function renderCategoryBarChart(breakdown) {
+function renderدستهBarChart(breakdown) {
     const container = document.getElementById('categoryBarChart');
     if (categoryChartInstance) categoryChartInstance.dispose();
     categoryChartInstance = echarts.init(container);
@@ -335,10 +335,10 @@ function renderCategoryBarChart(breakdown) {
     const costs = breakdown.map(item => item.cost);
 
     categoryChartInstance.setOption({
-        title: { text: 'Cost by Category', left: 'center' },
+        title: { text: 'Cost by دسته', left: 'center' },
         tooltip: { trigger: 'axis' },
         xAxis: { type: 'category', data: categories, axisLabel: { rotate: 30 } },
-        yAxis: { type: 'value', name: 'Cost ($)' },
+        yAxis: { type: 'value', name: 'هزینه (ریال)' },
         series: [{
             name: 'Cost',
             type: 'bar',
@@ -348,9 +348,9 @@ function renderCategoryBarChart(breakdown) {
     });
 }
 
-// ---- Subcategory Pie Chart ----
+// ---- زیردسته Pie Chart ----
 let subcategoryChartInstance = null;
-function renderSubcategoryPieChart(breakdown) {
+function renderزیردستهPieChart(breakdown) {
     const container = document.getElementById('subcategoryPieChart');
     if (subcategoryChartInstance) subcategoryChartInstance.dispose();
     subcategoryChartInstance = echarts.init(container);
@@ -361,7 +361,7 @@ function renderSubcategoryPieChart(breakdown) {
     }));
 
     subcategoryChartInstance.setOption({
-        title: { text: 'Cost by Subcategory', left: 'center' },
+        title: { text: 'Cost by زیردسته', left: 'center' },
         tooltip: { trigger: 'item', formatter: '{b}: ${c}' },
         series: [{
             type: 'pie',
@@ -394,7 +394,7 @@ downloadCsvBtn.addEventListener('click', () => {
     if (!currentData || !currentData.detail_breakdown) return;
 
     const rows = currentData.detail_breakdown;
-    const csvHeader = 'Factory,Category,Subcategory,Product,Cost\n';
+    const csvHeader = 'کارخانه,دسته,زیردسته,محصول,Cost\n';
     const csvRows = rows.map(r =>
         `"${r.factory || ''}","${r.category || ''}","${r.subcategory || ''}","${r.product || ''}",${r.cost}`
     ).join('\n');

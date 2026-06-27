@@ -4,7 +4,7 @@
 
 <div class="page-container">
     <button class="btn btn-secondary mb-3" onclick="history.back()">
-        ← Back
+        ← بازگشت
     </button>
 
     <!-- Subfield Header -->
@@ -13,7 +13,7 @@
             <span class="badge-icon">📂</span>
             <div>
                 <h2>{{Subfield}}</h2>
-                <p class="subtitle">Subfield parameter management and configuration</p>
+                <p class="subtitle">مدیریت و پیکربندی پارامترهای زیرحوزه</p>
             </div>
         </div>
     </div>
@@ -22,7 +22,7 @@
     <div class="search-section">
         <div class="search-container">
             <span class="search-icon">🔍</span>
-            <input id="searchInput" type="text" placeholder="Search..." class="search-input">
+            <input id="searchInput" type="text" placeholder="جستجو..." class="search-input">
         </div>
         <div id="filtersContainer" class="dropdown-filters"></div>
     </div>
@@ -32,9 +32,9 @@
         <div class="section-header">
             <div class="section-title">
                 <span class="section-icon">📊</span>
-                <h3>Subfield Data</h3>
+                <h3>داده‌های زیرحوزه</h3>
             </div>
-            <p class="section-description">Manage parameters and values for this subfield</p>
+            <p class="section-description">مدیریت پارامترها و مقادیر این زیرحوزه</p>
         </div>
 
         <div class="table-wrapper">
@@ -51,7 +51,7 @@
                 <span class="btn-icon">➕</span> Add Column
             </button>
             <button class="btn btn-add" id="addRowBtn">
-                <span class="btn-icon">📝</span> Add Row
+                <span class="btn-icon">📝</span> افزودن ردیف
             </button>
             <button class="btn btn-save" id="saveBtn">
                 <span class="btn-icon">💾</span> Save Changes
@@ -60,19 +60,19 @@
     </div>
 </div>
 
-<!-- Add Row Modal -->
+<!-- افزودن ردیف Modal -->
 <div class="modal-overlay" id="addRowModal">
     <div class="modal-dialog">
         <div class="modal-header">
-            <h3>Add New Row</h3>
+            <h3>افزودن ردیف جدید</h3>
             <button class="btn-close-modal" onclick="closeAddRowModal()">✕</button>
         </div>
         <div class="modal-body">
             <form id="addRowForm">
                 <div id="modalFieldsContainer" class="modal-fields-container"></div>
                 <div class="form-actions">
-                    <button type="button" class="btn-cancel" onclick="closeAddRowModal()">Cancel</button>
-                    <button type="submit" class="btn-save">Add Row</button>
+                    <button type="button" class="btn-cancel" onclick="closeAddRowModal()">انصراف</button>
+                    <button type="submit" class="btn-save">افزودن ردیف</button>
                 </div>
             </form>
         </div>
@@ -200,7 +200,7 @@ function buildTable(){
             const del = document.createElement("button");
             del.innerText = "✕";
             del.className = "delete-col-btn";
-            del.title = "Delete column";
+            del.title = "حذف ستون";
             del.onclick = (e) => {
                 e.stopPropagation();
                 removeColumn(i);
@@ -212,9 +212,9 @@ function buildTable(){
         thead.appendChild(th);
     });
     
-    // Actions header (combined)
+    // عملیات header (combined)
     const actionsTh = document.createElement("th");
-    actionsTh.innerHTML = `<span class="header-title">✨ Actions</span>`;
+    actionsTh.innerHTML = `<span class="header-title">✨ عملیات</span>`;
     actionsTh.className = "actions-header";
     thead.appendChild(actionsTh);
     
@@ -249,7 +249,7 @@ function buildFilters(){
                     data-val="__all__"
                     class="filter-checkbox"
                     checked>
-                <span>📋 All</span>
+                <span>📋 همه</span>
             </label>
         `;
         container.appendChild(all);
@@ -280,7 +280,7 @@ document.addEventListener("change", e => {
     
     if(val === "__all__"){
         filters[col] = [];
-        document.querySelectorAll(`input[data-col="${col}"]`)
+        document.querySelectorهمه(`input[data-col="${col}"]`)
             .forEach(cb => cb.checked = (cb.dataset.val === "__all__"));
     } else {
         document.querySelector(`input[data-col="${col}"][data-val="__all__"]`).checked = false;
@@ -327,8 +327,8 @@ function renderTable(){
         td.innerHTML = `
             <div class="empty-message">
                 <span class="empty-icon">📭</span>
-                <p>No data found</p>
-                <small>Try adjusting your search or filters</small>
+                <p>داده‌ای یافت نشد</p>
+                <small>جستجو یا فیلترها را تغییر دهید</small>
             </div>
         `;
         tr.appendChild(td);
@@ -371,7 +371,7 @@ function renderTable(){
             tr.appendChild(td);
         });
         
-        // Combined Actions Cell (Delete + View)
+        // Combined عملیات Cell (Delete + View)
         const actionTd = document.createElement("td");
         actionTd.className = "action-cell combined-actions";
         
@@ -430,7 +430,7 @@ function addColumn(){
 
 function removeColumn(i){
     const name = headers[i];
-    const confirmed = confirm(`Delete column "${getDisplayName(name)}"?`);
+    const confirmed = confirm(`حذف ستون "${getDisplayName(name)}"?`);
     if(!confirmed) return;
     
     headers.splice(i,1);
@@ -441,7 +441,7 @@ function removeColumn(i){
 
 // Remove row by object reference
 function removeRowByObject(rowObj){
-    const confirmed = confirm(`Delete row?`);
+    const confirmed = confirm(`ردیف حذف شود؟`);
     if(!confirmed) return;
     const index = rows.findIndex(r => r === rowObj);
     if(index !== -1){
@@ -497,7 +497,7 @@ function closeAddRowModal(){
     document.getElementById("addRowForm").reset();
 }
 
-// Handle Add Row Form Submission
+// Handle افزودن ردیف Form Submission
 document.getElementById("addRowForm").addEventListener("submit", function(e){
     e.preventDefault();
     
@@ -581,7 +581,7 @@ function showNotification(message, type) {
 }
 
 function saveTable() {
-    const confirmed = confirm("Save all changes to the table?");
+    const confirmed = confirm("همه تغییرات جدول ذخیره شود؟");
     if (!confirmed) return;
     
     const payload = buildColumnData();

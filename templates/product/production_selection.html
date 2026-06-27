@@ -5,9 +5,9 @@
     <!-- Header Section -->
     <div class="header-section">
         <button class="btn-back" onclick="history.back()">
-            <span class="back-icon">←</span> Back
+            <span class="back-icon">←</span> بازگشت
         </button>
-        <h1 class="page-title">Product Management</h1>
+        <h1 class="page-title">مدیریت محصولات</h1>
     </div>
 
     <div class="container">
@@ -21,13 +21,13 @@
             </div>
             <div class="header-right" style="display: flex; gap: 10px;">
                 <button class="btn-add-category" onclick="openAddCategoryModal()">
-                    <span class="btn-icon">📂</span> Add New Category
+                    <span class="btn-icon">📂</span> افزودن دسته جدید
                 </button>
                 <button class="btn-add-subcategory" onclick="openAddSubcategoryModal()">
-                    <span class="btn-icon">📁</span> Add New Subcategory
+                    <span class="btn-icon">📁</span> افزودن زیردسته جدید
                 </button>
                 <button class="btn-add-product" onclick="openAddProductModal()">
-                    <span class="btn-icon">+</span> Add New Product
+                    <span class="btn-icon">+</span> افزودن محصول جدید
                 </button>
             </div>
         </div>
@@ -36,7 +36,7 @@
         <div class="filters-panel">
             <div class="search-box">
                 <span class="search-icon">🔍</span>
-                <input id="searchInput" type="text" placeholder="Search by product name..." />
+                <input id="searchInput" type="text" placeholder="جستجو بر اساس نام محصول..." />
                 <button class="btn-clear-search" id="clearSearch" style="display:none;">✕</button>
             </div>
 
@@ -44,7 +44,7 @@
                 <!-- Factory -->
                 <div class="dropdown">
                     <button class="dropbtn">
-                        <span class="filter-icon">🏭</span> Factory <span class="arrow">▾</span>
+                        <span class="filter-icon">🏭</span> کارخانه <span class="arrow">▾</span>
                         <span class="filter-count" id="factoryCount"></span>
                     </button>
                     <div class="dropdown-content" id="factoryDropdown"></div>
@@ -53,7 +53,7 @@
                 <!-- Category -->
                 <div class="dropdown">
                     <button class="dropbtn">
-                        <span class="filter-icon">📂</span> Category <span class="arrow">▾</span>
+                        <span class="filter-icon">📂</span> دسته <span class="arrow">▾</span>
                         <span class="filter-count" id="categoryCount"></span>
                     </button>
                     <div class="dropdown-content" id="categoryDropdown"></div>
@@ -62,7 +62,7 @@
                 <!-- Subcategory -->
                 <div class="dropdown">
                     <button class="dropbtn">
-                        <span class="filter-icon">📁</span> Subcategory <span class="arrow">▾</span>
+                        <span class="filter-icon">📁</span> زیردسته <span class="arrow">▾</span>
                         <span class="filter-count" id="subcategoryCount"></span>
                     </button>
                     <div class="dropdown-content" id="subcategoryDropdown"></div>
@@ -79,32 +79,32 @@
                 <thead>
                     <tr>
                         <th width="5%">#</th>
-                        <th width="20%">Product Name</th>
-                        <th width="15%">Factory</th>
-                        <th width="15%">Category</th>
-                        <th width="15%">Subcategory</th>
-                        <th width="15%">Capacity (Ah)</th>
-                        <th width="15%">Action</th>
+                        <th width="20%">نام محصول</th>
+                        <th width="15%">کارخانه</th>
+                        <th width="15%">دسته</th>
+                        <th width="15%">زیردسته</th>
+                        <th width="15%">ظرفیت (Ah)</th>
+                        <th width="15%">عملیات</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
             <div class="empty-state" id="emptyState" style="display:none;">
                 <div class="empty-icon">📦</div>
-                <h3>No products found</h3>
-                <p>Try adjusting your search or filter criteria</p>
+                <h3>محصولی یافت نشد</h3>
+                <p>معیارهای جستجو یا فیلتر را تغییر دهید</p>
             </div>
         </div>
 
         <!-- Pagination -->
         <div class="pagination-wrapper">
             <div class="pagination-info">
-                Showing <span id="showingStart">0</span>-<span id="showingEnd">0</span> of <span id="totalResults">0</span> results
+                نمایش <span id="showingStart">0</span>-<span id="showingEnd">0</span> از <span id="totalResults">0</span> نتیجه
             </div>
             <div class="pagination">
-                <button id="prevPage" class="btn-page">← Previous</button>
+                <button id="prevPage" class="btn-page">قبلی</button>
                 <div class="page-numbers" id="pageNumbers"></div>
-                <button id="nextPage" class="btn-page">Next →</button>
+                <button id="nextPage" class="btn-page">بعدی</button>
             </div>
         </div>
     </div>
@@ -114,38 +114,38 @@
 <div class="modal-overlay" id="addProductModal">
     <div class="modal-dialog">
         <div class="modal-header">
-            <h3>Add New Product</h3>
+            <h3>افزودن محصول جدید</h3>
             <button class="btn-close-modal" onclick="closeAddProductModal()">✕</button>
         </div>
         <div class="modal-body">
             <form id="addProductForm">
                 <div class="form-group">
-                    <label for="newProductName">Product Name *</label>
-                    <input type="text" id="newProductName" required placeholder="Enter product name" autofocus>
+                    <label for="newProductName">نام محصول *</label>
+                    <input type="text" id="newProductName" required placeholder="نام محصول را وارد کنید" autofocus>
                 </div>
                 <div class="form-group">
-                    <label for="newFactory">Factory *</label>
+                    <label for="newFactory">کارخانه *</label>
                     <select id="newFactory" required></select>
                 </div>
                 <div class="form-group">
-                    <label for="newCategory">Category *</label>
+                    <label for="newCategory">دسته *</label>
                     <select id="newCategory" required disabled>
-                        <option value="">Select Factory First</option>
+                        <option value="">ابتدا کارخانه را انتخاب کنید</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="newSubcategory">Subcategory *</label>
+                    <label for="newSubcategory">زیردسته *</label>
                     <select id="newSubcategory" required disabled>
-                        <option value="">Select Category First</option>
+                        <option value="">ابتدا دسته را انتخاب کنید</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="newCapacity">Capacity *</label>
-                    <input type="number" id="newCapacity" required min="1" max="1000" value="50" placeholder="Enter capacity">
+                    <label for="newCapacity">ظرفیت *</label>
+                    <input type="number" id="newCapacity" required min="1" max="1000" value="50" placeholder="ظرفیت را وارد کنید">
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-cancel" onclick="closeAddProductModal()">Cancel</button>
-                    <button type="submit" class="btn-save">Save Product</button>
+                    <button type="button" class="btn-cancel" onclick="closeAddProductModal()">انصراف</button>
+                    <button type="submit" class="btn-save">ذخیره محصول</button>
                 </div>
             </form>
         </div>
@@ -156,24 +156,24 @@
 <div class="modal-overlay" id="addCategoryModal">
     <div class="modal-dialog">
         <div class="modal-header">
-            <h3>Add New Category</h3>
+            <h3>افزودن دسته جدید</h3>
             <button class="btn-close-modal" onclick="closeAddCategoryModal()">✕</button>
         </div>
         <div class="modal-body">
             <form id="addCategoryForm">
                 <div class="form-group">
-                    <label for="newCategoryFactory">Factory *</label>
+                    <label for="newCategoryFactory">کارخانه *</label>
                     <select id="newCategoryFactory" required>
-                        <option value="">Select Factory</option>
+                        <option value="">انتخاب کارخانه</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="newCategoryName">Category Name *</label>
-                    <input type="text" id="newCategoryName" required placeholder="Enter category name">
+                    <label for="newCategoryName">نام دسته *</label>
+                    <input type="text" id="newCategoryName" required placeholder="نام دسته را وارد کنید">
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-cancel" onclick="closeAddCategoryModal()">Cancel</button>
-                    <button type="submit" class="btn-save">Save Category</button>
+                    <button type="button" class="btn-cancel" onclick="closeAddCategoryModal()">انصراف</button>
+                    <button type="submit" class="btn-save">ذخیره دسته</button>
                 </div>
             </form>
         </div>
@@ -184,30 +184,30 @@
 <div class="modal-overlay" id="addSubcategoryModal">
     <div class="modal-dialog">
         <div class="modal-header">
-            <h3>Add New Subcategory</h3>
+            <h3>افزودن زیردسته جدید</h3>
             <button class="btn-close-modal" onclick="closeAddSubcategoryModal()">✕</button>
         </div>
         <div class="modal-body">
             <form id="addSubcategoryForm">
                 <div class="form-group">
-                    <label for="newSubcategoryFactory">Factory *</label>
+                    <label for="newSubcategoryFactory">کارخانه *</label>
                     <select id="newSubcategoryFactory" required>
-                        <option value="">Select Factory</option>
+                        <option value="">انتخاب کارخانه</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="newSubcategoryCategory">Category *</label>
+                    <label for="newSubcategoryCategory">دسته *</label>
                     <select id="newSubcategoryCategory" required>
-                        <option value="">Select Category</option>
+                        <option value="">انتخاب دسته</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="newSubcategoryName">Subcategory Name *</label>
-                    <input type="text" id="newSubcategoryName" required placeholder="Enter subcategory name">
+                    <label for="newSubcategoryName">نام زیردسته *</label>
+                    <input type="text" id="newSubcategoryName" required placeholder="نام زیردسته را وارد کنید">
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-cancel" onclick="closeAddSubcategoryModal()">Cancel</button>
-                    <button type="submit" class="btn-save">Save Subcategory</button>
+                    <button type="button" class="btn-cancel" onclick="closeAddSubcategoryModal()">انصراف</button>
+                    <button type="submit" class="btn-save">ذخیره زیردسته</button>
                 </div>
             </form>
         </div>
@@ -325,9 +325,9 @@ function initializeDynamicDropdowns() {
             const subcategorySelect = document.getElementById("newSubcategory");
             
             if (!factory) {
-                categorySelect.innerHTML = '<option value="">Select Factory First</option>';
+                categorySelect.innerHTML = '<option value="">ابتدا کارخانه را انتخاب کنید</option>';
                 categorySelect.disabled = true;
-                subcategorySelect.innerHTML = '<option value="">Select Category First</option>';
+                subcategorySelect.innerHTML = '<option value="">ابتدا دسته را انتخاب کنید</option>';
                 subcategorySelect.disabled = true;
                 return;
             }
@@ -337,7 +337,7 @@ function initializeDynamicDropdowns() {
             if (factoryData && Object.keys(factoryData).length > 0) {
                 const matchingCategories = Object.keys(factoryData).sort();
                 
-                categorySelect.innerHTML = '<option value="">Select Category</option>';
+                categorySelect.innerHTML = '<option value="">انتخاب دسته</option>';
                 matchingCategories.forEach(cat => {
                     const el = document.createElement("option");
                     el.value = cat;
@@ -347,12 +347,12 @@ function initializeDynamicDropdowns() {
                 categorySelect.disabled = false;
                 
                 // Reset subcategory dropdown
-                subcategorySelect.innerHTML = '<option value="">Select Category First</option>';
+                subcategorySelect.innerHTML = '<option value="">ابتدا دسته را انتخاب کنید</option>';
                 subcategorySelect.disabled = true;
             } else {
-                categorySelect.innerHTML = '<option value="">No categories available</option>';
+                categorySelect.innerHTML = '<option value="">دسته‌ای موجود نیست</option>';
                 categorySelect.disabled = true;
-                subcategorySelect.innerHTML = '<option value="">Select Category First</option>';
+                subcategorySelect.innerHTML = '<option value="">ابتدا دسته را انتخاب کنید</option>';
                 subcategorySelect.disabled = true;
                 showPersistentNotification(`Please first define a category for factory "${factory}"`, "error");
             }
@@ -368,7 +368,7 @@ function initializeDynamicDropdowns() {
             const subcategorySelect = document.getElementById("newSubcategory");
             
             if (!category || !factory) {
-                subcategorySelect.innerHTML = '<option value="">Select Category First</option>';
+                subcategorySelect.innerHTML = '<option value="">ابتدا دسته را انتخاب کنید</option>';
                 subcategorySelect.disabled = true;
                 return;
             }
@@ -379,7 +379,7 @@ function initializeDynamicDropdowns() {
                 const matchingSubcategories = factoryData[category];
                 
                 if (matchingSubcategories && matchingSubcategories.length > 0) {
-                    subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+                    subcategorySelect.innerHTML = '<option value="">انتخاب زیردسته</option>';
                     matchingSubcategories.sort().forEach(subcat => {
                         const el = document.createElement("option");
                         el.value = subcat;
@@ -388,12 +388,12 @@ function initializeDynamicDropdowns() {
                     });
                     subcategorySelect.disabled = false;
                 } else {
-                    subcategorySelect.innerHTML = '<option value="">No subcategories available</option>';
+                    subcategorySelect.innerHTML = '<option value="">زیردسته‌ای موجود نیست</option>';
                     subcategorySelect.disabled = true;
                     showPersistentNotification(`Please first define a subcategory for category "${category}" in factory "${factory}"`, "error");
                 }
             } else {
-                subcategorySelect.innerHTML = '<option value="">No subcategories available</option>';
+                subcategorySelect.innerHTML = '<option value="">زیردسته‌ای موجود نیست</option>';
                 subcategorySelect.disabled = true;
                 showPersistentNotification(`Please first define a subcategory for category "${category}" in factory "${factory}"`, "error");
             }
@@ -408,7 +408,7 @@ function initializeDynamicDropdowns() {
             const categorySelect = document.getElementById("newSubcategoryCategory");
             
             if (!factory) {
-                categorySelect.innerHTML = '<option value="">Select Category</option>';
+                categorySelect.innerHTML = '<option value="">انتخاب دسته</option>';
                 categorySelect.disabled = false;
                 return;
             }
@@ -418,7 +418,7 @@ function initializeDynamicDropdowns() {
             if (factoryData && Object.keys(factoryData).length > 0) {
                 const matchingCategories = Object.keys(factoryData).sort();
                 
-                categorySelect.innerHTML = '<option value="">Select Category</option>';
+                categorySelect.innerHTML = '<option value="">انتخاب دسته</option>';
                 matchingCategories.forEach(cat => {
                     const el = document.createElement("option");
                     el.value = cat;
@@ -427,7 +427,7 @@ function initializeDynamicDropdowns() {
                 });
                 categorySelect.disabled = false;
             } else {
-                categorySelect.innerHTML = '<option value="">No categories available</option>';
+                categorySelect.innerHTML = '<option value="">دسته‌ای موجود نیست</option>';
                 categorySelect.disabled = true;
                 showPersistentNotification(`Please first define a category for factory "${factory}"`, "error");
             }
@@ -444,9 +444,9 @@ function openAddProductModal() {
     modal.classList.add("active");
     // Reset the form and dropdowns
     document.getElementById("addProductForm").reset();
-    document.getElementById("newCategory").innerHTML = '<option value="">Select Factory First</option>';
+    document.getElementById("newCategory").innerHTML = '<option value="">ابتدا کارخانه را انتخاب کنید</option>';
     document.getElementById("newCategory").disabled = true;
-    document.getElementById("newSubcategory").innerHTML = '<option value="">Select Category First</option>';
+    document.getElementById("newSubcategory").innerHTML = '<option value="">ابتدا دسته را انتخاب کنید</option>';
     document.getElementById("newSubcategory").disabled = true;
     document.getElementById("newCapacity").value = '50';
     setTimeout(() => {
@@ -612,7 +612,7 @@ function openAddSubcategoryModal() {
     const modal = document.getElementById("addSubcategoryModal");
     modal.classList.add("active");
     // Reset the category dropdown
-    document.getElementById("newSubcategoryCategory").innerHTML = '<option value="">Select Category</option>';
+    document.getElementById("newSubcategoryCategory").innerHTML = '<option value="">انتخاب دسته</option>';
     document.getElementById("newSubcategoryCategory").disabled = false;
     setTimeout(() => {
         document.getElementById("newSubcategoryName").focus();

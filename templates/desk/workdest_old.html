@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Work Desk{% endblock %}
+{% block title %}میز کار{% endblock %}
 {% block content %}
-<h3 class="mb-4">Work Desk</h3>
+<h3 class="mb-4">میز کار</h3>
 <div class="row g-4">
-<div class="col-md-4"><div class="card p-3"><h5>Product Configuration</h5><a href="{{ url_for('product.production_selection') }}" class="btn btn-primary">Open</a></div></div>
-<div class="col-md-4"><div class="card p-3"><h5>General Parameters</h5><a href="{{ url_for('general_parameters.general_parameters') }}" class="btn btn-primary">Open</a></div></div>
-<div class="col-md-4"><div class="card p-3"><h5>Factory Parameters</h5><a href="{{ url_for('factory_parameters.factory_parameters') }}" class="btn btn-primary">Open</a></div></div>
-<div class="col-md-4"><div class="card p-3"><h5>Cost Calculation</h5><a href="{{ url_for('cost_calculation.cost_cal') }}" class="btn btn-primary">Open</a></div></div>
-<div class="col-md-4"><div class="card p-3"><h5>Dashboard</h5><a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Open</a></div></div>
-<div class="col-md-4"><div class="card p-3"><h5>User Profile</h5><a href="/profile" class="btn btn-primary">Open</a></div></div>
+<div class="col-md-4"><div class="card p-3"><h5>پیکربندی محصول</h5><a href="{{ url_for('product.production_selection') }}" class="btn btn-primary">باز کردن</a></div></div>
+<div class="col-md-4"><div class="card p-3"><h5>پارامترهای عمومی</h5><a href="{{ url_for('general_parameters.general_parameters') }}" class="btn btn-primary">باز کردن</a></div></div>
+<div class="col-md-4"><div class="card p-3"><h5>پارامترهای کارخانه</h5><a href="{{ url_for('factory_parameters.factory_parameters') }}" class="btn btn-primary">باز کردن</a></div></div>
+<div class="col-md-4"><div class="card p-3"><h5>محاسبه بهای تمام‌شده</h5><a href="{{ url_for('cost_calculation.cost_cal') }}" class="btn btn-primary">باز کردن</a></div></div>
+<div class="col-md-4"><div class="card p-3"><h5>داشبورد</h5><a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">باز کردن</a></div></div>
+<div class="col-md-4"><div class="card p-3"><h5>پروفایل کاربر</h5><a href="/profile" class="btn btn-primary">باز کردن</a></div></div>
 </div>
 {% endblock %}
 

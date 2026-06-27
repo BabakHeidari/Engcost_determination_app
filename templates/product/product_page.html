@@ -10,13 +10,13 @@
     </button>
 
     <div class="header-section">
-        <h2>BOM / Recipe for: {{ product_name }}</h2>
+        <h2>فهرست مواد (BOM) / دستور ساخت برای: {{ product_name }}</h2>
         <div class="search-wrapper">
             <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/>
                 <path d="m21 21-4.3-4.3"/>
             </svg>
-            <input type="text" id="searchInput" placeholder="Search materials...">
+            <input type="text" id="searchInput" placeholder="جستجوی مواد...">
         </div>
     </div>
 
@@ -34,13 +34,13 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
             </svg>
-            Add Column
+            افزودن ستون
         </button>
         <button class="btn-secondary" id="addRowBtn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M5 12h14M12 5v14"/>
             </svg>
-            Add Row
+            افزودن ردیف
         </button>
         <button class="btn-primary" id="saveBtn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -48,7 +48,7 @@
                 <polyline points="17 21 17 13 7 13 7 21"/>
                 <polyline points="7 3 7 8 15 8"/>
             </svg>
-            Save Changes
+            ذخیره تغییرات
         </button>
     </div>
 </div>
@@ -771,10 +771,10 @@
     }
 
     function addColumn() {
-        const name = prompt("Column name?");
+        const name = prompt("نام ستون؟");
         if (!name) return;
         if (headers.includes(name)) {
-            alert("A column with this name already exists!");
+            alert("ستونی با این نام از قبل وجود دارد!");
             return;
         }
         headers.push(name);
@@ -786,10 +786,10 @@
     function removeColumn(idx) {
         const colName = headers[idx];
         if (CORE_COLUMNS.includes(colName)) {
-            alert(`Cannot remove core column "${colName}".`);
+            alert(`ستون اصلی قابل حذف نیست "${colName}".`);
             return;
         }
-        if (!confirm(`Delete column "${colName}"?`)) return;
+        if (!confirm(`حذف ستون "${colName}"?`)) return;
         headers.splice(idx, 1);
         bomRows.forEach(r => delete r[colName]);
         const userColIndex = userAddedColumns.indexOf(colName);
@@ -806,7 +806,7 @@
     }
 
     function removeRow(idx) {
-        if (!confirm("Delete this row?")) return;
+        if (!confirm("این ردیف حذف شود؟")) return;
         bomRows.splice(idx, 1);
         buildTable();
     }
@@ -826,16 +826,16 @@
             const lost = parseFloat(row.lost_percentage);
             const rec = parseFloat(row.recycability_percentage);
             if (!isNaN(lost) && lost >= 100) {
-                alert(`Row ${idx + 1}: lost_percentage must be less than 100%`);
+                alert(`ردیف ${idx + 1}: درصد ضایعات باید کمتر از 100٪ باشد`);
                 hasErrors = true;
             }
             if (!isNaN(lost) && !isNaN(rec) && lost > 0 && rec >= lost) {
-                alert(`Row ${idx + 1}: recycability_percentage (${rec}) must be less than lost_percentage (${lost})`);
+                alert(`ردیف ${idx + 1}: درصد بازیافت‌پذیری (${rec}) باید کمتر از درصد ضایعات (${lost}) باشد`);
                 hasErrors = true;
             }
         });
         if (hasErrors) return;
-        if (!confirm("Save changes?")) return;
+        if (!confirm("تغییرات ذخیره شود؟")) return;
 
         const data = {};
         headers.forEach(h => {
@@ -849,8 +849,8 @@
             body: JSON.stringify(payload)
         })
         .then(r => { if (!r.ok) return r.json().then(err => { throw err; }); return r.json(); })
-        .then(() => alert("BOM saved successfully ✅"))
-        .catch(err => { console.error(err); alert("Error saving BOM"); });
+        .then(() => alert("BOM با موفقیت ذخیره شد ✅"))
+        .catch(err => { console.error(err); alert("خطا در ذخیره BOM"); });
     }
 
     document.getElementById("addColumnBtn").onclick = addColumn;
