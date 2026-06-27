@@ -413,13 +413,13 @@ downloadCsvBtn.addEventListener('click', () => {
 
 // ---- Utility ----
 function formatNumber(num) {
-    return Number(num || 0).toLocaleString('en-US', {
+    return Number(num || 0).toLocaleString('fa-IR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
 }
 function formatInteger(num) {
-    return Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+    return Number(num || 0).toLocaleString('fa-IR', { maximumFractionDigits: 0 });
 }
 function formatCurrency(num) {
     return `${formatNumber(num)} ریال`;

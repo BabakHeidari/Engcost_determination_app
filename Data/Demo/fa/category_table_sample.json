@@ -1,0 +1,4 @@
+{
+  "_order": ["category", "selling_share_of_category"],
+  "data": {"category": ["باتری خودرو", "باتری صنعتی", "پک لیتیومی"], "selling_share_of_category": [45, 35, 20]}
+}
