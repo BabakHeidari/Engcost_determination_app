@@ -9,6 +9,7 @@ from modules.factory_parameters.routes import factory_parameters_bp
 from modules.cost_calculation.routes import cost_calculation_bp
 from modules.profile.routes import profile_bp
 import secrets
+from utils.localization import DEFAULT_DIRECTION, DEFAULT_LANGUAGE, DEFAULT_LOCALE, t
 
 
 app = Flask(__name__)
@@ -33,7 +34,11 @@ def inject_user():
     except:
         user = None
     return {
-        "user": user
+        "user": user,
+        "app_language": DEFAULT_LANGUAGE,
+        "app_locale": DEFAULT_LOCALE,
+        "app_direction": DEFAULT_DIRECTION,
+        "t": t,
     }
 
 @app.route("/")

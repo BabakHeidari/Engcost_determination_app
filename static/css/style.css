@@ -1,14 +1,59 @@
 /* Base styles */
+:root {
+    --app-font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
+    --app-sidebar-width: 260px;
+    --app-sidebar-bg: #2c3e50;
+    --app-sidebar-hover-bg: #3d566e;
+    --app-accent: #1abc9c;
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+html {
+    direction: rtl;
+}
+
 body {
     background: #f4f6f9;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--app-font-family);
     overflow-x: hidden;
+    text-align: start;
+}
+
+[dir="ltr"],
+.ltr,
+.code-like,
+code,
+pre,
+kbd,
+samp,
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input.input-ltr,
+textarea.input-ltr,
+.numeric,
+.currency,
+.percentage,
+.date-value,
+.sku,
+.formula {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: start;
+}
+
+input[type="number"],
+.numeric,
+.currency,
+.percentage {
+    font-variant-numeric: tabular-nums;
 }
 
 /* App wrapper */
@@ -19,11 +64,23 @@ body {
 
 /* Sidebar styles */
 .sidebar {
-    background: #2c3e50;
-    width: 260px;
+    background: var(--app-sidebar-bg);
+    inline-size: var(--app-sidebar-width);
     transition: transform 0.3s ease-in-out;
     z-index: 1040;
     overflow-y: auto;
+    flex: 0 0 var(--app-sidebar-width);
+}
+
+.sidebar-shell {
+    background: var(--app-sidebar-bg);
+    color: #fff;
+    padding: 1rem;
+    min-block-size: 100vh;
+}
+
+.sidebar-title {
+    margin-block-end: 1.5rem;
 }
 
 /* Desktop sidebar */
@@ -31,7 +88,7 @@ body {
     .sidebar {
         transform: translateX(0) !important;
         position: relative;
-        height: auto;
+        block-size: auto;
     }
 }
 
@@ -39,11 +96,11 @@ body {
 @media (max-width: 991.98px) {
     .sidebar {
         position: fixed;
-        top: 0;
-        left: 0;
-        height: 100%;
-        transform: translateX(-100%);
-        box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        inset-block-start: 0;
+        inset-inline-end: 0;
+        block-size: 100%;
+        transform: translateX(100%);
+        box-shadow: -2px 0 10px rgba(0,0,0,0.2);
     }
     
     .sidebar.show {
@@ -54,10 +111,7 @@ body {
 /* Sidebar overlay for mobile */
 .sidebar-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     background: rgba(0,0,0,0.5);
     z-index: 1030;
     display: none;
@@ -72,27 +126,116 @@ body.sidebar-open {
     overflow: hidden;
 }
 
+.sidebar-toggle {
+    inset-block-end: 20px;
+    inset-inline-start: 20px;
+    z-index: 1050;
+    border-radius: 50%;
+    inline-size: 50px;
+    block-size: 50px;
+}
+
 /* Main content area */
 .main-content {
-    min-height: 100vh;
-    width: 100%;
+    min-block-size: 100vh;
+    inline-size: 100%;
+    min-inline-size: 0;
+}
+
+/* Shared shell */
+.app-header {
+    padding-inline: 1.5rem;
+}
+
+.app-header__meta {
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.footer {
+    background: #5c6e7e;
+    color: #f8f9fa;
+    font-size: 0.9rem;
+    inline-size: 100%;
+    margin-block-start: auto;
+}
+
+.footer a {
+    color: #f8f9fa;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    color: var(--app-accent);
+    text-decoration: underline;
 }
 
 /* Navigation links */
 .nav-link {
     transition: all 0.3s ease;
     border-radius: 8px;
-    margin: 2px 8px;
+    margin-block: 2px;
+    margin-inline: 8px;
+    text-align: start;
 }
 
 .nav-link:hover {
-    background: #3d566e;
-    transform: translateX(5px);
+    background: var(--app-sidebar-hover-bg);
+    transform: translateX(-5px);
 }
 
 .nav-link.active {
-    background: #1abc9c;
+    background: var(--app-accent);
     color: white !important;
+}
+
+/* Shared Bootstrap component RTL foundations */
+.dropdown-menu,
+.modal-content,
+.alert,
+.card,
+.breadcrumb,
+.pagination,
+.form-label,
+.form-control,
+.form-select,
+.table {
+    text-align: start;
+}
+
+.dropdown-menu {
+    --bs-position: end;
+}
+
+.modal-header .btn-close {
+    margin-inline-start: 0;
+    margin-inline-end: auto;
+}
+
+.breadcrumb-item + .breadcrumb-item {
+    padding-inline-start: 0;
+    padding-inline-end: var(--bs-breadcrumb-item-padding-x, .5rem);
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    float: none;
+    padding-inline-end: 0;
+    padding-inline-start: var(--bs-breadcrumb-item-padding-x, .5rem);
+}
+
+.pagination {
+    padding-inline-start: 0;
+}
+
+.table > :not(caption) > * > * {
+    text-align: start;
+}
+
+.table .text-end,
+.text-end.numeric,
+.text-end.currency,
+.text-end.percentage {
+    text-align: end !important;
 }
 
 /* Card styles */
@@ -121,25 +264,6 @@ body.sidebar-open {
     min-height: 100vh;
 }
 
-/* Footer */
-.footer {
-    background: #5c6e7e;
-    color: #f8f9fa;
-    font-size: 0.9rem;
-    width: 100%;
-    margin-top: auto;
-}
-
-.footer a {
-    color: #f8f9fa;
-    text-decoration: none;
-}
-
-.footer a:hover {
-    color: #1abc9c;
-    text-decoration: underline;
-}
-
 /* Responsive typography */
 @media (max-width: 768px) {
     body {
@@ -151,16 +275,25 @@ body.sidebar-open {
     }
     
     .container-fluid {
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-inline: 1rem !important;
     }
 }
 
 /* Responsive tables */
+.table-responsive,
+.table-responsive-stack {
+    direction: rtl;
+}
+
+.table-responsive > .table,
+.table-responsive-stack > .table {
+    direction: rtl;
+}
+
 @media (max-width: 768px) {
     .table-responsive-stack {
         display: block;
-        width: 100%;
+        inline-size: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
@@ -173,7 +306,7 @@ body.sidebar-open {
     }
     
     .row > [class*="col-"] {
-        margin-bottom: 1rem;
+        margin-block-end: 1rem;
     }
 }
 
@@ -192,15 +325,20 @@ body.sidebar-open {
 /* Loading spinner */
 .spinner-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     background: rgba(0,0,0,0.7);
     z-index: 9999;
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/* Chart/tooltips can opt into this class for safe shared RTL defaults. */
+.chart-tooltip,
+.echarts-tooltip {
+    direction: rtl;
+    text-align: start;
+    font-family: var(--app-font-family);
 }
 
 /* Print styles */
@@ -213,7 +351,7 @@ body.sidebar-open {
     }
     
     .main-content {
-        margin-left: 0 !important;
+        margin-inline-start: 0 !important;
         padding: 0 !important;
     }
     

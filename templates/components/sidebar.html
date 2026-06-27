@@ -1,42 +1,36 @@
-<div class="bg-dark text-white p-3 vh-100">
-<h5 class="mb-4">Cost System</h5>
+<div class="sidebar-shell">
+<h5 class="sidebar-title">سامانه هزینه</h5>
 <ul class="nav flex-column">
-<li class="nav-item mb-2"><a class="nav-link text-white" href="/workdesk">Work Desk</a></li>
+<li class="nav-item mb-2"><a class="nav-link text-white" href="/workdesk">میز کار</a></li>
 
 <li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('general_parameters.general_parameters') }}">
-    <i class="bi bi-gear"></i> General Parameters
+    <i class="bi bi-gear" aria-hidden="true"></i> پارامترهای عمومی
   </a>
 </li>
 
 <li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('factory_parameters.factory_parameters') }}">
-    <i class="bi bi-gear"></i> Factory Parameters
+    <i class="bi bi-gear" aria-hidden="true"></i> پارامترهای کارخانه
   </a>
 </li>
 
 <li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('product.production_selection') }}">
-    <i class="bi bi-gear"></i> Product Configuration
+    <i class="bi bi-gear" aria-hidden="true"></i> پیکربندی محصول
   </a>
 </li>
 
 <li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('cost_calculation.cost_cal') }}">
-    <i class="bi bi-gear"></i> Cost Calculation
+    <i class="bi bi-gear" aria-hidden="true"></i> محاسبه هزینه
   </a>
 </li>
 
 <li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('dashboard.dashboard') }}">
-    <i class="bi bi-gear"></i> Dashboard
+    <i class="bi bi-gear" aria-hidden="true"></i> داشبورد
   </a>
 </li>
 
-<li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('dashboard.dashboard') }}">
-    <i class="bi bi-gear"></i> User Profile
+<li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('profile.profile') }}">
+    <i class="bi bi-gear" aria-hidden="true"></i> پروفایل کاربر
   </a>
 </li>
-
-<!-- <li class="nav-item mb-2"><a class="nav-link text-white" href="/product">Product Configuration</a></li>
-<li class="nav-item mb-2"><a class="nav-link text-white" href="/parameter">Parameter Tuning</a></li>
-<li class="nav-item mb-2"><a class="nav-link text-white" href="/dashboard">Dashboard</a></li>
-<li class="nav-item mb-2"><a class="nav-link text-white" href="/cost">Cost Calculation</a></li>
-<li class="nav-item mb-2"><a class="nav-link text-white" href="/profile">User Profile</a></li> -->
 </ul>
 </div>

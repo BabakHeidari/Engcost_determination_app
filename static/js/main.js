@@ -1,10 +1,45 @@
-function updateTime(){const now=new Date();const el=document.getElementById('currentTime');if(el){el.innerText=now.toLocaleTimeString();}}setInterval(updateTime,1000);updateTime();
+(function () {
+    const appLocale = document.documentElement.lang === 'fa' ? 'fa-IR' : (document.documentElement.lang || 'fa-IR');
+
+    window.AppLocale = Object.freeze({
+        locale: appLocale,
+        direction: document.documentElement.dir || 'rtl',
+        formatTime(date) {
+            return new Intl.DateTimeFormat(this.locale, {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                numberingSystem: 'latn'
+            }).format(date);
+        },
+        formatNumber(value, options = {}) {
+            return new Intl.NumberFormat(this.locale, {
+                numberingSystem: 'latn',
+                ...options
+            }).format(value);
+        }
+    });
+
+    function updateTime() {
+        const now = new Date();
+        const el = document.getElementById('currentTime');
+        if (el) {
+            el.innerText = window.AppLocale.formatTime(now);
+        }
+    }
+
+    setInterval(updateTime, 1000);
+    updateTime();
+})();
 
 document.addEventListener("DOMContentLoaded", () => {
-
     const table = document.getElementById("component_table");
     const addRowBtn = document.getElementById("add_row");
     const grandTotalEl = document.getElementById("grand_total");
+
+    if (!table || !addRowBtn || !grandTotalEl) {
+        return;
+    }
 
     function recalcTotals() {
         let grandTotal = 0;
@@ -27,10 +62,10 @@ document.addEventListener("DOMContentLoaded", () => {
     addRowBtn.addEventListener("click", () => {
         const newRow = document.createElement("tr");
         newRow.innerHTML = `
-            <td><input type="text" class="form-control" placeholder="Component name"></td>
-            <td><input type="number" class="form-control quantity" min="0"></td>
-            <td><input type="number" class="form-control unit_cost" step="0.01" min="0"></td>
-            <td class="total_cost text-end">0.00</td>
+            <td><input type="text" class="form-control" placeholder="نام جزء"></td>
+            <td><input type="number" class="form-control quantity" min="0" dir="ltr"></td>
+            <td><input type="number" class="form-control unit_cost" step="0.01" min="0" dir="ltr"></td>
+            <td class="total_cost text-end numeric" dir="ltr">0.00</td>
             <td><button class="btn btn-sm btn-outline-danger remove-row">×</button></td>
         `;
         table.querySelector("tbody").appendChild(newRow);
