@@ -311,10 +311,10 @@ function renderDashboard(data) {
     noDataPlaceholder.style.display = 'none';
 
     // KPIs
-    document.getElementById('totalCost').textContent = '$ ' + formatNumber(data.kpis.total_cost);
-    document.getElementById('avgCost').textContent = '$ ' + formatNumber(data.kpis.avg_cost_per_product);
-    document.getElementById('productCount').textContent = data.kpis.product_count;
-    document.getElementById('topDriver').textContent = data.kpis.top_cost_driver || 'N/A';
+    document.getElementById('totalCost').textContent = formatCurrency(data.kpis.total_cost);
+    document.getElementById('avgCost').textContent = formatCurrency(data.kpis.avg_cost_per_product);
+    document.getElementById('productCount').textContent = formatInteger(data.kpis.product_count);
+    document.getElementById('topDriver').textContent = data.kpis.top_cost_driver || 'نامشخص';
 
     // Breakdown Charts
     renderدستهBarChart(data.breakdown_by_category);
@@ -335,12 +335,12 @@ function renderدستهBarChart(breakdown) {
     const costs = breakdown.map(item => item.cost);
 
     categoryChartInstance.setOption({
-        title: { text: 'Cost by دسته', left: 'center' },
-        tooltip: { trigger: 'axis' },
+        title: { text: 'هزینه بر اساس دسته', left: 'center' },
+        tooltip: { trigger: 'axis', valueFormatter: value => formatCurrency(value) },
         xAxis: { type: 'category', data: categories, axisLabel: { rotate: 30 } },
         yAxis: { type: 'value', name: 'هزینه (ریال)' },
         series: [{
-            name: 'Cost',
+            name: 'هزینه',
             type: 'bar',
             data: costs,
             itemStyle: { color: '#5470c6' }
@@ -361,13 +361,13 @@ function renderزیردستهPieChart(breakdown) {
     }));
 
     subcategoryChartInstance.setOption({
-        title: { text: 'Cost by زیردسته', left: 'center' },
-        tooltip: { trigger: 'item', formatter: '{b}: ${c}' },
+        title: { text: 'هزینه بر اساس زیردسته', left: 'center' },
+        tooltip: { trigger: 'item', formatter: params => `${params.name}: ${formatCurrency(params.value)} (${formatInteger(params.percent)}٪)` },
         series: [{
             type: 'pie',
             radius: ['40%', '70%'],
             data: pieData,
-            label: { show: true, formatter: '{b}: {d}%' }
+            label: { show: true, formatter: params => `${params.name}: ${formatInteger(params.percent)}٪` }
         }]
     });
 }
@@ -379,11 +379,11 @@ function renderDetailTable(details) {
     details.forEach(row => {
         tbody.innerHTML += `
             <tr>
-                <td>${row.factory || 'N/A'}</td>
-                <td>${row.category || 'N/A'}</td>
-                <td>${row.subcategory || 'N/A'}</td>
-                <td>${row.product || 'N/A'}</td>
-                <td>$${formatNumber(row.cost)}</td>
+                <td>${row.factory || 'نامشخص'}</td>
+                <td>${row.category || 'نامشخص'}</td>
+                <td>${row.subcategory || 'نامشخص'}</td>
+                <td>${row.product || 'نامشخص'}</td>
+                <td class="currency" dir="ltr">${formatCurrency(row.cost)}</td>
             </tr>
         `;
     });
@@ -394,7 +394,7 @@ downloadCsvBtn.addEventListener('click', () => {
     if (!currentData || !currentData.detail_breakdown) return;
 
     const rows = currentData.detail_breakdown;
-    const csvHeader = 'کارخانه,دسته,زیردسته,محصول,Cost\n';
+    const csvHeader = 'کارخانه,دسته,زیردسته,محصول,هزینه (ریال)\n';
     const csvRows = rows.map(r =>
         `"${r.factory || ''}","${r.category || ''}","${r.subcategory || ''}","${r.product || ''}",${r.cost}`
     ).join('\n');
@@ -413,10 +413,16 @@ downloadCsvBtn.addEventListener('click', () => {
 
 // ---- Utility ----
 function formatNumber(num) {
-    return Number(num).toLocaleString('en-US', {
+    return Number(num || 0).toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
+}
+function formatInteger(num) {
+    return Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+function formatCurrency(num) {
+    return `${formatNumber(num)} ریال`;
 }
 
 // ---- Handle Window Resize for Charts ----

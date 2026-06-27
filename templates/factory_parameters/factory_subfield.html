@@ -4,7 +4,7 @@
 
 <div class="page-container">
     <button class="btn btn-secondary mb-3" onclick="history.back()">
-        ← بازگشت
+        بازگشت
     </button>
 
     <!-- Subfield Header -->
@@ -48,13 +48,13 @@
 
         <div class="button-bar">
             <button class="btn btn-add" id="addColumnBtn">
-                <span class="btn-icon">➕</span> Add Column
+                <span class="btn-icon">➕</span> افزودن ستون
             </button>
             <button class="btn btn-add" id="addRowBtn">
                 <span class="btn-icon">📝</span> افزودن ردیف
             </button>
             <button class="btn btn-save" id="saveBtn">
-                <span class="btn-icon">💾</span> Save Changes
+                <span class="btn-icon">💾</span> ذخیره تغییرات
             </button>
         </div>
     </div>
@@ -130,19 +130,15 @@ function getColumnIcon(columnName) {
 
 function getDisplayName(columnName) {
     const lowerName = columnName.toLowerCase();
-    if (lowerName === 'subject') return 'Subject';
-    if (lowerName === 'cost') return 'Cost';
+    if (lowerName === 'subject') return 'موضوع';
+    if (lowerName === 'cost') return 'هزینه';
     return columnName.charAt(0).toUpperCase() + columnName.slice(1);
 }
 
 function formatCurrency(value) {
     const num = parseFloat(value);
     if (isNaN(num)) return value;
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2
-    }).format(num);
+    return `${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num)} ریال`;
 }
 
 // ===== BUILD TABLE =====
@@ -174,7 +170,7 @@ function buildTable(){
         
         titleSpan.onblur = () => {
             const oldName = headers[i];
-            const newName = titleSpan.innerText.replace(/[^a-zA-Z\s]/g, '').trim();
+            const newName = titleSpan.innerText.replace(/^[^\p{L}\p{N}]+/u, '').trim();
             
             if(!newName || oldName === newName) return;
             
@@ -280,7 +276,7 @@ document.addEventListener("change", e => {
     
     if(val === "__all__"){
         filters[col] = [];
-        document.querySelectorهمه(`input[data-col="${col}"]`)
+        document.querySelectorAll(`input[data-col="${col}"]`)
             .forEach(cb => cb.checked = (cb.dataset.val === "__all__"));
     } else {
         document.querySelector(`input[data-col="${col}"][data-val="__all__"]`).checked = false;
@@ -377,13 +373,13 @@ function renderTable(){
         
         // Delete button
         const delBtn = document.createElement("button");
-        delBtn.innerHTML = '<span class="btn-icon">🗑️</span> Delete';
+        delBtn.innerHTML = '<span class="btn-icon">🗑️</span> حذف';
         delBtn.className = "delete-row-btn";
         delBtn.onclick = () => removeRowByObject(row);
         
         // View button
         const viewBtn = document.createElement("button");
-        viewBtn.innerHTML = '<span class="btn-icon">🔍</span> View';
+        viewBtn.innerHTML = '<span class="btn-icon">🔍</span> مشاهده';
         viewBtn.className = "view-btn";
         const firstKey = headers[0];
         const firstValue = row[firstKey];
@@ -419,7 +415,7 @@ function renderTable(){
 
 // ===== ROW / COLUMN MANAGEMENT =====
 function addColumn(){
-    const name = prompt("Enter column name:");
+    const name = prompt("نام ستون را وارد کنید:");
     if(!name || name.trim() === "") return;
     
     headers.push(name.trim());
@@ -470,12 +466,12 @@ function openAddRowModal(){
         const input = document.createElement("input");
         input.type = "text";
         input.id = `field_${header.replace(/\s/g, '_')}`;
-        input.placeholder = `Enter ${getDisplayName(header)}`;
+        input.placeholder = `${getDisplayName(header)} را وارد کنید`;
         input.dataset.header = header;
         
         // For cost column, add hint
         if(header.toLowerCase() === 'cost'){
-            input.placeholder = "Enter numeric value (e.g., 19.99)";
+            input.placeholder = "مقدار عددی را وارد کنید (مثلاً 19.99)";
         }
         
         fieldDiv.appendChild(label);
@@ -511,7 +507,7 @@ document.getElementById("addRowForm").addEventListener("submit", function(e){
         
         // Basic validation: subject and cost could be required optionally
         if(header.toLowerCase() === 'subject' && value === ""){
-            showNotification("Subject field is required.", "error");
+            showNotification("فیلد موضوع الزامی است.", "error");
             allFilled = false;
             return;
         }
@@ -532,7 +528,7 @@ document.getElementById("addRowForm").addEventListener("submit", function(e){
     rows.push(newRow);
     closeAddRowModal();
     renderTable();
-    showNotification("New row added successfully!", "success");
+    showNotification("ردیف جدید با موفقیت اضافه شد.", "success");
 });
 
 // Close modal when clicking outside
@@ -598,11 +594,11 @@ function saveTable() {
         try { return JSON.parse(text); } catch { return text; }
     })
     .then(data => {
-        showNotification("Table saved successfully!", "success");
+        showNotification("جدول با موفقیت ذخیره شد.", "success");
     })
     .catch(err => {
         console.error("SAVE ERROR:", err);
-        showNotification("Save failed. Check console.", "error");
+        showNotification("ذخیره ناموفق بود. لطفاً دوباره تلاش کنید.", "error");
     });
 }
 
@@ -613,7 +609,7 @@ document.getElementById("addRowBtn").onclick = openAddRowModal;
 document.getElementById("saveBtn").onclick = saveTable;
 
 // Set search placeholder
-document.getElementById("searchInput").placeholder = `Search ${getDisplayName(searchColumn)}...`;
+document.getElementById("searchInput").placeholder = `جستجوی ${getDisplayName(searchColumn)}...`;
 
 // init
 buildTable();
