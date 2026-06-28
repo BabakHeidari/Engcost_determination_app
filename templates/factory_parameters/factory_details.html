@@ -12,7 +12,7 @@
         <div class="title-badge">
             <span class="badge-icon">🏭</span>
             <div>
-                <h2>{{factory_name}} - سایت</h2>
+                <h2>{{factory_name|display_value}} - سایت</h2>
                 <p class="subtitle">تحلیل ساختار هزینه و توزیع مخارج</p>
             </div>
         </div>
@@ -100,6 +100,20 @@
 <script>
     // ===== MAIN TABLE =====
     const tableJSON = {{ table_json | safe }};
+
+    const DATA_DISPLAY_LABELS = {
+        'AdministrativeandResearch': 'اداری و پژوهش', 'FinancialCosts': 'هزینه‌های مالی',
+        'Overhead': 'سربار', 'Payroll': 'حقوق و دستمزد', 'Depriciation': 'استهلاک',
+        'NonOperationalCostsandIncomes': 'هزینه‌ها و درآمدهای غیرعملیاتی',
+        'Bahman Khodro': 'بهمن خودرو', 'IKCO': 'ایران‌خودرو', 'Saipa': 'سایپا',
+        'Lead-Acid': 'سرب-اسید', 'LithiumIon': 'لیتیوم-یون', 'Fidelity': 'فیدلیتی',
+        'BigVehielcle': 'خودروی سنگین', 'SmallVehiecle': 'خودروی سبک', 'Sild': 'سیلد'
+    };
+    function displayDataValue(value) { return DATA_DISPLAY_LABELS[String(value)] || value || ''; }
+    function displayColumnName(columnName) {
+        const labels = { subfield: 'زیرحوزه', cost: 'هزینه', percentageofall: 'درصد از کل', category: 'دسته', selling_share_of_category: 'سهم فروش دسته', 'Product Name': 'محصول', 'Predicted Production': 'مقدار پیش‌بینی' };
+        return labels[columnName] || columnName;
+    }
     let headers = [...tableJSON._order];
 
     // Column icons mapping for main table
@@ -138,7 +152,7 @@
         if (isNaN(num)) return value;
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
-            currency: 'USD',
+            currency: 'IRR',
             minimumFractionDigits: 2
         }).format(num);
     }
@@ -156,7 +170,7 @@
         headers.forEach((h, i) => {
             const th = document.createElement("th");
             const icon = getColumnIcon(h);
-            const displayName = h.charAt(0).toUpperCase() + h.slice(1);
+            const displayName = displayColumnName(h);
             th.innerHTML = `${icon} ${displayName}`;
             th.className = 'col-header';
             thead.appendChild(th);
@@ -193,7 +207,7 @@
                     td.className = 'cell-subfield';
                 }
                 
-                td.innerText = value;
+                td.innerText = displayDataValue(value);
                 tr.appendChild(td);
             });
             
@@ -206,7 +220,7 @@
                     <input type="hidden" name="${headers[0]}" value="${row[headers[0]]}">
                     <input type="hidden" name="${headers[1]}" value="${row[headers[1]] ?? ""}">
                     <button type="submit" class="view-btn">
-                        <span class="btn-icon">🔍</span> Details
+                        <span class="btn-icon">🔍</span> جزئیات
                     </button>
                 </form>
             `;
@@ -240,15 +254,15 @@
         })
         .then(async response => {
             const text = await response.text();
-            if (!response.ok) throw new Error("Server error: " + response.status);
+            if (!response.ok) throw new Error("خطای سرور: " + response.status);
             try { return JSON.parse(text); } catch { return text; }
         })
         .then(data => {
-            showNotification("Cost structure saved successfully!", "success");
+            showNotification("ساختار هزینه با موفقیت ذخیره شد.", "success");
         })
         .catch(err => {
             console.error("SAVE ERROR:", err);
-            showNotification("Save failed. Check console.", "error");
+            showNotification("ذخیره ناموفق بود. کنسول را بررسی کنید.", "error");
         });
     }
 
@@ -287,8 +301,8 @@
 
     function getDisplayName(columnName) {
         const lowerName = columnName.toLowerCase();
-        if (lowerName === 'selling_share_of_category') return 'Weight (%)';
-        if (lowerName === 'category') return 'Category';
+        if (lowerName === 'selling_share_of_category') return 'وزن (%)';
+        if (lowerName === 'category') return 'دسته';
         return columnName.charAt(0).toUpperCase() + columnName.slice(1);
     }
 
@@ -323,10 +337,10 @@
         const indicator = document.getElementById('totalWeightIndicator');
         if (indicator) {
             if (Math.abs(total - 100) <= 0.001) {
-                indicator.innerHTML = '✓ Total: 100%';
+                indicator.innerHTML = '✓ مجموع: 100%';
                 indicator.className = 'total-indicator valid';
             } else {
-                indicator.innerHTML = `⚠ Total: ${total.toFixed(2)}% (must be 100%)`;
+                indicator.innerHTML = `⚠ مجموع: ${total.toFixed(2)}% (باید 100٪ باشد)`;
                 indicator.className = 'total-indicator invalid';
             }
         }
@@ -346,7 +360,7 @@
                 const lowerName = h.toLowerCase();
                 
                 if (lowerName === 'category') {
-                    td.innerText = value;
+                    td.innerText = displayDataValue(value);
                     td.className = 'cell-category';
                 } else if (lowerName === 'selling_share_of_category') {
                     td.innerHTML = `<input type="number" class="weight-input" step="0.01" value="${value}" data-category="${row['category']}">`;
@@ -357,7 +371,7 @@
                         updateTotalIndicator();
                     };
                 } else {
-                    td.innerText = value;
+                    td.innerText = displayDataValue(value);
                 }
                 
                 tr.appendChild(td);
@@ -409,7 +423,7 @@
         const sum = calculateTotalWeight();
         
         if (Math.abs(sum - 100) > 0.001) {
-            showNotification(`Error: Category weights must sum to 100%. Current sum: ${sum.toFixed(2)}%`, "error");
+            showNotification(`خطا: مجموع وزن دسته‌ها باید 100٪ باشد. مجموع فعلی: ${sum.toFixed(2)}٪`, "error");
             return;
         }
 
@@ -424,15 +438,15 @@
         })
         .then(async response => {
             const text = await response.text();
-            if (!response.ok) throw new Error("Server error: " + response.status);
+            if (!response.ok) throw new Error("خطای سرور: " + response.status);
             try { return JSON.parse(text); } catch { return text; }
         })
         .then(data => {
-            showNotification("Category weights saved successfully!", "success");
+            showNotification("وزن دسته‌ها با موفقیت ذخیره شد.", "success");
         })
         .catch(err => {
             console.error("CATEGORY SAVE ERROR:", err);
-            showNotification("Category save failed. Check console.", "error");
+            showNotification("ذخیره دسته ناموفق بود. کنسول را بررسی کنید.", "error");
         });
     }
 
@@ -472,7 +486,7 @@
 
     function getPredictionDisplayName(columnName) {
         if (columnName === 'Product Name') return 'محصول';
-        if (columnName === 'Predicted Production') return 'Prediction Value';
+        if (columnName === 'Predicted Production') return 'مقدار پیش‌بینی';
         return columnName.charAt(0).toUpperCase() + columnName.slice(1);
     }
 
@@ -501,7 +515,7 @@
             td.style.textAlign = "center";
             td.style.padding = "20px";
             td.style.color = "#999";
-            td.innerHTML = "No prediction data available.";
+            td.innerHTML = "داده‌ای برای پیش‌بینی موجود نیست.";
             tr.appendChild(td);
             predictionTbody.appendChild(tr);
             return;
@@ -517,7 +531,7 @@
                 const value = row[h] ?? 0;
                 
                 if (h === 'Product Name') {
-                    td.innerText = value;
+                    td.innerText = displayDataValue(value);
                     td.className = 'cell-product';
                 } else if (h === 'Predicted Production') {
                     td.innerHTML = `<input type="number" class="prediction-input" min="0" step="1" value="${value}" data-product="${row['Product Name']}">`;
@@ -554,7 +568,7 @@
                         row[h] = val;
                     };
                 } else {
-                    td.innerText = value;
+                    td.innerText = displayDataValue(value);
                 }
                 
                 tr.appendChild(td);
@@ -592,15 +606,15 @@
         })
         .then(async response => {
             const text = await response.text();
-            if (!response.ok) throw new Error("Server error: " + response.status);
+            if (!response.ok) throw new Error("خطای سرور: " + response.status);
             try { return JSON.parse(text); } catch { return text; }
         })
         .then(data => {
-            showNotification("Production predictions saved successfully!", "success");
+            showNotification("پیش‌بینی تولید با موفقیت ذخیره شد.", "success");
         })
         .catch(err => {
             console.error("PREDICTION SAVE ERROR:", err);
-            showNotification("Prediction save failed. Check console.", "error");
+            showNotification("ذخیره پیش‌بینی ناموفق بود. کنسول را بررسی کنید.", "error");
         });
     }
 
@@ -717,7 +731,7 @@
     table {
         border-collapse: collapse;
         width: 100%;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: var(--app-font-family);
     }
 
     thead {

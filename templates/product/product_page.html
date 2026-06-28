@@ -6,7 +6,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
         </svg>
-        Back
+        بازگشت
     </button>
 
     <div class="header-section">
@@ -66,7 +66,7 @@
         max-width: 1400px;
         margin: 0 auto;
         padding: 1.5rem;
-        font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-family: var(--app-font-family);
     }
 
     /* Back button */
@@ -416,6 +416,14 @@
 
     const materialOptions = Object.values(materialsData.material);
 
+    const COLUMN_DISPLAY_LABELS = {
+        materials: "مواد", unit: "واحد", currency: "ارز", cost_per_unit_in_currency: "هزینه هر واحد به ارز",
+        cost_currency: "نرخ ارز هزینه", cost_of_material_in_its_currency: "هزینه ماده به ارز اصلی",
+        cost_of_material_in_rial: "هزینه ماده به ریال", usage: "مصرف", lost_percentage: "درصد ضایعات",
+        recycability_percentage: "درصد بازیافت‌پذیری"
+    };
+    function displayHeader(key) { return COLUMN_DISPLAY_LABELS[key] || key; }
+
     // Core columns that cannot be removed
     const CORE_COLUMNS = ["materials", "unit", "currency", "cost_per_unit_in_currency", 
                           "cost_currency", "cost_of_material_in_its_currency", 
@@ -596,7 +604,7 @@
             
             const headerSpan = document.createElement("span");
             headerSpan.contentEditable = "false";
-            headerSpan.innerText = h;
+            headerSpan.innerText = displayHeader(h);
             
             if (sortColumn === h) {
                 const indicator = document.createElement("span");
@@ -616,7 +624,7 @@
                     e.stopPropagation();
                     removeColumn(index);
                 };
-                delBtn.title = "Remove column";
+                delBtn.title = "حذف ستون";
                 th.appendChild(delBtn);
                 
                 if (!userAddedColumns.includes(h) && !CORE_COLUMNS.includes(h)) {
@@ -762,7 +770,7 @@
             const delRowTd = document.createElement("td");
             const delRowBtn = document.createElement("button");
             delRowBtn.className = "delete-btn";
-            delRowBtn.innerText = "Delete Row";
+            delRowBtn.innerText = "حذف ردیف";
             delRowBtn.onclick = () => removeRow(originalIndex);
             delRowTd.appendChild(delRowBtn);
             tr.appendChild(delRowTd);
@@ -786,10 +794,10 @@
     function removeColumn(idx) {
         const colName = headers[idx];
         if (CORE_COLUMNS.includes(colName)) {
-            alert(`ستون اصلی قابل حذف نیست "${colName}".`);
+            alert(`ستون اصلی «${displayHeader(colName)}» قابل حذف نیست.`);
             return;
         }
-        if (!confirm(`حذف ستون "${colName}"?`)) return;
+        if (!confirm(`ستون «${displayHeader(colName)}» حذف شود؟`)) return;
         headers.splice(idx, 1);
         bomRows.forEach(r => delete r[colName]);
         const userColIndex = userAddedColumns.indexOf(colName);

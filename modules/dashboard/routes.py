@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, jsonify
 from utils.auth import login_required
 from utils.load_data import load_json
 from utils.paths import product_path
+from utils.localization import display_value
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -27,8 +28,8 @@ def dashboard():
 
     products = load_json(product_path+".json")
     filter_options = {
-        "factories": ["Plant Alpha", "Plant Beta", "Plant Gamma"],
-        "categories": ["Cathode", "Anode", "Electrolyte", "Separator", "Packaging"]
+        "factories": [display_value(v, "categories") for v in ["کارخانه آلفا", "کارخانه بتا", "کارخانه گاما"]],
+        "categories": [display_value(v, "categories") for v in ["کاتد", "آند", "الکترولیت", "جداکننده", "بسته‌بندی"]]
     }
 
     return render_template("dashboard/dashboard.html",
@@ -43,14 +44,14 @@ def cost_analysis():
         "total_cost": 1256000.00,
         "avg_cost_per_product": 83733.33,
         "product_count": 15,
-        "top_cost_driver": "Cathode - NMC 811"
+        "top_cost_driver": f"{display_value('Cathode', 'categories')} - NMC 811"
     },
     "breakdown_by_category": [
-        { "name": "Cathode", "cost": 520000 },
-        { "name": "Anode", "cost": 310000 },
-        { "name": "Electrolyte", "cost": 185000 },
-        { "name": "Separator", "cost": 141000 },
-        { "name": "Packaging", "cost": 100000 }
+        { "name": "کاتد", "cost": 520000 },
+        { "name": "آند", "cost": 310000 },
+        { "name": "الکترولیت", "cost": 185000 },
+        { "name": "جداکننده", "cost": 141000 },
+        { "name": "بسته‌بندی", "cost": 100000 }
     ],
     "breakdown_by_subcategory": [
         { "name": "NMC 811", "cost": 280000 },
@@ -66,50 +67,50 @@ def cost_analysis():
     ],
     "detail_breakdown": [
         {
-        "factory": "Plant Alpha",
-        "category": "Cathode",
+        "factory": "کارخانه آلفا",
+        "category": "کاتد",
         "subcategory": "NMC 811",
         "product": "NMC-811 Premium",
         "cost": 145000.00
         },
         {
-        "factory": "Plant Alpha",
-        "category": "Cathode",
+        "factory": "کارخانه آلفا",
+        "category": "کاتد",
         "subcategory": "LFP",
         "product": "LFP Standard",
         "cost": 135000.00
         },
         {
-        "factory": "Plant Beta",
-        "category": "Anode",
+        "factory": "کارخانه بتا",
+        "category": "آند",
         "subcategory": "Graphite",
         "product": "Graphite Fine",
         "cost": 95000.00
         },
         {
-        "factory": "Plant Beta",
-        "category": "Anode",
+        "factory": "کارخانه بتا",
+        "category": "آند",
         "subcategory": "Silicon",
         "product": "Si-C Composite",
         "cost": 85000.00
         },
         {
-        "factory": "Plant Gamma",
-        "category": "Electrolyte",
+        "factory": "کارخانه گاما",
+        "category": "الکترولیت",
         "subcategory": "LiPF6",
         "product": "LiPF6 Solution",
         "cost": 62000.00
         },
         {
-        "factory": "Plant Gamma",
-        "category": "Separator",
+        "factory": "کارخانه گاما",
+        "category": "جداکننده",
         "subcategory": "Polyolefin",
         "product": "PP Film 25µm",
         "cost": 47000.00
         },
         {
-        "factory": "Plant Alpha",
-        "category": "Packaging",
+        "factory": "کارخانه آلفا",
+        "category": "بسته‌بندی",
         "subcategory": "Aluminum Case",
         "product": "A356 Case 100Ah",
         "cost": 55000.00
