@@ -774,7 +774,7 @@
             ${history.map(h => `
               <div class="history-item">
                 <div class="history-icon"><i class="fas ${h.icon}"></i></div>
-                <div class="history-content"><strong>${displayHistoryAction(h.action)}</strong><div class="history-date" dir="ltr">${h.date}</div></div>
+                <div class="history-content"><strong>${displayHistoryAction(h.action)}</strong><div class="history-date" dir="ltr">${window.JalaliDate ? window.JalaliDate.formatDateTime(h.date) : h.date}</div></div>
               </div>
             `).join('')}
           </div>
@@ -1043,7 +1043,7 @@
       document.getElementById('historyViewPanel').classList.remove('hidden');
       document.getElementById('historyUserName').textContent = user.name;
       document.getElementById('historyDynamicList').innerHTML = generateHistoryForUser(user.name, user.role).map(h => `
-        <div style="background:#f1f5fb;border-radius:12px;padding:0.6rem 1rem;margin-bottom:0.5rem;display:flex;gap:10px;"><i class="fas ${h.icon}" style="color:#1e3a5f;"></i><div><strong>${displayHistoryAction(h.action)}</strong><div style="font-size:0.7rem;" dir="ltr">${h.date}</div></div></div>`).join('');
+        <div style="background:#f1f5fb;border-radius:12px;padding:0.6rem 1rem;margin-bottom:0.5rem;display:flex;gap:10px;"><i class="fas ${h.icon}" style="color:#1e3a5f;"></i><div><strong>${displayHistoryAction(h.action)}</strong><div style="font-size:0.7rem;" dir="ltr">${window.JalaliDate ? window.JalaliDate.formatDateTime(h.date) : h.date}</div></div></div>`).join('');
     }
 
     function updateTopBar() {

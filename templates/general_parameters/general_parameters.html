@@ -281,7 +281,7 @@ function updateLastModifiedDisplay() {
         try {
             const date = new Date(lastModificationDate);
             if (!isNaN(date.getTime())) {
-                dateElement.textContent = date.toLocaleString();
+                dateElement.textContent = window.JalaliDate ? window.JalaliDate.formatDateTime(date) : date.toLocaleString('fa-IR');
                 displayElement.style.display = 'flex';
             } else {
                 dateElement.textContent = 'تاریخ نامعتبر';
@@ -1002,7 +1002,7 @@ function saveTable() {
             row._isNew = false;
         });
 
-        alert(`✅ تغییرات با موفقیت ذخیره شد!\n\nآخرین تغییر: ${new Date(lastModificationDate).toLocaleString()}`);
+        alert(`✅ تغییرات با موفقیت ذخیره شد!\n\nآخرین تغییر: ${window.JalaliDate ? window.JalaliDate.formatDateTime(lastModificationDate) : new Date(lastModificationDate).toLocaleString('fa-IR')}`);
     })
     .catch(err => {
         console.error("SAVE ERROR:", err);

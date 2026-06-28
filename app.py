@@ -9,7 +9,7 @@ from modules.factory_parameters.routes import factory_parameters_bp
 from modules.cost_calculation.routes import cost_calculation_bp
 from modules.profile.routes import profile_bp
 import secrets
-from utils.localization import DEFAULT_DIRECTION, DEFAULT_LANGUAGE, DEFAULT_LOCALE, display_value, format_persian_digits, t
+from utils.localization import DEFAULT_DIRECTION, DEFAULT_LANGUAGE, DEFAULT_LOCALE, display_value, format_jalali_date, format_jalali_datetime, format_persian_digits, parse_jalali_input, t
 from utils.demo_data import persian_demo_enabled
 
 
@@ -30,6 +30,8 @@ app.register_blueprint(profile_bp)
 
 app.jinja_env.filters["display_value"] = display_value
 app.jinja_env.filters["persian_digits"] = format_persian_digits
+app.jinja_env.filters["jalali_date"] = format_jalali_date
+app.jinja_env.filters["jalali_datetime"] = format_jalali_datetime
 
 @app.context_processor
 def inject_user():
@@ -45,6 +47,9 @@ def inject_user():
         "t": t,
         "display_value": display_value,
         "format_persian_digits": format_persian_digits,
+        "format_jalali_date": format_jalali_date,
+        "format_jalali_datetime": format_jalali_datetime,
+        "parse_jalali_input": parse_jalali_input,
         "persian_demo_enabled": persian_demo_enabled(),
     }
 
