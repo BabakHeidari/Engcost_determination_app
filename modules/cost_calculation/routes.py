@@ -1,7 +1,9 @@
 from flask import Blueprint, render_template, request, jsonify
+import json
+from pathlib import Path
 from utils.auth import login_required
 from utils.paths import product_path
-from utils.load_data import load_json
+from utils.localization import DISPLAY_MAPPINGS
 from utils.cost_determiners import cost_aggregator
 
 
@@ -15,8 +17,14 @@ cost_calculation_bp = Blueprint("cost_calculation", __name__)
 @login_required
 def cost_cal():
     """Render the main product catalogue page with the cost‑calculation section."""
-    products = load_json(product_path + ".json")
-    return render_template("cost/calculation.html", table_json=products)
+    product_catalog_path = Path((product_path + ".json").replace("\\", "/"))
+    with open(product_catalog_path, "r", encoding="utf-8") as product_file:
+        products = json.load(product_file)
+    return render_template(
+        "cost/calculation.html",
+        table_json=products,
+        display_mappings=DISPLAY_MAPPINGS,
+    )
 
 # ------------------------------------------------------------
 # 2. SINGLE PRODUCT COST – called by the “Calculate Cost” button
