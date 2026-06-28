@@ -702,6 +702,7 @@
     // DATA FROM FLASK BACKEND
     // ============================================================
     const tableJSON = {{ table_json | safe }};
+    const displayMappings = {{ display_mappings | default({}, true) | tojson }};
     
     function jsonToRows(jsonObj) {
         if (!jsonObj || typeof jsonObj !== 'object') return [];
@@ -763,6 +764,20 @@
 
     function formatCurrency(value) {
         return `${formatNumber(value)} ریال`;
+    }
+
+    function displayValue(value, domain) {
+        if (value === null || value === undefined) return "";
+        const text = String(value);
+        const domains = domain ? [domain] : [];
+        domains.push("categories", "columns", "statuses", "departments", "units", "currencies", "reports");
+        for (const name of domains) {
+            const mapping = displayMappings[name] || {};
+            if (Object.prototype.hasOwnProperty.call(mapping, text)) {
+                return mapping[text];
+            }
+        }
+        return text;
     }
 
     function escapeHtml(str) {
@@ -858,7 +873,7 @@
         container.appendChild(allDiv);
         uniqueVals.forEach(val => {
             const div = document.createElement("div");
-            div.innerHTML = `<label><input type="checkbox" class="filter-checkbox" data-column="${columnName}" data-value="${escapeHtml(val)}"> ${escapeHtml(val)}</label>`;
+            div.innerHTML = `<label><input type="checkbox" class="filter-checkbox" data-column="${columnName}" data-value="${escapeHtml(val)}"> ${escapeHtml(displayValue(val, "categories"))}</label>`;
             container.appendChild(div);
         });
     }
@@ -902,9 +917,9 @@
             pageRows.forEach(row => {
                 const tr = document.createElement("tr");
                 const productName = escapeHtml(row.Product_Name || "");
-                const factory = escapeHtml(row.Factory || "");
-                const category = escapeHtml(row.Category || "");
-                const subcategory = escapeHtml(row.Subcategory || "");
+                const factory = escapeHtml(displayValue(row.Factory || "", "categories"));
+                const category = escapeHtml(displayValue(row.Category || "", "categories"));
+                const subcategory = escapeHtml(displayValue(row.Subcategory || "", "categories"));
                 const productDataAttr = escapeHtml(JSON.stringify(row));
                 tr.innerHTML = `
                     <td>${productName}</td>
@@ -965,8 +980,8 @@
                     `"${(product.Subcategory || "").replace(/"/g, '""')}"`,
                     (costs.Final_Production_Cost ?? 0).toFixed(2),
                     (costs.BOM ?? 0).toFixed(2),
-                    (costs.حقوق و دستمزد ?? 0).toFixed(2),
-                    (costs.سربار ?? 0).toFixed(2),
+                    (costs.Payroll ?? 0).toFixed(2),
+                    (costs.Overhead ?? 0).toFixed(2),
                     (costs.Depriciation ?? 0).toFixed(2),
                     (costs.AdministrativeandResearch ?? 0).toFixed(2),
                     (costs.FinancialCosts ?? 0).toFixed(2),
@@ -1141,11 +1156,11 @@
             </li>
             <li class="step-item">
                 <span class="step-desc"><span class="step-icon">👥</span><strong>حقوق و دستمزد</strong></span>
-                <span class="step-cost">${formatCurrency(costs.حقوق و دستمزد ?? 0)}</span>
+                <span class="step-cost">${formatCurrency(costs.Payroll ?? 0)}</span>
             </li>
             <li class="step-item">
                 <span class="step-desc"><span class="step-icon">⚡</span><strong>سربار</strong></span>
-                <span class="step-cost">${formatCurrency(costs.سربار ?? 0)}</span>
+                <span class="step-cost">${formatCurrency(costs.Overhead ?? 0)}</span>
             </li>
             <li class="step-item">
                 <span class="step-desc"><span class="step-icon">🏭</span><strong>استهلاک</strong></span>
