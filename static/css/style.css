@@ -1,6 +1,30 @@
 /* Base styles */
+@font-face {
+    font-family: "IRANSansX";
+    src: url("../fonts/IRANSansX-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "IRANSansX";
+    src: url("../fonts/IRANSansX-Medium.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "IRANSansX";
+    src: url("../fonts/IRANSansX-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
-    --app-font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
+    --app-font-family: "IRANSansX", "Vazirmatn", "Noto Naskh Arabic", Tahoma, "Segoe UI", Arial, sans-serif;
     --app-sidebar-width: 260px;
     --app-sidebar-bg: #2c3e50;
     --app-sidebar-hover-bg: #3d566e;
@@ -20,6 +44,8 @@ html {
 body {
     background: #f4f6f9;
     font-family: var(--app-font-family);
+    font-weight: 400;
+    line-height: 1.65;
     overflow-x: hidden;
     text-align: start;
 }
@@ -56,6 +82,16 @@ input[type="number"],
     font-variant-numeric: tabular-nums;
 }
 
+code,
+pre,
+kbd,
+samp,
+.code-like,
+.formula,
+.sku {
+    font-family: "SF Mono", "Cascadia Code", "Consolas", "Liberation Mono", monospace;
+}
+
 /* App wrapper */
 .app-wrapper {
     min-height: 100vh;
@@ -65,6 +101,7 @@ input[type="number"],
 /* Sidebar styles */
 .sidebar {
     background: var(--app-sidebar-bg);
+    font-family: var(--app-font-family);
     inline-size: var(--app-sidebar-width);
     transition: transform 0.3s ease-in-out;
     z-index: 1040;
@@ -145,6 +182,7 @@ body.sidebar-open {
 /* Shared shell */
 .app-header {
     padding-inline: 1.5rem;
+    font-family: var(--app-font-family);
 }
 
 .app-header__meta {
@@ -154,6 +192,7 @@ body.sidebar-open {
 
 .footer {
     background: #5c6e7e;
+    font-family: var(--app-font-family);
     color: #f8f9fa;
     font-size: 0.9rem;
     inline-size: 100%;
@@ -200,6 +239,7 @@ body.sidebar-open {
 .form-control,
 .form-select,
 .table {
+    font-family: var(--app-font-family);
     text-align: start;
 }
 
@@ -253,6 +293,7 @@ body.sidebar-open {
 
 .card-header {
     background: white;
+    font-family: var(--app-font-family);
     border-bottom: 2px solid #f0f2f5;
     font-weight: 600;
     border-radius: 10px 10px 0 0 !important;
@@ -358,6 +399,10 @@ body.sidebar-open {
     .card {
         box-shadow: none;
         border: 1px solid #ddd;
+    }
+
+    body {
+        font-family: var(--app-font-family);
     }
 }
 

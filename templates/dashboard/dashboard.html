@@ -222,6 +222,7 @@ const analyzeBtn = document.getElementById('analyzeBtn');
 const downloadCsvBtn = document.getElementById('downloadCsvBtn');
 const costDashboard = document.getElementById('costDashboard');
 const noDataPlaceholder = document.getElementById('noDataPlaceholder');
+const APP_FONT_FAMILY = getComputedStyle(document.documentElement).getPropertyValue('--app-font-family').trim() || 'IRANSansX, Tahoma, sans-serif';
 
 // ---- Populate کارخانه & دسته Dropdowns on Load ----
 function populateInitialFilters() {
@@ -335,10 +336,11 @@ function renderدستهBarChart(breakdown) {
     const costs = breakdown.map(item => item.cost);
 
     categoryChartInstance.setOption({
-        title: { text: 'هزینه بر اساس دسته', left: 'center' },
-        tooltip: { trigger: 'axis', valueFormatter: value => formatCurrency(value) },
-        xAxis: { type: 'category', data: categories, axisLabel: { rotate: 30 } },
-        yAxis: { type: 'value', name: 'هزینه (ریال)' },
+        textStyle: { fontFamily: APP_FONT_FAMILY },
+        title: { text: 'هزینه بر اساس دسته', left: 'center', textStyle: { fontFamily: APP_FONT_FAMILY, fontWeight: 700 } },
+        tooltip: { trigger: 'axis', textStyle: { fontFamily: APP_FONT_FAMILY }, valueFormatter: value => formatCurrency(value) },
+        xAxis: { type: 'category', data: categories, axisLabel: { rotate: 30, fontFamily: APP_FONT_FAMILY } },
+        yAxis: { type: 'value', name: 'هزینه (ریال)', nameTextStyle: { fontFamily: APP_FONT_FAMILY }, axisLabel: { fontFamily: APP_FONT_FAMILY } },
         series: [{
             name: 'هزینه',
             type: 'bar',
@@ -361,13 +363,14 @@ function renderزیردستهPieChart(breakdown) {
     }));
 
     subcategoryChartInstance.setOption({
-        title: { text: 'هزینه بر اساس زیردسته', left: 'center' },
-        tooltip: { trigger: 'item', formatter: params => `${params.name}: ${formatCurrency(params.value)} (${formatInteger(params.percent)}٪)` },
+        textStyle: { fontFamily: APP_FONT_FAMILY },
+        title: { text: 'هزینه بر اساس زیردسته', left: 'center', textStyle: { fontFamily: APP_FONT_FAMILY, fontWeight: 700 } },
+        tooltip: { trigger: 'item', textStyle: { fontFamily: APP_FONT_FAMILY }, formatter: params => `${params.name}: ${formatCurrency(params.value)} (${formatInteger(params.percent)}٪)` },
         series: [{
             type: 'pie',
             radius: ['40%', '70%'],
             data: pieData,
-            label: { show: true, formatter: params => `${params.name}: ${formatInteger(params.percent)}٪` }
+            label: { show: true, fontFamily: APP_FONT_FAMILY, formatter: params => `${params.name}: ${formatInteger(params.percent)}٪` }
         }]
     });
 }

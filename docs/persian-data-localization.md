@@ -104,3 +104,25 @@ The following remain English or raw by design:
 - Add display-only Persian columns to any future exports that also need raw technical columns.
 - Extend mappings as product owners finalize manufacturing/accounting terminology.
 - Add route-level safeguards if editable demo mode is expanded beyond read-only fixture/catalog selection.
+
+## Persian UI font setup
+
+The Persian RTL design system uses the licensed IRANSansX webfont files that are manually maintained under `static/fonts/` and referenced from the global stylesheet `static/css/style.css`.
+
+Expected font files and weights:
+
+- `static/fonts/IRANSansX-Regular.woff2` — weight `400`.
+- `static/fonts/IRANSansX-Medium.woff2` — weight `500`.
+- `static/fonts/IRANSansX-Bold.woff2` — weight `700`.
+
+The global stylesheet declares these files with `@font-face`, `font-display: swap`, and relative URLs from `static/css/style.css` to `../fonts/...`, which is compatible with Flask's `/static/` asset serving in both development and production deployments.
+
+The shared font stack is:
+
+```css
+"IRANSansX", "Vazirmatn", "Noto Naskh Arabic", Tahoma, "Segoe UI", Arial, sans-serif
+```
+
+This stack is applied through `--app-font-family` to the Persian UI shell, navigation, cards, forms, tables, modals, dropdowns, alerts, pagination, dashboard chart text, and print styles. Technical/code-like content still uses monospace fallbacks through the existing `code`, `pre`, `.code-like`, `.formula`, `.sku`, and related LTR utility selectors.
+
+Future font-file replacements must be performed manually and legally by replacing the three files at the same paths with licensed equivalents of the same formats/weights. Do not download fonts from application code, add external font CDNs, rename the expected files, or change the CSS architecture unless the design system is intentionally migrated.
