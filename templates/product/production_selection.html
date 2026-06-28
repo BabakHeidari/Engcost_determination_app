@@ -15,9 +15,9 @@
         <div class="card-header">
             <div class="header-left">
                 <h2 class="section-title">
-                    <span class="icon-grid">⊞</span> Product Table
+                    <span class="icon-grid">⊞</span> جدول محصولات
                 </h2>
-                <span class="badge-count" id="productCount">0 products</span>
+                <span class="badge-count" id="productCount">۰ محصول</span>
             </div>
             <div class="header-right" style="display: flex; gap: 10px;">
                 <button class="btn-add-category" onclick="openAddCategoryModal()">
@@ -224,6 +224,38 @@
 // JSON data passed from Flask
 const rawData = {{ table_json | safe }};
 
+const DATA_DISPLAY_LABELS = {
+    "DinMohamadpour": "کارخانه دین‌محمدپور",
+    "HajAmini": "کارخانه حاج‌امینی",
+    "Arefi": "کارخانه عارفی",
+    "Nasooz": "کارخانه نسوز",
+    "TajdidPazir": "کارخانه تجدیدپذیر",
+    "Bahman Khodro": "بهمن خودرو",
+    "IKCO": "ایران‌خودرو",
+    "Saipa": "سایپا",
+    "Lead-Acid": "سرب-اسید",
+    "LithiumIon": "لیتیوم-یون",
+    "Fidelity": "فیدلیتی",
+    "BigVehielcle": "خودروی سنگین",
+    "SmallVehiecle": "خودروی سبک",
+    "BahmanCO": "بهمن‌کو",
+    "nasooz_cat1": "دسته نسوز ۱",
+    "nasooz_sub_cat1": "زیردسته نسوز ۱",
+    "cat2": "دسته ۲",
+    "Sild": "سیلد"
+};
+const COLUMN_DISPLAY_LABELS = { Factory: "کارخانه", Category: "دسته", Subcategory: "زیردسته" };
+function displayDataValue(value) { return DATA_DISPLAY_LABELS[String(value)] || value; }
+function displayColumnName(columnName) { return COLUMN_DISPLAY_LABELS[columnName] || columnName; }
+function localizedApiMessage(message) {
+    const messages = {
+        "All fields are required.": "تکمیل همه فیلدها الزامی است.",
+        "Factory and category name are required.": "کارخانه و نام دسته الزامی است.",
+        "Factory, category, and subcategory name are required.": "کارخانه، دسته و نام زیردسته الزامی است."
+    };
+    return messages[message] || message || "خطای نامشخص";
+}
+
 // Convert JSON columns → row objects
 function jsonToRowData(jsonObj) {
     const keys = Object.keys(jsonObj);
@@ -298,14 +330,14 @@ function populateDropdown(id, options) {
     const select = document.getElementById(id);
     if (!select) return;
     
-    select.innerHTML = '<option value="">Select</option>';
+    select.innerHTML = '<option value="">انتخاب کنید</option>';
     if (!options || options.length === 0) {
         return;
     }
     options.forEach(opt => {
         const el = document.createElement("option");
         el.value = opt;
-        el.textContent = opt;
+        el.textContent = displayDataValue(opt);
         select.appendChild(el);
     });
 }
@@ -341,7 +373,7 @@ function initializeDynamicDropdowns() {
                 matchingCategories.forEach(cat => {
                     const el = document.createElement("option");
                     el.value = cat;
-                    el.textContent = cat;
+                    el.textContent = displayDataValue(cat);
                     categorySelect.appendChild(el);
                 });
                 categorySelect.disabled = false;
@@ -354,7 +386,7 @@ function initializeDynamicDropdowns() {
                 categorySelect.disabled = true;
                 subcategorySelect.innerHTML = '<option value="">ابتدا دسته را انتخاب کنید</option>';
                 subcategorySelect.disabled = true;
-                showPersistentNotification(`Please first define a category for factory "${factory}"`, "error");
+                showPersistentNotification(`ابتدا برای کارخانه «${displayDataValue(factory)}» یک دسته تعریف کنید`, "error");
             }
         });
     }
@@ -383,19 +415,19 @@ function initializeDynamicDropdowns() {
                     matchingSubcategories.sort().forEach(subcat => {
                         const el = document.createElement("option");
                         el.value = subcat;
-                        el.textContent = subcat;
+                        el.textContent = displayDataValue(subcat);
                         subcategorySelect.appendChild(el);
                     });
                     subcategorySelect.disabled = false;
                 } else {
                     subcategorySelect.innerHTML = '<option value="">زیردسته‌ای موجود نیست</option>';
                     subcategorySelect.disabled = true;
-                    showPersistentNotification(`Please first define a subcategory for category "${category}" in factory "${factory}"`, "error");
+                    showPersistentNotification(`ابتدا برای دسته «${displayDataValue(category)}» در کارخانه «${displayDataValue(factory)}» یک زیردسته تعریف کنید`, "error");
                 }
             } else {
                 subcategorySelect.innerHTML = '<option value="">زیردسته‌ای موجود نیست</option>';
                 subcategorySelect.disabled = true;
-                showPersistentNotification(`Please first define a subcategory for category "${category}" in factory "${factory}"`, "error");
+                showPersistentNotification(`ابتدا برای دسته «${displayDataValue(category)}» در کارخانه «${displayDataValue(factory)}» یک زیردسته تعریف کنید`, "error");
             }
         });
     }
@@ -422,14 +454,14 @@ function initializeDynamicDropdowns() {
                 matchingCategories.forEach(cat => {
                     const el = document.createElement("option");
                     el.value = cat;
-                    el.textContent = cat;
+                    el.textContent = displayDataValue(cat);
                     categorySelect.appendChild(el);
                 });
                 categorySelect.disabled = false;
             } else {
                 categorySelect.innerHTML = '<option value="">دسته‌ای موجود نیست</option>';
                 categorySelect.disabled = true;
-                showPersistentNotification(`Please first define a category for factory "${factory}"`, "error");
+                showPersistentNotification(`ابتدا برای کارخانه «${displayDataValue(factory)}» یک دسته تعریف کنید`, "error");
             }
         });
     }
@@ -482,26 +514,26 @@ document.getElementById("addProductForm").addEventListener("submit", async funct
     const capacity = parseInt(capacityValue);
     
     if (!productName || !factory || !category || !subcategory || !capacityValue) {
-        showPersistentNotification("All fields are required.", "error");
+        showPersistentNotification("تکمیل همه فیلدها الزامی است.", "error");
         return;
     }
     
     // Validate capacity is a positive integer
     if (isNaN(capacity) || capacity < 1 || !Number.isInteger(capacity)) {
-        showPersistentNotification("Capacity must be a positive integer (e.g., 1, 2, 50, 100).", "error");
+        showPersistentNotification("ظرفیت باید یک عدد صحیح مثبت باشد (مانند 1، 2، 50، 100).", "error");
         return;
     }
     
     // Validate that the category belongs to the factory using product_hierarchy
     const factoryData = productHierarchy[factory];
     if (!factoryData || !factoryData[category]) {
-        showPersistentNotification(`Invalid category "${category}" for factory "${factory}". Please select a valid category.`, "error");
+        showPersistentNotification(`دسته «${displayDataValue(category)}» برای کارخانه «${displayDataValue(factory)}» معتبر نیست. یک دسته معتبر انتخاب کنید.`, "error");
         return;
     }
     
     // Validate that the subcategory belongs to the category
     if (!factoryData[category].includes(subcategory)) {
-        showPersistentNotification(`Invalid subcategory "${subcategory}" for category "${category}". Please select a valid subcategory.`, "error");
+        showPersistentNotification(`زیردسته «${displayDataValue(subcategory)}» برای دسته «${displayDataValue(category)}» معتبر نیست. یک زیردسته معتبر انتخاب کنید.`, "error");
         return;
     }
     
@@ -533,12 +565,12 @@ document.getElementById("addProductForm").addEventListener("submit", async funct
             refreshAllDropdowns();
             closeAddProductModal();
             renderTable();
-            showPersistentNotification("Product added successfully!", "success");
+            showPersistentNotification("محصول با موفقیت اضافه شد.", "success");
         } else {
-            showPersistentNotification("Error: " + (result.message || "Unknown error"), "error");
+            showPersistentNotification("خطا: " + localizedApiMessage(result.message), "error");
         }
     } catch (error) {
-        showPersistentNotification("Network error. Please try again.", "error");
+        showPersistentNotification("خطای شبکه رخ داد. دوباره تلاش کنید.", "error");
     }
 });
 
@@ -572,7 +604,7 @@ document.getElementById("addCategoryForm").addEventListener("submit", async func
     const categoryName = document.getElementById("newCategoryName").value.trim();
     
     if (!factory || !categoryName) {
-        showPersistentNotification("All fields are required.", "error");
+        showPersistentNotification("تکمیل همه فیلدها الزامی است.", "error");
         return;
     }
     
@@ -595,12 +627,12 @@ document.getElementById("addCategoryForm").addEventListener("submit", async func
             await loadProductOptions();
             refreshAllDropdowns();
             closeAddCategoryModal();
-            showPersistentNotification("Category added successfully!", "success");
+            showPersistentNotification("دسته با موفقیت اضافه شد.", "success");
         } else {
-            showPersistentNotification("Error: " + (result.message || "Unknown error"), "error");
+            showPersistentNotification("خطا: " + localizedApiMessage(result.message), "error");
         }
     } catch (error) {
-        showPersistentNotification("Network error. Please try again.", "error");
+        showPersistentNotification("خطای شبکه رخ داد. دوباره تلاش کنید.", "error");
     }
 });
 
@@ -639,14 +671,14 @@ document.getElementById("addSubcategoryForm").addEventListener("submit", async f
     const subcategoryName = document.getElementById("newSubcategoryName").value.trim();
     
     if (!factory || !category || !subcategoryName) {
-        showPersistentNotification("All fields are required.", "error");
+        showPersistentNotification("تکمیل همه فیلدها الزامی است.", "error");
         return;
     }
     
     // Check if the category is valid for the factory using product_hierarchy
     const factoryData = productHierarchy[factory];
     if (!factoryData || !factoryData[category]) {
-        showPersistentNotification(`Invalid category "${category}" for factory "${factory}". Please select a valid category.`, "error");
+        showPersistentNotification(`دسته «${displayDataValue(category)}» برای کارخانه «${displayDataValue(factory)}» معتبر نیست. یک دسته معتبر انتخاب کنید.`, "error");
         return;
     }
     
@@ -675,12 +707,12 @@ document.getElementById("addSubcategoryForm").addEventListener("submit", async f
             await loadProductOptions();
             refreshAllDropdowns();
             closeAddSubcategoryModal();
-            showPersistentNotification("Subcategory added successfully!", "success");
+            showPersistentNotification("زیردسته با موفقیت اضافه شد.", "success");
         } else {
-            showPersistentNotification("Error: " + (result.message || "Unknown error"), "error");
+            showPersistentNotification("خطا: " + localizedApiMessage(result.message), "error");
         }
     } catch (error) {
-        showPersistentNotification("Network error. Please try again.", "error");
+        showPersistentNotification("خطای شبکه رخ داد. دوباره تلاش کنید.", "error");
     }
 });
 
@@ -705,7 +737,7 @@ function buildDropdown(id, columnName) {
                    data-value="__all__"
                    checked>
             <span class="checkmark"></span>
-            All
+            همه
         </label>
     `;
     container.appendChild(allDiv);
@@ -720,7 +752,7 @@ function buildDropdown(id, columnName) {
                        data-column="${columnName}" 
                        data-value="${val}">
                 <span class="checkmark"></span>
-                ${val}
+                ${displayDataValue(val)}
             </label>
         `;
         container.appendChild(div);
@@ -785,7 +817,7 @@ function updateActiveFilters() {
         filters[col].forEach(val => {
             html += `
                 <span class="filter-tag">
-                    ${col}: ${val}
+                    ${displayColumnName(col)}: ${displayDataValue(val)}
                     <span class="remove-filter" onclick="removeFilter('${col}', '${val}')">✕</span>
                 </span>
             `;
@@ -841,7 +873,7 @@ function renderTable() {
     
     // Update product count
     if (productCount) {
-        productCount.textContent = `${filtered.length} product${filtered.length !== 1 ? 's' : ''}`;
+        productCount.textContent = `${filtered.length} محصول`;
     }
 
     // Handle empty state
@@ -869,16 +901,16 @@ function renderTable() {
             tr.innerHTML = `
                 <td>${globalIndex}</td>
                 <td class="product-name">${escapeHtml(String(row.Product_Name))}</td>
-                <td>${escapeHtml(String(row.Factory))}</td>
-                <td>${escapeHtml(String(row.Category))}</td>
-                <td>${escapeHtml(String(row.Subcategory))}</td>
+                <td>${escapeHtml(String(displayDataValue(row.Factory)))}</td>
+                <td>${escapeHtml(String(displayDataValue(row.Category)))}</td>
+                <td>${escapeHtml(String(displayDataValue(row.Subcategory)))}</td>
                 <td>${escapeHtml(String(row.Capacity || ''))}</td>
                 <td>
                     <form method="POST" action="/product/${encodeURIComponent(row.Product_Name)}" style="margin:0;">
                         <input type="hidden" name="factory" value="${escapeHtml(String(row.Factory))}">
                         <input type="hidden" name="category" value="${escapeHtml(String(row.Category))}">
                         <input type="hidden" name="subcategory" value="${escapeHtml(String(row.Subcategory))}">
-                        <button type="submit" class="btn-view">View</button>
+                        <button type="submit" class="btn-view">مشاهده</button>
                     </form>
                 </td>
             `;

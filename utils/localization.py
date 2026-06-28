@@ -53,6 +53,10 @@ DISPLAY_MAPPINGS = {
         "Cathode": "کاتد", "Anode": "آند", "Electrolyte": "الکترولیت", "Separator": "جداکننده",
         "Packaging": "بسته‌بندی", "Plant Alpha": "کارخانه آلفا", "Plant Beta": "کارخانه بتا",
         "Plant Gamma": "کارخانه گاما", "Factory A": "کارخانه الف", "Factory B": "کارخانه ب", "Factory C": "کارخانه ج",
+        "DinMohamadpour": "کارخانه دین‌محمدپور", "HajAmini": "کارخانه حاج‌امینی", "Arefi": "کارخانه عارفی",
+        "Nasooz": "کارخانه نسوز", "TajdidPazir": "کارخانه تجدیدپذیر", "Bahman Khodro": "بهمن خودرو",
+        "IKCO": "ایران‌خودرو", "Saipa": "سایپا", "Lead-Acid": "سرب-اسید", "LithiumIon": "لیتیوم-یون",
+        "Fidelity": "فیدلیتی", "Sild": "سیلد", "BigVehielcle": "خودروی سنگین", "SmallVehiecle": "خودروی سبک",
         "Tehran": "تهران", "Qom": "قم", "Semnan": "سمنان", "Zanjan": "زنجان",
     },
     "reports": {
