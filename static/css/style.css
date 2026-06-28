@@ -1,6 +1,30 @@
 /* Base styles */
+@font-face {
+    font-family: "IRANSansX";
+    src: url("../fonts/IRANSansX-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "IRANSansX";
+    src: url("../fonts/IRANSansX-Medium.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "IRANSansX";
+    src: url("../fonts/IRANSansX-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
-    --app-font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
+    --app-font-family: "IRANSansX", "Vazirmatn", "Noto Naskh Arabic", Tahoma, "Segoe UI", Arial, sans-serif;
     --app-sidebar-width: 260px;
     --app-sidebar-bg: #2c3e50;
     --app-sidebar-hover-bg: #3d566e;
@@ -20,6 +44,8 @@ html {
 body {
     background: #f4f6f9;
     font-family: var(--app-font-family);
+    font-weight: 400;
+    line-height: 1.65;
     overflow-x: hidden;
     text-align: start;
 }
@@ -56,15 +82,31 @@ input[type="number"],
     font-variant-numeric: tabular-nums;
 }
 
+code,
+pre,
+kbd,
+samp,
+.code-like,
+.formula,
+.sku {
+    font-family: "SF Mono", "Cascadia Code", "Consolas", "Liberation Mono", monospace;
+}
+
 /* App wrapper */
 .app-wrapper {
     min-height: 100vh;
     position: relative;
 }
 
+.app-layout {
+    direction: rtl;
+    inline-size: 100%;
+}
+
 /* Sidebar styles */
 .sidebar {
     background: var(--app-sidebar-bg);
+    font-family: var(--app-font-family);
     inline-size: var(--app-sidebar-width);
     transition: transform 0.3s ease-in-out;
     z-index: 1040;
@@ -87,8 +129,17 @@ input[type="number"],
 @media (min-width: 992px) {
     .sidebar {
         transform: translateX(0) !important;
-        position: relative;
-        block-size: auto;
+        position: sticky;
+        inset-block-start: 0;
+        inset-inline-start: 0;
+        block-size: 100vh;
+        align-self: flex-start;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.12);
+    }
+
+    .main-content {
+        flex: 1 1 auto;
+        min-inline-size: 0;
     }
 }
 
@@ -97,7 +148,7 @@ input[type="number"],
     .sidebar {
         position: fixed;
         inset-block-start: 0;
-        inset-inline-end: 0;
+        inset-inline-start: 0;
         block-size: 100%;
         transform: translateX(100%);
         box-shadow: -2px 0 10px rgba(0,0,0,0.2);
@@ -112,6 +163,7 @@ input[type="number"],
 .sidebar-overlay {
     position: fixed;
     inset: 0;
+    direction: rtl;
     background: rgba(0,0,0,0.5);
     z-index: 1030;
     display: none;
@@ -145,6 +197,7 @@ body.sidebar-open {
 /* Shared shell */
 .app-header {
     padding-inline: 1.5rem;
+    font-family: var(--app-font-family);
 }
 
 .app-header__meta {
@@ -154,6 +207,7 @@ body.sidebar-open {
 
 .footer {
     background: #5c6e7e;
+    font-family: var(--app-font-family);
     color: #f8f9fa;
     font-size: 0.9rem;
     inline-size: 100%;
@@ -200,6 +254,7 @@ body.sidebar-open {
 .form-control,
 .form-select,
 .table {
+    font-family: var(--app-font-family);
     text-align: start;
 }
 
@@ -253,6 +308,7 @@ body.sidebar-open {
 
 .card-header {
     background: white;
+    font-family: var(--app-font-family);
     border-bottom: 2px solid #f0f2f5;
     font-weight: 600;
     border-radius: 10px 10px 0 0 !important;
@@ -358,6 +414,10 @@ body.sidebar-open {
     .card {
         box-shadow: none;
         border: 1px solid #ddd;
+    }
+
+    body {
+        font-family: var(--app-font-family);
     }
 }
 

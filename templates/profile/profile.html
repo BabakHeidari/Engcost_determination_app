@@ -1,36 +1,36 @@
 {% extends "base.html" %}
 {% block content %}
-<button class="btn btn-secondary mb-3" onclick="history.back()">Back</button>
-<!-- <h3>User Profile</h3> -->
+<button class="btn btn-secondary mb-3" onclick="history.back()">بازگشت</button>
+<!-- <h3>پروفایل کاربر</h3> -->
 
 <!-- Profile Dashboard with Module-Based Privileges -->
-<div class="dashboard" style="max-width:1300px; width:100%; background:white; border-radius:2.5rem; box-shadow:0 20px 45px rgba(0,0,0,0.08); overflow:hidden; display:flex; flex-direction:column; margin-top:1rem;">
+<div class="dashboard" dir="rtl" style="max-width:1300px; width:100%; background:white; border-radius:2.5rem; box-shadow:0 20px 45px rgba(0,0,0,0.08); overflow:hidden; display:flex; flex-direction:column; margin-top:1rem;">
   <div class="top-bar" style="background: linear-gradient(105deg, #0b1e33 0%, #1a3350 100%); color: white; padding: 1.5rem 2.5rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;">
     <div class="logo-area">
-      <h2 style="font-weight:600; font-size:1.8rem; display:flex; align-items:center; gap:10px;"><i class="fas fa-shield-haltered" style="color:#6ea8fe;"></i> User Profile</h2>
+      <h2 style="font-weight:600; font-size:1.8rem; display:flex; align-items:center; gap:10px;"><i class="fas fa-shield-haltered" style="color:#6ea8fe;"></i> پروفایل کاربر</h2>
     </div>
     <div class="current-user-badge" style="background:rgba(255,255,255,0.12); padding:0.6rem 1.5rem; border-radius:3rem; display:flex; align-items:center; gap:12px; backdrop-filter:blur(10px); font-weight:500;">
       <i class="fas fa-user-circle"></i>
-      <span id="currentUserName">Loading...</span>
-      <span class="badge-role" id="currentUserRole" style="background:#ffd966; color:#0b1e33; padding:0.3rem 1rem; border-radius:20px; font-weight:600;">Loading...</span>
+      <span id="currentUserName">در حال بارگذاری...</span>
+      <span class="badge-role" id="currentUserRole" style="background:#ffd966; color:#0b1e33; padding:0.3rem 1rem; border-radius:20px; font-weight:600;">در حال بارگذاری...</span>
       <span id="factoryBadge" style="background:#6ea8fe; color:white; padding:0.2rem 0.8rem; border-radius:20px; font-size:0.75rem; display:none;"></span>
     </div>
   </div>
 
-  <div class="main-grid" style="display:grid; grid-template-columns:1fr 380px; gap:1.5rem; padding:2rem 2.5rem 2.5rem;">
+  <div class="main-grid" style="display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:1.5rem; padding:2rem 2.5rem 2.5rem;">
     <div class="profile-section" id="profileContainer" style="background:#ffffff; border-radius:1.8rem; box-shadow:0 8px 28px rgba(0,0,0,0.04); padding:1.8rem;"></div>
     <div class="admin-panel" id="adminControlPanel" style="background:#f9fafc; border-radius:1.8rem; padding:1.8rem; box-shadow:0 8px 28px rgba(0,0,0,0.04); display:flex; flex-direction:column; gap:1.8rem; border:1px solid #eaedf4;">
-      <div style="font-weight:700; font-size:1.2rem; display:flex; align-items:center; gap:8px; color:#0b1e33;"><i class="fas fa-user-cog"></i> Admin Controls</div>
+      <div style="font-weight:700; font-size:1.2rem; display:flex; align-items:center; gap:8px; color:#0b1e33;"><i class="fas fa-user-cog"></i> کنترل‌های مدیریتی</div>
       <div id="adminContentArea"></div>
     </div>
   </div>
 </div>
 
 <!-- Add/Edit User Modal -->
-<div id="addUserModal" class="modal hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; display:none; align-items:center; justify-content:center;">
+<div id="addUserModal" class="modal hidden" style="position:fixed; inset:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; display:none; align-items:center; justify-content:center;">
   <div class="modal-content" style="background:white; border-radius:1.5rem; padding:2rem; max-width:500px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3); animation:slideUp 0.3s ease; max-height:90vh; overflow-y:auto;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-      <h3 style="font-weight:700; color:#0b1e33;" id="userModalTitle"><i class="fas fa-user-plus"></i> Add New User</h3>
+      <h3 style="font-weight:700; color:#0b1e33;" id="userModalTitle"><i class="fas fa-user-plus"></i> افزودن کاربر جدید</h3>
       <button class="btn btn-sm" onclick="closeAddUserModal()" style="background:transparent; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
     </div>
     
@@ -38,47 +38,47 @@
       <input type="hidden" id="editingUserId" value="">
       
       <div style="margin-bottom:1rem;">
-        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">Full Name</label>
-        <input type="text" id="newUserName" placeholder="Enter user's full name" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem;">
+        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">نام کامل</label>
+        <input type="text" id="newUserName" placeholder="نام و نام خانوادگی کاربر را وارد کنید" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem;">
       </div>
       
       <div style="margin-bottom:1rem;">
-        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">Email</label>
+        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">ایمیل</label>
         <input type="email" id="newUserEmail" placeholder="user@example.com" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem;">
       </div>
       
       <div style="margin-bottom:1rem;">
-        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">Assign Role</label>
+        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">تخصیص نقش</label>
         <select id="newUserRole" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem; background:white;">
-          <option value="">-- Select Role --</option>
+          <option value="">-- انتخاب نقش --</option>
         </select>
         <div id="roleHint" style="font-size:0.7rem; color:#718096; margin-top:0.3rem;"></div>
       </div>
       
       <div style="margin-bottom:1rem;" id="factorySelectionGroup" class="hidden">
-        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">Assign Factory</label>
+        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">تخصیص کارخانه</label>
         <select id="newUserFactory" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem; background:white;">
-          <option value="">-- Select Factory --</option>
+          <option value="">-- انتخاب کارخانه --</option>
         </select>
         <div id="factoryHint" style="font-size:0.7rem; color:#e53e3e; margin-top:0.3rem; display:none;"></div>
         <button class="btn btn-sm" id="addNewFactoryInlineBtn" style="margin-top:0.5rem; font-size:0.75rem; display:none;">
-          <i class="fas fa-plus"></i> Add New Factory
+          <i class="fas fa-plus"></i> افزودن کارخانه جدید
         </button>
       </div>
       
       <div style="margin-bottom:1.5rem;">
-        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">Initial Module Access</label>
+        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">دسترسی اولیه ماژول‌ها</label>
         <div id="newUserPrivileges" style="background:#f7fafc; border-radius:12px; padding:0.8rem; border:1px solid #e2e8f0; max-height:200px; overflow-y:auto;">
-          <p style="color:#a0aec0; font-size:0.8rem;">Select a role to see default privileges</p>
+          <p style="color:#a0aec0; font-size:0.8rem;">برای مشاهده دسترسی‌های پیش‌فرض، نقش را انتخاب کنید</p>
         </div>
       </div>
       
       <div id="addUserError" style="color:#e53e3e; font-size:0.8rem; margin-bottom:1rem; display:none;"></div>
       
-      <div style="display:flex; gap:10px; justify-content:flex-end;">
-        <button class="btn btn-sm" onclick="closeAddUserModal()">Cancel</button>
+      <div style="display:flex; gap:10px; justify-content:flex-start;">
+        <button class="btn btn-sm" onclick="closeAddUserModal()">انصراف</button>
         <button class="btn btn-primary btn-sm" id="confirmAddUserBtn">
-          <i class="fas fa-user-plus"></i> Add User
+          <i class="fas fa-user-plus"></i> افزودن کاربر
         </button>
       </div>
     </div>
@@ -86,35 +86,35 @@
 </div>
 
 <!-- Add Factory Modal -->
-<div id="addFactoryModal" class="modal hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10001; display:none; align-items:center; justify-content:center;">
+<div id="addFactoryModal" class="modal hidden" style="position:fixed; inset:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10001; display:none; align-items:center; justify-content:center;">
   <div class="modal-content" style="background:white; border-radius:1.5rem; padding:2rem; max-width:450px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3); animation:slideUp 0.3s ease;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-      <h3 style="font-weight:700; color:#0b1e33;"><i class="fas fa-industry"></i> Add New Factory</h3>
+      <h3 style="font-weight:700; color:#0b1e33;"><i class="fas fa-industry"></i> افزودن کارخانه جدید</h3>
       <button class="btn btn-sm" onclick="closeAddFactoryModal()" style="background:transparent; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
     </div>
     
     <div id="addFactoryForm">
       <div style="margin-bottom:1rem;">
-        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">Factory Code</label>
-        <input type="text" id="newFactoryCode" placeholder="e.g., F4" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem; text-transform:uppercase;" maxlength="5">
+        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">کد کارخانه</label>
+        <input type="text" id="newFactoryCode" placeholder="مثلاً F4" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem; text-transform:uppercase;" maxlength="5">
       </div>
       
       <div style="margin-bottom:1rem;">
-        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">Factory Name</label>
-        <input type="text" id="newFactoryName" placeholder="e.g., Factory Delta" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem;">
+        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">نام کارخانه</label>
+        <input type="text" id="newFactoryName" placeholder="مثلاً کارخانه دلتا" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem;">
       </div>
       
       <div style="margin-bottom:1rem;">
-        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">Location</label>
-        <input type="text" id="newFactoryLocation" placeholder="e.g., Building 4, North Campus" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem;">
+        <label style="font-weight:600; font-size:0.85rem; color:#2d3748; display:block; margin-bottom:0.3rem;">موقعیت</label>
+        <input type="text" id="newFactoryLocation" placeholder="مثلاً شهرک صنعتی شمس‌آباد، سالن ۴" style="width:100%; padding:0.7rem 1rem; border-radius:12px; border:1px solid #dce3f0; font-size:0.9rem;">
       </div>
       
       <div id="addFactoryError" style="color:#e53e3e; font-size:0.8rem; margin-bottom:1rem; display:none;"></div>
       
-      <div style="display:flex; gap:10px; justify-content:flex-end;">
-        <button class="btn btn-sm" onclick="closeAddFactoryModal()">Cancel</button>
+      <div style="display:flex; gap:10px; justify-content:flex-start;">
+        <button class="btn btn-sm" onclick="closeAddFactoryModal()">انصراف</button>
         <button class="btn btn-primary btn-sm" id="confirmAddFactoryBtn">
-          <i class="fas fa-plus-circle"></i> Add Factory
+          <i class="fas fa-plus-circle"></i> افزودن کارخانه
         </button>
       </div>
     </div>
@@ -122,13 +122,13 @@
 </div>
 
 <!-- Notification Container -->
-<div id="notificationContainer" style="position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px;"></div>
+<div id="notificationContainer" style="position:fixed; top:20px; left:20px; z-index:9999; display:flex; flex-direction:column; gap:10px;"></div>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: #f4f6fc; }
+  body { font-family: var(--app-font-family); background: #f4f6fc; }
   .profile-header { display: flex; align-items: flex-start; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
   .avatar { background: #1e3a5f; width: 85px; height: 85px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; color: white; box-shadow: 0 12px 22px rgba(0,0,0,0.15); flex-shrink: 0; }
   .user-details { flex: 1; }
@@ -143,7 +143,7 @@
   .priv-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #cbd5e0; }
   .priv-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 0.6rem; padding-bottom: 0.5rem; border-bottom: 1px solid #f0f4f8; }
   .priv-card-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; background: #ebf4ff; color: #1e3a5f; }
-  .priv-card-title { font-weight: 700; font-size: 0.85rem; color: #2d3748; text-transform: uppercase; letter-spacing: 0.3px; }
+  .priv-card-title { font-weight: 700; font-size: 0.85rem; color: #2d3748;  }
   .priv-card-levels { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .priv-level { font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
   .level-read { background: #e3f2fd; color: #1565c0; }
@@ -155,7 +155,7 @@
   .work-history { margin-top: 2rem; }
   .section-title { font-weight: 700; font-size: 1.2rem; color: #0b1e33; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #eef2f9; padding-bottom: 0.5rem; }
   .history-list { display: flex; flex-direction: column; gap: 1rem; }
-  .history-item { background: #f8fafd; border-radius: 16px; padding: 1rem 1.3rem; display: flex; align-items: center; gap: 1rem; border-left: 5px solid #1e3a5f; }
+  .history-item { background: #f8fafd; border-radius: 16px; padding: 1rem 1.3rem; display: flex; align-items: center; gap: 1rem; border-inline-start: 5px solid #1e3a5f; }
   .history-icon { background: #e3eaf5; width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #1e3a5f; font-size: 1.2rem; }
   .history-content { flex: 1; font-weight: 500; }
   .history-date { font-size: 0.75rem; color: #5f6c80; margin-top: 3px; }
@@ -163,7 +163,7 @@
   .admin-section { margin-bottom: 1.5rem; }
   .admin-section-title { font-weight: 700; font-size: 0.9rem; color: #2d3748; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
   
-  .subordinate-list { display: flex; flex-direction: column; gap: 0.8rem; max-height: 240px; overflow-y: auto; padding-right: 4px; }
+  .subordinate-list { display: flex; flex-direction: column; gap: 0.8rem; max-height: 240px; overflow-y: auto; padding-inline-end: 4px; }
   .sub-item { background: white; border-radius: 16px; padding: 0.9rem 1rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.02); border: 1px solid #eef2f6; transition: all 0.2s; }
   .sub-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
   .sub-item.protected { background: #fffbeb; border-color: #fbd38d; }
@@ -172,7 +172,7 @@
   .protected-badge { font-size: 0.65rem; background: #fef3c7; color: #92400e; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 600; }
   .save-indicator { font-size: 0.7rem; color: #48bb78; display: flex; align-items: center; gap: 3px; }
   
-  .factory-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 150px; overflow-y: auto; padding-right: 4px; }
+  .factory-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 150px; overflow-y: auto; padding-inline-end: 4px; }
   .factory-item { background: white; border-radius: 12px; padding: 0.6rem 0.8rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid #eef2f6; font-size: 0.8rem; }
   .factory-code { background: #e2e8f0; padding: 0.15rem 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.7rem; color: #2d3748; }
   .factory-full { color: #e53e3e; font-size: 0.65rem; }
@@ -192,12 +192,12 @@
   .btn-sm { padding: 0.35rem 1rem; font-size: 0.8rem; }
   .btn-success { background: #48bb78; color: white; border: none; }
   .btn-success:hover { background: #38a169; }
-  select, input { padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid #dce3f0; background: white; font-weight: 500; margin-right: 0.5rem; }
+  select, input { padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid #dce3f0; background: white; font-weight: 500; margin-inline-end: 0.5rem; }
   .view-history-btn { background: transparent; border: none; color: #1e3a5f; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
   hr { border: 0.5px solid #e2e8f2; margin: 0.8rem 0; }
   .hidden { display: none !important; }
   .history-mini { font-size: 0.8rem; color: #3c4b5c; }
-  .level-hierarchy { display: inline-block; font-size: 0.65rem; margin-left: 4px; }
+  .level-hierarchy { display: inline-block; font-size: 0.65rem; margin-inline-start: 4px; }
   .lock-icon { color: #d69e2e; }
   .api-badge { font-size: 0.6rem; padding: 0.15rem 0.5rem; border-radius: 8px; font-weight: 600; }
   .api-badge.local { background: #fef3c7; color: #92400e; }
@@ -206,8 +206,8 @@
   .modal.show { display: flex !important; }
   
   @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-  @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+  @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes slideOutLeft { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
   
   @media (max-width: 950px) { .main-grid { grid-template-columns: 1fr !important; padding: 1.5rem !important; } }
 </style>
@@ -235,9 +235,9 @@
     };
 
     let FACTORIES = {
-      F1: 'Factory Alpha',
-      F2: 'Factory Beta',
-      F3: 'Factory Gamma'
+      F1: 'کارخانه آلفا',
+      F2: 'کارخانه بتا',
+      F3: 'کارخانه گاما'
     };
 
     const MODULE_ICONS = {
@@ -245,6 +245,48 @@
       'Product Configuration': 'fa-cubes', 'Cost Calculation': 'fa-calculator',
       'Dashboard': 'fa-chart-pie', 'User Profile': 'fa-user-circle'
     };
+
+    const DISPLAY_LABELS = {
+      roles: {
+        'IT Admin': 'مدیر فناوری اطلاعات',
+        'Official Admin': 'مدیر سازمانی',
+        'Factory Admin': 'مدیر کارخانه',
+        'Office Staff': 'کارشناس ستادی',
+        'Factory Staff': 'کارشناس کارخانه'
+      },
+      modules: {
+        'General Parameters': 'پارامترهای عمومی',
+        'Factory Parameters': 'پارامترهای کارخانه',
+        'Product Configuration': 'پیکربندی محصول',
+        'Cost Calculation': 'محاسبه هزینه',
+        'Dashboard': 'داشبورد',
+        'User Profile': 'پروفایل کاربر'
+      },
+      levels: { Read: 'خواندن', Write: 'نوشتن', Modify: 'ویرایش' },
+      scopes: {
+        'Global (All Modules)': 'سراسری (همه ماژول‌ها)',
+        'Global (Office Focus)': 'سراسری (تمرکز ستادی)',
+        Office: 'ستادی',
+        Global: 'سراسری',
+        None: 'بدون محدوده'
+      }
+    };
+    function displayRole(role) { return DISPLAY_LABELS.roles[role] || role; }
+    function displayModule(module) { return DISPLAY_LABELS.modules[module] || module; }
+    function displayLevel(level) { return DISPLAY_LABELS.levels[level] || level; }
+    function displayScope(scope) {
+      if (!scope) return '';
+      if (DISPLAY_LABELS.scopes[scope]) return DISPLAY_LABELS.scopes[scope];
+      if (scope.startsWith('Factory: ')) return `کارخانه: ${scope.slice('Factory: '.length)}`;
+      return scope;
+    }
+    function displayHistoryAction(action) {
+      if (action === 'Logged in') return 'ورود به سامانه';
+      if (action === 'Viewed dashboard') return 'مشاهده داشبورد';
+      if (action.startsWith('Accessed ')) return `دسترسی به ${displayModule(action.slice('Accessed '.length))}`;
+      if (action.startsWith('Updated ') && action.endsWith(' settings')) return `به‌روزرسانی تنظیمات ${displayRole(action.slice('Updated '.length, -' settings'.length))}`;
+      return action;
+    }
 
     const LEVEL_HIERARCHY = ['Read', 'Write', 'Modify'];
     const MODULE_PRIVILEGES = {
@@ -272,11 +314,11 @@
       if (role === ROLES.FACTORY_ADMIN) {
         base['Factory Parameters'] = ['Read', 'Write', 'Modify']; base['Product Configuration'] = ['Read', 'Write', 'Modify'];
         base['Cost Calculation'] = ['Read', 'Write']; base['Dashboard'] = ['Read', 'Write']; base['General Parameters'] = ['Read'];
-        return { privileges: base, scope: `Factory: ${FACTORIES[factoryId] || 'Unknown'}`, factoryId: factoryId || 'F1' };
+        return { privileges: base, scope: `Factory: ${FACTORIES[factoryId] || 'نامشخص'}`, factoryId: factoryId || 'F1' };
       }
       if (role === ROLES.FACTORY_STAFF) {
         base['Product Configuration'] = ['Read']; base['Factory Parameters'] = ['Read']; base['Dashboard'] = ['Read'];
-        return { privileges: base, scope: `Factory: ${FACTORIES[factoryId] || 'Unknown'}`, factoryId: factoryId || 'F1' };
+        return { privileges: base, scope: `Factory: ${FACTORIES[factoryId] || 'نامشخص'}`, factoryId: factoryId || 'F1' };
       }
       if (role === ROLES.OFFICE_STAFF) {
         base['Dashboard'] = ['Read', 'Write']; base['User Profile'] = ['Read']; base['General Parameters'] = ['Read']; base['Cost Calculation'] = ['Read'];
@@ -286,14 +328,14 @@
     }
 
     const DEFAULT_USERS = [
-      { id: 1, name: 'Mohsen Valizadeh', email: 'elena@company.com', role: ROLES.IT_ADMIN, ...getFullPrivileges(ROLES.IT_ADMIN), factoryId: null },
-      { id: 2, name: 'Mojtaba Monfared', email: 'marcus@company.com', role: ROLES.OFFICIAL_ADMIN, ...getFullPrivileges(ROLES.OFFICIAL_ADMIN), factoryId: null },
-      { id: 3, name: 'Amirhossein Sharifi', email: 'li@factory-alpha.com', role: ROLES.FACTORY_ADMIN, ...getFullPrivileges(ROLES.FACTORY_ADMIN, 'F1'), factoryId: 'F1' },
-      { id: 4, name: 'Siamak Ranjbar', email: 'sarah@company.com', role: ROLES.OFFICE_STAFF, ...getFullPrivileges(ROLES.OFFICE_STAFF), factoryId: null },
-      { id: 5, name: 'Saber Taghiani', email: 'david@factory-alpha.com', role: ROLES.FACTORY_STAFF, ...getFullPrivileges(ROLES.FACTORY_STAFF, 'F1'), factoryId: 'F1' },
-      { id: 6, name: 'Hossein Amani', email: 'anna@company.com', role: ROLES.OFFICE_STAFF, ...getFullPrivileges(ROLES.OFFICE_STAFF), factoryId: null },
-      { id: 7, name: 'Akbar Raghfar', email: 'tom@factory-beta.com', role: ROLES.FACTORY_ADMIN, ...getFullPrivileges(ROLES.FACTORY_ADMIN, 'F2'), factoryId: 'F2' },
-      { id: 8, name: 'Hamid Javadi', email: 'rosa@factory-alpha.com', role: ROLES.FACTORY_STAFF, ...getFullPrivileges(ROLES.FACTORY_STAFF, 'F1'), factoryId: 'F1' }
+      { id: 1, name: 'محسن ولی‌زاده', email: 'elena@company.com', role: ROLES.IT_ADMIN, ...getFullPrivileges(ROLES.IT_ADMIN), factoryId: null },
+      { id: 2, name: 'مجتبی منفرد', email: 'marcus@company.com', role: ROLES.OFFICIAL_ADMIN, ...getFullPrivileges(ROLES.OFFICIAL_ADMIN), factoryId: null },
+      { id: 3, name: 'امیرحسین شریفی', email: 'li@factory-alpha.com', role: ROLES.FACTORY_ADMIN, ...getFullPrivileges(ROLES.FACTORY_ADMIN, 'F1'), factoryId: 'F1' },
+      { id: 4, name: 'سیامک رنجبر', email: 'sarah@company.com', role: ROLES.OFFICE_STAFF, ...getFullPrivileges(ROLES.OFFICE_STAFF), factoryId: null },
+      { id: 5, name: 'صابر تقیانی', email: 'david@factory-alpha.com', role: ROLES.FACTORY_STAFF, ...getFullPrivileges(ROLES.FACTORY_STAFF, 'F1'), factoryId: 'F1' },
+      { id: 6, name: 'حسین امانی', email: 'anna@company.com', role: ROLES.OFFICE_STAFF, ...getFullPrivileges(ROLES.OFFICE_STAFF), factoryId: null },
+      { id: 7, name: 'اکبر راغ‌فر', email: 'tom@factory-beta.com', role: ROLES.FACTORY_ADMIN, ...getFullPrivileges(ROLES.FACTORY_ADMIN, 'F2'), factoryId: 'F2' },
+      { id: 8, name: 'حمید جوادی', email: 'rosa@factory-alpha.com', role: ROLES.FACTORY_STAFF, ...getFullPrivileges(ROLES.FACTORY_STAFF, 'F1'), factoryId: 'F1' }
     ];
 
     // ----- BACKEND DATA INJECTION -----
@@ -315,10 +357,10 @@
       const bgColors = { success: '#48bb78', error: '#f56565', warning: '#ed8936', info: '#4299e1' };
       const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
       const n = document.createElement('div');
-      n.style.cssText = `background:${bgColors[type]};color:white;padding:1rem 1.5rem;border-radius:12px;font-weight:600;font-size:0.9rem;box-shadow:0 10px 25px rgba(0,0,0,0.15);animation:slideInRight 0.3s ease;display:flex;align-items:center;gap:10px;min-width:300px;max-width:450px;`;
+      n.style.cssText = `background:${bgColors[type]};color:white;padding:1rem 1.5rem;border-radius:12px;font-weight:600;font-size:0.9rem;box-shadow:0 10px 25px rgba(0,0,0,0.15);animation:slideInLeft 0.3s ease;display:flex;align-items:center;gap:10px;min-width:300px;max-width:450px;`;
       n.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`;
       container.appendChild(n);
-      setTimeout(() => { n.style.animation = 'slideOutRight 0.3s ease'; setTimeout(() => n.remove(), 300); }, duration);
+      setTimeout(() => { n.style.animation = 'slideOutLeft 0.3s ease'; setTimeout(() => n.remove(), 300); }, duration);
     }
 
     // ----- API CALLS -----
@@ -401,12 +443,12 @@
     function populateFactorySelect(sel, includeEmpty = true, excludeFull = false) {
       if (!sel) return;
       const cur = sel.value;
-      sel.innerHTML = includeEmpty ? '<option value="">-- Select Factory --</option>' : '';
+      sel.innerHTML = includeEmpty ? '<option value="">-- انتخاب کارخانه --</option>' : '';
       Object.entries(FACTORIES).forEach(([c, n]) => {
         const hasAdmin = factoryHasAdmin(c);
         const isFull = hasAdmin && excludeFull;
         const disabled = isFull ? ' disabled' : '';
-        const label = isFull ? `${n} (${c}) - Admin assigned` : `${n} (${c})`;
+        const label = isFull ? `${n} (${c}) - مدیر تخصیص داده شده` : `${n} (${c})`;
         sel.innerHTML += `<option value="${c}"${c===cur?' selected':''}${disabled}>${label}</option>`;
       });
       if (cur && FACTORIES[cur]) sel.value = cur;
@@ -432,20 +474,20 @@
       const location = document.getElementById('newFactoryLocation').value.trim();
       const err = document.getElementById('addFactoryError');
       err.style.display = 'none';
-      if (!code) { err.textContent = 'Enter factory code.'; err.style.display = 'block'; return; }
-      if (!name) { err.textContent = 'Enter factory name.'; err.style.display = 'block'; return; }
-      if (FACTORIES[code]) { err.textContent = 'Code exists.'; err.style.display = 'block'; return; }
-      if (Object.values(FACTORIES).some(n => n.toLowerCase() === name.toLowerCase())) { err.textContent = 'Name exists.'; err.style.display = 'block'; return; }
+      if (!code) { err.textContent = 'کد کارخانه را وارد کنید.'; err.style.display = 'block'; return; }
+      if (!name) { err.textContent = 'نام کارخانه را وارد کنید.'; err.style.display = 'block'; return; }
+      if (FACTORIES[code]) { err.textContent = 'این کد قبلاً ثبت شده است.'; err.style.display = 'block'; return; }
+      if (Object.values(FACTORIES).some(n => n.toLowerCase() === name.toLowerCase())) { err.textContent = 'این نام قبلاً ثبت شده است.'; err.style.display = 'block'; return; }
       const btn = document.getElementById('confirmAddFactoryBtn');
       const orig = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال افزودن...';
       btn.disabled = true;
       try {
         const result = await addFactoryToBackend({ code, name, location });
         if (result.success) {
           FACTORIES[code] = name;
           nextFactoryCode++;
-          showNotification(`Factory "${name}" added.`, 'success');
+          showNotification(`کارخانه «${name}» افزوده شد.`, 'success');
           if (document.getElementById('addFactoryModal').dataset.fromUserModal === 'true') {
             const fs = document.getElementById('newUserFactory');
             const selectedRole = document.getElementById('newUserRole').value;
@@ -457,13 +499,13 @@
           closeAddFactoryModal();
           renderAdminPanel();
         } else {
-          err.textContent = result.message || 'Failed.';
+          err.textContent = result.message || 'عملیات ناموفق بود.';
           err.style.display = 'block';
           btn.innerHTML = orig;
           btn.disabled = false;
         }
       } catch(e) {
-        err.textContent = 'Network error.';
+        err.textContent = 'خطای شبکه رخ داد.';
         err.style.display = 'block';
         btn.innerHTML = orig;
         btn.disabled = false;
@@ -473,8 +515,8 @@
     // ----- USER MODAL (Add/Edit) -----
     function openAddUserModal() {
       document.getElementById('editingUserId').value = '';
-      document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-plus"></i> Add New User';
-      document.getElementById('confirmAddUserBtn').innerHTML = '<i class="fas fa-user-plus"></i> Add User';
+      document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-plus"></i> افزودن کاربر جدید';
+      document.getElementById('confirmAddUserBtn').innerHTML = '<i class="fas fa-user-plus"></i> افزودن کاربر';
       _openUserModal();
     }
 
@@ -483,8 +525,8 @@
       if (!user || !canEditUser(user)) return;
       
       document.getElementById('editingUserId').value = user.id;
-      document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-edit"></i> Edit User';
-      document.getElementById('confirmAddUserBtn').innerHTML = '<i class="fas fa-save"></i> Save Changes';
+      document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-edit"></i> ویرایش کاربر';
+      document.getElementById('confirmAddUserBtn').innerHTML = '<i class="fas fa-save"></i> ذخیره تغییرات';
       
       _openUserModal(user);
     }
@@ -497,9 +539,9 @@
       const roleSelect = document.getElementById('newUserRole');
       const creatableRoles = userData ? [userData.role, ...getCreatableRoles().filter(r => r !== userData.role)] : getCreatableRoles();
       
-      roleSelect.innerHTML = '<option value="">-- Select Role --</option>';
+      roleSelect.innerHTML = '<option value="">-- انتخاب نقش --</option>';
       [...new Set(creatableRoles)].forEach(role => {
-        roleSelect.innerHTML += `<option value="${role}">${role}</option>`;
+        roleSelect.innerHTML += `<option value="${role}">${displayRole(role)}</option>`;
       });
       
       document.getElementById('newUserName').value = userData ? userData.name : '';
@@ -515,7 +557,7 @@
         updateNewUserForm(userData.role, userData.id);
       } else {
         document.getElementById('factorySelectionGroup').classList.add('hidden');
-        document.getElementById('newUserPrivileges').innerHTML = '<p style="color:#a0aec0;font-size:0.8rem;">Select a role to see default privileges</p>';
+        document.getElementById('newUserPrivileges').innerHTML = '<p style="color:#a0aec0;font-size:0.8rem;">برای مشاهده دسترسی‌های پیش‌فرض، نقش را انتخاب کنید</p>';
         document.getElementById('roleHint').textContent = '';
       }
       
@@ -541,7 +583,7 @@
       
       if (!selectedRole) {
         factoryGroup.classList.add('hidden');
-        privContainer.innerHTML = '<p style="color:#a0aec0;font-size:0.8rem;">Select a role to see default privileges</p>';
+        privContainer.innerHTML = '<p style="color:#a0aec0;font-size:0.8rem;">برای مشاهده دسترسی‌های پیش‌فرض، نقش را انتخاب کنید</p>';
         roleHint.textContent = '';
         return;
       }
@@ -555,20 +597,20 @@
           const isEditing = editingUserId !== null && editingUserId !== undefined;
           const excludeFull = selectedRole === ROLES.FACTORY_ADMIN && !isEditing;
           populateFactorySelect(factorySelect, true, excludeFull);
-          roleHint.textContent = currentUser.role === ROLES.OFFICIAL_ADMIN ? 'Select or add a new factory' : 'Select a factory';
+          roleHint.textContent = currentUser.role === ROLES.OFFICIAL_ADMIN ? 'یک کارخانه را انتخاب یا اضافه کنید' : 'یک کارخانه را انتخاب کنید';
           
           // Show hint if factory already has admin
           if (selectedRole === ROLES.FACTORY_ADMIN && isEditing) {
             const currentFactoryId = factorySelect.value;
             if (currentFactoryId && factoryHasAdmin(currentFactoryId, editingUserId)) {
-              factoryHint.textContent = 'Note: This factory already has an admin. Saving will reassign.';
+              factoryHint.textContent = 'توجه: این کارخانه از قبل مدیر دارد. ذخیره، تخصیص را تغییر می‌دهد.';
               factoryHint.style.display = 'block';
             }
           }
         } else if (isFactoryAdmin(currentUser.role)) {
           factorySelect.innerHTML = `<option value="${currentUser.factoryId}" selected>${FACTORIES[currentUser.factoryId]} (${currentUser.factoryId})</option>`;
           factorySelect.disabled = true;
-          roleHint.textContent = 'Assigned to your factory';
+          roleHint.textContent = 'به کارخانه شما اختصاص داده شده است';
         }
       } else {
         factoryGroup.classList.add('hidden');
@@ -580,16 +622,16 @@
       const defaultPrivs = getDefaultPrivilegesForRole(selectedRole, factoryId);
       
       if (Object.keys(defaultPrivs).length > 0) {
-        let privHTML = '<div style="font-size:0.75rem;color:#718096;margin-bottom:0.5rem;">Default access levels:</div>';
+        let privHTML = '<div style="font-size:0.75rem;color:#718096;margin-bottom:0.5rem;">سطوح دسترسی پیش‌فرض:</div>';
         Object.entries(defaultPrivs).forEach(([m, lvls]) => {
           privHTML += `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #f0f4f8;font-size:0.8rem;">
-            <span><i class="fas ${MODULE_ICONS[m]||'fa-cog'}" style="margin-right:5px;font-size:0.7rem;"></i>${m}</span>
-            <span>${lvls.map(l => `<span class="priv-level level-${l.toLowerCase()}" style="font-size:0.65rem;">${l}</span>`).join(' ')}</span>
+            <span><i class="fas ${MODULE_ICONS[m]||'fa-cog'}" style="margin-inline-end:5px;font-size:0.7rem;"></i>${displayModule(m)}</span>
+            <span>${lvls.map(l => `<span class="priv-level level-${l.toLowerCase()}" style="font-size:0.65rem;">${displayLevel(l)}</span>`).join(' ')}</span>
           </div>`;
         });
         privContainer.innerHTML = privHTML;
       } else {
-        privContainer.innerHTML = '<p style="color:#a0aec0;font-size:0.8rem;">No default privileges</p>';
+        privContainer.innerHTML = '<p style="color:#a0aec0;font-size:0.8rem;">دسترسی پیش‌فرضی وجود ندارد</p>';
       }
     }
 
@@ -606,26 +648,26 @@
       const err = document.getElementById('addUserError');
       err.style.display = 'none';
       
-      if (!name) { err.textContent = 'Enter name.'; err.style.display = 'block'; return; }
-      if (!email?.includes('@')) { err.textContent = 'Valid email required.'; err.style.display = 'block'; return; }
-      if (!role) { err.textContent = 'Select role.'; err.style.display = 'block'; return; }
+      if (!name) { err.textContent = 'نام را وارد کنید.'; err.style.display = 'block'; return; }
+      if (!email?.includes('@')) { err.textContent = 'ایمیل معتبر وارد کنید.'; err.style.display = 'block'; return; }
+      if (!role) { err.textContent = 'نقش را انتخاب کنید.'; err.style.display = 'block'; return; }
       
       // Check email uniqueness (exclude current user if editing)
       if (users.some(u => u.email === email && u.id.toString() !== editingId)) {
-        err.textContent = 'Email already exists.';
+        err.textContent = 'این ایمیل قبلاً ثبت شده است.';
         err.style.display = 'block';
         return;
       }
       
       // Check factory admin uniqueness
       if (role === ROLES.FACTORY_ADMIN && fid && factoryHasAdmin(fid, isEditing ? parseInt(editingId) : null)) {
-        err.textContent = 'This factory already has an admin. Each factory can have only one admin.';
+        err.textContent = 'این کارخانه از قبل مدیر دارد. هر کارخانه فقط می‌تواند یک مدیر داشته باشد.';
         err.style.display = 'block';
         return;
       }
       
       if ((role === ROLES.FACTORY_ADMIN || role === ROLES.FACTORY_STAFF) && !fid) {
-        err.textContent = 'Select factory.';
+        err.textContent = 'کارخانه را انتخاب کنید.';
         err.style.display = 'block';
         return;
       }
@@ -634,13 +676,13 @@
       const userData = {
         name, email, role,
         privileges: privs,
-        scope: role.includes('Factory') ? `Factory: ${FACTORIES[fid]||'Unknown'}` : (role===ROLES.OFFICE_STAFF?'Office':'Global'),
+        scope: role.includes('Factory') ? `Factory: ${FACTORIES[fid]||'نامشخص'}` : (role===ROLES.OFFICE_STAFF?'Office':'Global'),
         factoryId: fid
       };
       
       const btn = document.getElementById('confirmAddUserBtn');
       const orig = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ذخیره...';
       btn.disabled = true;
       
       try {
@@ -659,23 +701,23 @@
                 updateTopBar();
               }
             }
-            showNotification(`User "${name}" updated.`, 'success');
+            showNotification(`کاربر «${name}» به‌روزرسانی شد.`, 'success');
           } else {
             const newUser = { id: USING_BACKEND ? result.user_id : nextUserId++, ...userData };
             users.push(newUser);
-            showNotification(`User "${name}" added.`, 'success');
+            showNotification(`کاربر «${name}» افزوده شد.`, 'success');
           }
           closeAddUserModal();
           renderProfile();
           renderAdminPanel();
         } else {
-          err.textContent = result.message || 'Failed.';
+          err.textContent = result.message || 'عملیات ناموفق بود.';
           err.style.display = 'block';
           btn.innerHTML = orig;
           btn.disabled = false;
         }
       } catch(e) {
-        err.textContent = 'Network error.';
+        err.textContent = 'خطای شبکه رخ داد.';
         err.style.display = 'block';
         btn.innerHTML = orig;
         btn.disabled = false;
@@ -696,43 +738,43 @@
             let levelClass = 'level-read';
             if (level === 'Write') levelClass = 'level-write';
             if (level === 'Modify') levelClass = 'level-modify';
-            return `<span class="priv-level ${levelClass}">${level}</span>`;
+            return `<span class="priv-level ${levelClass}">${displayLevel(level)}</span>`;
           }).join('');
           
           privHTML += `
             <div class="priv-card">
               <div class="priv-card-header">
                 <div class="priv-card-icon"><i class="fas ${icon}"></i></div>
-                <div class="priv-card-title">${module}</div>
+                <div class="priv-card-title">${displayModule(module)}</div>
               </div>
               <div class="priv-card-levels">${levelBadges}</div>
             </div>
           `;
         });
       } else {
-        privHTML = '<div class="no-privileges"><i class="fas fa-lock" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>No module access</div>';
+        privHTML = '<div class="no-privileges"><i class="fas fa-lock" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>دسترسی به ماژولی وجود ندارد</div>';
       }
 
-      const scopeInfo = user.scope ? `<div class="scope-info"><i class="fas fa-globe"></i> Scope: ${user.scope}</div>` : '';
+      const scopeInfo = user.scope ? `<div class="scope-info"><i class="fas fa-globe"></i> محدوده: ${displayScope(user.scope)}</div>` : '';
 
       container.innerHTML = `
         <div class="profile-header">
           <div class="avatar"><i class="fas fa-user-astronaut"></i></div>
           <div class="user-details">
-            <h3>${user.name} ${USING_BACKEND?'<span class="api-badge server" style="font-size:0.6rem;">Live</span>':'<span class="api-badge local" style="font-size:0.6rem;">Demo</span>'}</h3>
-            <span class="role-tag"><i class="fas fa-id-badge"></i> ${user.role}</span>
+            <h3>${user.name} ${USING_BACKEND?'<span class="api-badge server" style="font-size:0.6rem;">فعال</span>':'<span class="api-badge local" style="font-size:0.6rem;">نمایشی</span>'}</h3>
+            <span class="role-tag"><i class="fas fa-id-badge"></i> ${displayRole(user.role)}</span>
             ${scopeInfo}
           </div>
         </div>
-        <div class="section-title" style="margin-top:1rem;"><i class="fas fa-cubes"></i> Module Access</div>
+        <div class="section-title" style="margin-top:1rem;"><i class="fas fa-cubes"></i> دسترسی ماژول‌ها</div>
         <div class="privilege-grid">${privHTML}</div>
         <div class="work-history">
-          <div class="section-title"><i class="fas fa-history"></i> Work History</div>
+          <div class="section-title"><i class="fas fa-history"></i> سوابق کاری</div>
           <div class="history-list">
             ${history.map(h => `
               <div class="history-item">
                 <div class="history-icon"><i class="fas ${h.icon}"></i></div>
-                <div class="history-content"><strong>${h.action}</strong><div class="history-date">${h.date}</div></div>
+                <div class="history-content"><strong>${displayHistoryAction(h.action)}</strong><div class="history-date" dir="ltr">${h.date}</div></div>
               </div>
             `).join('')}
           </div>
@@ -778,18 +820,18 @@
               <div style="display:flex;align-items:center;gap:8px;">
                 <span class="factory-code">${code}</span>
                 <span>${name}</span>
-                ${hasAdmin ? '<span class="factory-full">(Admin assigned)</span>' : ''}
+                ${hasAdmin ? '<span class="factory-full">(مدیر تخصیص داده شده)</span>' : ''}
               </div>
-              <span style="font-size:0.7rem;color:#718096;">${userCount} users</span>
+              <span style="font-size:0.7rem;color:#718096;">${userCount} کاربر</span>
             </div>
           `;
         });
         
         html += `
           <div class="admin-section">
-            <div class="admin-section-title"><i class="fas fa-industry"></i> Factories (${Object.keys(FACTORIES).length})</div>
+            <div class="admin-section-title"><i class="fas fa-industry"></i> کارخانه‌ها (${Object.keys(FACTORIES).length})</div>
             <div class="factory-list">${factoryListHTML}</div>
-            <button class="btn btn-success btn-sm" onclick="openAddFactoryModal(false)" style="margin-top:0.5rem;width:100%;justify-content:center;"><i class="fas fa-plus"></i> Add New Factory</button>
+            <button class="btn btn-success btn-sm" onclick="openAddFactoryModal(false)" style="margin-top:0.5rem;width:100%;justify-content:center;"><i class="fas fa-plus"></i> افزودن کارخانه جدید</button>
           </div>
           <hr>
         `;
@@ -806,13 +848,13 @@
                 <div class="sub-avatar-sm"><i class="fas fa-user"></i></div>
                 <div>
                   <strong>${sub.name}</strong>
-                  <div class="history-mini">${sub.role} ${sub.factoryId ? `(${FACTORIES[sub.factoryId] || sub.factoryId})` : ''}</div>
+                  <div class="history-mini">${displayRole(sub.role)} ${sub.factoryId ? `(${FACTORIES[sub.factoryId] || sub.factoryId})` : ''}</div>
                 </div>
               </div>
               <div style="display:flex;gap:5px;align-items:center;">
-                <span class="save-indicator hidden" id="save-indicator-${sub.id}"><i class="fas fa-check-circle"></i> Saved</span>
+                <span class="save-indicator hidden" id="save-indicator-${sub.id}"><i class="fas fa-check-circle"></i> ذخیره شد</span>
                 <button class="btn btn-sm view-history-btn" data-userid="${sub.id}"><i class="fas fa-clock"></i></button>
-                ${canEdit ? `<button class="btn btn-sm edit-user-btn" data-userid="${sub.id}" title="Edit user"><i class="fas fa-user-edit"></i></button>` : ''}
+                ${canEdit ? `<button class="btn btn-sm edit-user-btn" data-userid="${sub.id}" title="ویرایش کاربر"><i class="fas fa-user-edit"></i></button>` : ''}
                 <button class="btn btn-sm edit-priv-btn" data-userid="${sub.id}"><i class="fas fa-edit"></i></button>
               </div>
             </div>
@@ -826,10 +868,10 @@
             <div class="sub-item protected">
               <div class="sub-info">
                 <div class="sub-avatar-sm"><i class="fas fa-user-shield"></i></div>
-                <div><strong>${sub.name}</strong><div class="history-mini">${sub.role}</div></div>
+                <div><strong>${sub.name}</strong><div class="history-mini">${displayRole(sub.role)}</div></div>
               </div>
               <div style="display:flex;gap:5px;align-items:center;">
-                <span class="protected-badge"><i class="fas fa-lock lock-icon"></i> Protected</span>
+                <span class="protected-badge"><i class="fas fa-lock lock-icon"></i> محافظت‌شده</span>
                 <button class="btn btn-sm view-history-btn" data-userid="${sub.id}"><i class="fas fa-clock"></i></button>
               </div>
             </div>
@@ -838,25 +880,25 @@
       }
       
       if (!subordinates.length && !protectedUsers.length) {
-        subListHTML = '<p style="color:#666;font-size:0.9rem;">No users to display</p>';
+        subListHTML = '<p style="color:#666;font-size:0.9rem;">کاربری برای نمایش وجود ندارد</p>';
       }
 
       html += `
         <div class="admin-section">
-          <div class="admin-section-title"><i class="fas fa-users"></i> Users (${subordinates.length} editable, ${protectedUsers.length} protected)</div>
-          ${canAdd ? `<button class="btn btn-success btn-sm" onclick="openAddUserModal()" style="margin-bottom:0.8rem;width:100%;justify-content:center;"><i class="fas fa-user-plus"></i> Add New User</button>` : ''}
+          <div class="admin-section-title"><i class="fas fa-users"></i> کاربران (${subordinates.length} قابل ویرایش، ${protectedUsers.length} محافظت‌شده)</div>
+          ${canAdd ? `<button class="btn btn-success btn-sm" onclick="openAddUserModal()" style="margin-bottom:0.8rem;width:100%;justify-content:center;"><i class="fas fa-user-plus"></i> افزودن کاربر جدید</button>` : ''}
           <div class="subordinate-list" id="subordinateListContainer">${subListHTML}</div>
         </div>
-        <div style="display:flex;gap:5px;align-items:center;justify-content:flex-end;">${USING_BACKEND?'<span class="api-badge server">API</span>':'<span class="api-badge local">Demo</span>'}</div>
+        <div style="display:flex;gap:5px;align-items:center;justify-content:flex-start;">${USING_BACKEND?'<span class="api-badge server">API</span>':'<span class="api-badge local">نمایشی</span>'}</div>
         <hr>
         <div id="privilegeEditPanel" class="privilege-editor hidden">
-          <div class="superintendent-info"><i class="fas fa-info-circle"></i> As <strong>${currentUser.role}</strong>, module access granted cannot exceed your own privileges.</div>
-          <div style="font-weight:600;margin-bottom:0.8rem;">Editing: <span id="editUserName"></span> <span id="editUserRole" style="font-size:0.8rem;color:#666;"></span></div>
+          <div class="superintendent-info"><i class="fas fa-info-circle"></i> در نقش <strong>${displayRole(currentUser.role)}</strong>، دسترسی اعطاشده به ماژول‌ها نمی‌تواند از دسترسی‌های خود شما بیشتر باشد.</div>
+          <div style="font-weight:600;margin-bottom:0.8rem;">در حال ویرایش: <span id="editUserName"></span> <span id="editUserRole" style="font-size:0.8rem;color:#666;"></span></div>
           <div class="checkbox-group" id="privilegeCheckboxes"></div>
-          <div style="display:flex;gap:10px;margin-top:10px;"><button class="btn btn-primary btn-sm" id="savePrivilegeBtn"><i class="fas fa-save"></i> Save</button><button class="btn btn-sm" id="cancelEditBtn">Cancel</button></div>
+          <div style="display:flex;gap:10px;margin-top:10px;"><button class="btn btn-primary btn-sm" id="savePrivilegeBtn"><i class="fas fa-save"></i> ذخیره</button><button class="btn btn-sm" id="cancelEditBtn">انصراف</button></div>
           <div style="font-size:0.7rem;margin-top:0.5rem;" id="editWarning"></div>
         </div>
-        <div id="historyViewPanel" class="hidden" style="margin-top:0.5rem;"><div style="display:flex;justify-content:space-between;"><strong><i class="fas fa-history"></i> <span id="historyUserName"></span>'s history</strong><button class="btn btn-sm" id="closeHistoryBtn">Close</button></div><div id="historyDynamicList" style="margin-top:0.8rem;max-height:180px;overflow-y:auto;"></div></div>
+        <div id="historyViewPanel" class="hidden" style="margin-top:0.5rem;"><div style="display:flex;justify-content:space-between;"><strong><i class="fas fa-history"></i> سوابق <span id="historyUserName"></span></strong><button class="btn btn-sm" id="closeHistoryBtn">بستن</button></div><div id="historyDynamicList" style="margin-top:0.8rem;max-height:180px;overflow-y:auto;"></div></div>
       `;
       
       adminArea.innerHTML = html;
@@ -908,14 +950,14 @@
             }
           });
           
-          if (hasViolation) showNotification('Some access levels were reduced to match your authority.', 'warning');
+          if (hasViolation) showNotification('برخی سطوح دسترسی برای انطباق با اختیار شما کاهش یافتند.', 'warning');
           if (isFactoryAdmin(currentUser.role) && targetUser.role === ROLES.FACTORY_STAFF) {
             targetUser.factoryId = currentUser.factoryId;
             targetUser.scope = `Factory: ${FACTORIES[currentUser.factoryId]}`;
           }
           
           const orig = saveBtn.innerHTML;
-          saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+          saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ذخیره...';
           saveBtn.disabled = true;
           
           try {
@@ -923,17 +965,17 @@
             if (result.success) {
               targetUser.privileges = newPrivileges;
               if (currentUser.id === targetUser.id) { currentUser.privileges = {...newPrivileges}; updateTopBar(); }
-              showNotification(`Privileges for ${targetUser.name} saved.`, 'success');
+              showNotification(`دسترسی‌های ${targetUser.name} ذخیره شد.`, 'success');
               renderProfile();
               renderAdminPanel();
               editingUserId = null;
             } else {
-              showNotification(result.message || 'Failed.', 'error');
+              showNotification(result.message || 'عملیات ناموفق بود.', 'error');
               saveBtn.innerHTML = orig;
               saveBtn.disabled = false;
             }
           } catch(e) {
-            showNotification('Network error.', 'error');
+            showNotification('خطای شبکه رخ داد.', 'error');
             saveBtn.innerHTML = orig;
             saveBtn.disabled = false;
           }
@@ -956,7 +998,7 @@
       document.getElementById('privilegeEditPanel').classList.remove('hidden');
       document.getElementById('historyViewPanel').classList.add('hidden');
       document.getElementById('editUserName').textContent = user.name;
-      document.getElementById('editUserRole').textContent = `(${user.role})`;
+      document.getElementById('editUserRole').textContent = `(${displayRole(user.role)})`;
       
       const warningEl = document.getElementById('editWarning');
       warningEl.textContent = '';
@@ -964,7 +1006,7 @@
       
       let availableModules = grantableModules;
       if (isFactoryAdmin(currentUser.role) && user.role !== ROLES.FACTORY_STAFF) {
-        warningEl.textContent = 'Factory Admins can only modify Factory Staff module access.';
+        warningEl.textContent = 'مدیران کارخانه فقط می‌توانند دسترسی ماژول‌های کارشناسان کارخانه را تغییر دهند.';
         availableModules = [];
       }
       
@@ -979,21 +1021,21 @@
         const hasRestrictions = maxGrantableIdx < LEVEL_HIERARCHY.length - 1;
         if (hasRestrictions) restrictedCount++;
         
-        checkboxesHTML += `<div class="priv-subject-group" data-subject="${module}"><div class="subject-title"><i class="fas ${icon}"></i> ${module}${hasRestrictions?`<span class="restriction-note">(max: ${LEVEL_HIERARCHY[maxGrantableIdx]})</span>`:''}</div><div class="level-options">`;
+        checkboxesHTML += `<div class="priv-subject-group" data-subject="${module}"><div class="subject-title"><i class="fas ${icon}"></i> ${displayModule(module)}${hasRestrictions?`<span class="restriction-note">(حداکثر: ${displayLevel(LEVEL_HIERARCHY[maxGrantableIdx])})</span>`:''}</div><div class="level-options">`;
         allLevels.forEach(level => {
           const allowed = LEVEL_HIERARCHY.indexOf(level) <= maxGrantableIdx;
           const checked = userLevels.includes(level) && allowed;
-          checkboxesHTML += `<label style="display:flex;align-items:center;gap:5px;${!allowed?'opacity:0.5':''}"><input type="checkbox" value="${level}" ${checked?'checked':''} ${!allowed?'disabled':''}> <span class="priv-level level-${level.toLowerCase()}">${level}</span>${!allowed?'<span class="level-hierarchy" style="color:#e53e3e;">(exceeds)</span>':''}</label>`;
+          checkboxesHTML += `<label style="display:flex;align-items:center;gap:5px;${!allowed?'opacity:0.5':''}"><input type="checkbox" value="${level}" ${checked?'checked':''} ${!allowed?'disabled':''}> <span class="priv-level level-${level.toLowerCase()}">${displayLevel(level)}</span>${!allowed?'<span class="level-hierarchy" style="color:#e53e3e;">(فراتر از مجاز)</span>':''}</label>`;
         });
         checkboxesHTML += `</div></div>`;
       });
       
       if (restrictedCount > 0) {
-        warningEl.innerHTML = '<i class="fas fa-info-circle"></i> Some access levels are restricted based on your privileges.';
+        warningEl.innerHTML = '<i class="fas fa-info-circle"></i> برخی سطوح دسترسی بر اساس مجوزهای شما محدود شده‌اند.';
         warningEl.style.color = '#dd6b20';
       }
       
-      document.getElementById('privilegeCheckboxes').innerHTML = checkboxesHTML || '<p>No modules available.</p>';
+      document.getElementById('privilegeCheckboxes').innerHTML = checkboxesHTML || '<p>ماژولی در دسترس نیست.</p>';
     }
 
     function showUserHistory(user) {
@@ -1001,12 +1043,12 @@
       document.getElementById('historyViewPanel').classList.remove('hidden');
       document.getElementById('historyUserName').textContent = user.name;
       document.getElementById('historyDynamicList').innerHTML = generateHistoryForUser(user.name, user.role).map(h => `
-        <div style="background:#f1f5fb;border-radius:12px;padding:0.6rem 1rem;margin-bottom:0.5rem;display:flex;gap:10px;"><i class="fas ${h.icon}" style="color:#1e3a5f;"></i><div><strong>${h.action}</strong><div style="font-size:0.7rem;">${h.date}</div></div></div>`).join('');
+        <div style="background:#f1f5fb;border-radius:12px;padding:0.6rem 1rem;margin-bottom:0.5rem;display:flex;gap:10px;"><i class="fas ${h.icon}" style="color:#1e3a5f;"></i><div><strong>${displayHistoryAction(h.action)}</strong><div style="font-size:0.7rem;" dir="ltr">${h.date}</div></div></div>`).join('');
     }
 
     function updateTopBar() {
       document.getElementById('currentUserName').textContent = currentUser.name;
-      document.getElementById('currentUserRole').textContent = currentUser.role;
+      document.getElementById('currentUserRole').textContent = displayRole(currentUser.role);
     }
 
     // ----- EVENT LISTENERS -----
@@ -1028,11 +1070,11 @@
         nextUserId = Math.max(...users.map(u=>u.id), 0) + 1;
         const codes = Object.keys(FACTORIES);
         nextFactoryCode = Math.max(...codes.map(c=>parseInt(c.replace('F',''))||0), 0) + 1;
-        showNotification('Loaded from server', 'success', 2000);
+        showNotification('داده‌ها از سرور بارگذاری شد.', 'success', 2000);
       } else {
         currentUser = {...DEFAULT_USERS[0], privileges:{...DEFAULT_USERS[0].privileges}};
         users = JSON.parse(JSON.stringify(DEFAULT_USERS));
-        showNotification('Demo mode', 'info', 3000);
+        showNotification('حالت نمایشی فعال است.', 'info', 3000);
       }
       updateTopBar();
       renderProfile();
@@ -1042,8 +1084,8 @@
 
     function createDemoSwitcher() {
       const d = document.createElement('div');
-      d.style.cssText = 'position:fixed;bottom:20px;right:20px;background:white;padding:10px 15px;border-radius:30px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:1000;display:flex;gap:8px;align-items:center;font-size:0.8rem;';
-      d.innerHTML = `<span class="api-badge local">Demo</span> Switch: <select id="demoUserSwitch" style="padding:5px;border-radius:20px;">${users.map(u => `<option value="${u.id}" ${u.id===currentUser.id?'selected':''}>${u.name} (${u.role})</option>`).join('')}</select>`;
+      d.style.cssText = 'position:fixed;bottom:20px;left:20px;background:white;padding:10px 15px;border-radius:30px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:1000;display:flex;gap:8px;align-items:center;font-size:0.8rem;';
+      d.innerHTML = `<span class="api-badge local">نمایشی</span> تغییر کاربر: <select id="demoUserSwitch" style="padding:5px;border-radius:20px;">${users.map(u => `<option value="${u.id}" ${u.id===currentUser.id?'selected':''}>${u.name} (${displayRole(u.role)})</option>`).join('')}</select>`;
       document.body.appendChild(d);
       document.getElementById('demoUserSwitch').onchange = function() {
         const nu = users.find(u => u.id === parseInt(this.value));

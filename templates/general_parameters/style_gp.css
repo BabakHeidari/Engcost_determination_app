@@ -8,7 +8,7 @@
     padding: 24px;
     max-width: 1400px;
     margin: 0 auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    font-family: var(--app-font-family);
 }
 
 .page-header {
@@ -60,7 +60,7 @@
 
 .search-bar input {
     width: 100%;
-    padding: 12px 16px 12px 40px;
+    padding: 12px 40px 12px 16px;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
     font-size: 14px;
@@ -76,7 +76,7 @@
 
 .search-icon {
     position: absolute;
-    left: 14px;
+    right: 14px;
     top: 50%;
     transform: translateY(-50%);
     color: #94a3b8;
@@ -102,7 +102,7 @@ table {
 th, td {
     border-bottom: 1px solid #e2e8f0;
     padding: 12px 16px;
-    text-align: left;
+    text-align: start;
 }
 
 th {
@@ -217,7 +217,7 @@ td[contenteditable="true"]:hover {
 
 .float-column {
     font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-    text-align: right !important;
+    text-align: end !important;
     color: #059669;
     font-weight: 500;
 }
@@ -537,7 +537,7 @@ td[contenteditable="true"]:hover {
 
 .required {
     color: #ef4444;
-    margin-left: 2px;
+    margin-inline-start: 2px;
 }
 
 .modal-input {

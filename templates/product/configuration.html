@@ -1,62 +1,62 @@
 {% extends "base.html" %}
 {% block content %}
 
-<button class="btn btn-secondary mb-3" onclick="history.back()">Back</button>
+<button class="btn btn-secondary mb-3" onclick="history.back()">بازگشت</button>
 
 <div class="container-fluid py-3">
-    <h4 class="mb-4">Product Configuration</h4>
+    <h4 class="mb-4">پیکربندی محصول</h4>
 
     <!-- Toolbar -->
     <div class="mb-3">
-        <button class="btn btn-primary me-2">New Product</button>
-        <button class="btn btn-success me-2">Save</button>
-        <button class="btn btn-danger">Delete</button>
+        <button class="btn btn-primary me-2">محصول جدید</button>
+        <button class="btn btn-success me-2">ذخیره</button>
+        <button class="btn btn-danger">حذف</button>
     </div>
 
     <!-- Product Info -->
     <div class="card mb-4">
         <div class="card-header bg-light">
-            <strong>Product Details</strong>
+            <strong>جزئیات محصول</strong>
         </div>
         <div class="card-body row g-3">
             <div class="col-md-3">
-                <label class="form-label">Product Code</label>
+                <label class="form-label">کد محصول</label>
                 <input type="text" class="form-control" id="product_code">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Product Name</label>
+                <label class="form-label">نام محصول</label>
                 <input type="text" class="form-control" id="product_name">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Category</label>
+                <label class="form-label">دسته</label>
                 <input type="text" class="form-control" id="category">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Unit</label>
+                <label class="form-label">واحد</label>
                 <input type="text" class="form-control" id="unit">
             </div>
         </div>
     </div>
 
-    <!-- Components Table -->
+    <!-- اجزا Table -->
     <div class="card mb-4">
         <div class="card-header bg-light">
-            <strong>Components</strong>
+            <strong>اجزا</strong>
         </div>
         <div class="card-body">
             <table class="table table-bordered align-middle" id="component_table">
                 <thead class="table-light">
                     <tr>
-                        <th>Component</th>
-                        <th>Quantity</th>
-                        <th>Unit Cost</th>
-                        <th>Total Cost</th>
+                        <th>جزء</th>
+                        <th>تعداد</th>
+                        <th>هزینه واحد</th>
+                        <th>هزینه کل</th>
                         <th style="width:5%"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><input type="text" class="form-control" placeholder="Component name"></td>
+                        <td><input type="text" class="form-control" placeholder="نام جزء"></td>
                         <td><input type="number" class="form-control quantity" min="0"></td>
                         <td><input type="number" class="form-control unit_cost" step="0.01" min="0"></td>
                         <td class="total_cost text-end">0.00</td>
@@ -65,12 +65,12 @@
                 </tbody>
             </table>
 
-            <button class="btn btn-outline-primary btn-sm" id="add_row">+ Add Component</button>
+            <button class="btn btn-outline-primary btn-sm" id="add_row">افزودن جزء</button>
         </div>
     </div>
 
     <div class="d-flex justify-content-end">
-        <h5>Total Product Cost: <span id="grand_total">0.00</span></h5>
+        <h5>هزینه کل محصول: <span id="grand_total">0.00</span></h5>
     </div>
 </div>
 

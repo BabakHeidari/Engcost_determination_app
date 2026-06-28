@@ -1,5 +1,8 @@
 body{
-font-family: Arial;
+direction: rtl;
+}
+body{
+font-family: var(--app-font-family);
 margin:40px;
 }
 
@@ -9,7 +12,7 @@ margin-bottom:20px;
 
 select,input{
 padding:6px;
-margin-right:10px;
+margin-inline-end:10px;
 }
 
 table{

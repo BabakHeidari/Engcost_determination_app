@@ -12,7 +12,7 @@
         <div class="title-badge">
             <span class="badge-icon">📂</span>
             <div>
-                <h2>{{Subfield}}</h2>
+                <h2>{{Subfield|display_value}}</h2>
                 <p class="subtitle">مدیریت و پیکربندی پارامترهای زیرحوزه</p>
             </div>
         </div>
@@ -259,7 +259,7 @@ function buildFilters(){
                         data-col="${col}"
                         data-val="${v}"
                         class="filter-checkbox">
-                    <span>${v}</span>
+                    <span>${v || "(خالی)"}</span>
                 </label>
             `;
             container.appendChild(d);
@@ -426,7 +426,7 @@ function addColumn(){
 
 function removeColumn(i){
     const name = headers[i];
-    const confirmed = confirm(`حذف ستون "${getDisplayName(name)}"?`);
+    const confirmed = confirm(`ستون «${getDisplayName(name)}» حذف شود؟`);
     if(!confirmed) return;
     
     headers.splice(i,1);
@@ -590,7 +590,7 @@ function saveTable() {
     })
     .then(async response => {
         const text = await response.text();
-        if (!response.ok) throw new Error("Server error: " + response.status);
+        if (!response.ok) throw new Error("خطای سرور: " + response.status);
         try { return JSON.parse(text); } catch { return text; }
     })
     .then(data => {
@@ -831,7 +831,7 @@ buildTable();
     table {
         border-collapse: collapse;
         width: 100%;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: var(--app-font-family);
     }
 
     thead {
