@@ -98,6 +98,11 @@ samp,
     position: relative;
 }
 
+.app-layout {
+    direction: rtl;
+    inline-size: 100%;
+}
+
 /* Sidebar styles */
 .sidebar {
     background: var(--app-sidebar-bg);
@@ -124,8 +129,17 @@ samp,
 @media (min-width: 992px) {
     .sidebar {
         transform: translateX(0) !important;
-        position: relative;
-        block-size: auto;
+        position: sticky;
+        inset-block-start: 0;
+        inset-inline-start: 0;
+        block-size: 100vh;
+        align-self: flex-start;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.12);
+    }
+
+    .main-content {
+        flex: 1 1 auto;
+        min-inline-size: 0;
     }
 }
 
@@ -134,7 +148,7 @@ samp,
     .sidebar {
         position: fixed;
         inset-block-start: 0;
-        inset-inline-end: 0;
+        inset-inline-start: 0;
         block-size: 100%;
         transform: translateX(100%);
         box-shadow: -2px 0 10px rgba(0,0,0,0.2);
@@ -149,6 +163,7 @@ samp,
 .sidebar-overlay {
     position: fixed;
     inset: 0;
+    direction: rtl;
     background: rgba(0,0,0,0.5);
     z-index: 1030;
     display: none;
