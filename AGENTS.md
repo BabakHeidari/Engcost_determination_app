@@ -72,5 +72,6 @@ python -m pip install Flask pandas openpyxl
 
 ## Localization rule
 
+- All end-user-facing dates and date-times must use Jalali display/input conventions. Internal storage, APIs, calculations, database values, and machine-readable exports remain canonical unless explicitly requested otherwise.
 - All future end-user interface changes must be Persian (`fa-IR`) and right-to-left (RTL) by default unless explicitly instructed otherwise.
 - Internal code, database values, route names, API fields, environment variables, and identifiers remain English unless explicitly requested.

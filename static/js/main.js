@@ -9,12 +9,12 @@
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
-                numberingSystem: 'latn'
+                numberingSystem: 'arabext'
             }).format(date);
         },
         formatNumber(value, options = {}) {
             return new Intl.NumberFormat(this.locale, {
-                numberingSystem: 'latn',
+                numberingSystem: 'arabext',
                 ...options
             }).format(value);
         }

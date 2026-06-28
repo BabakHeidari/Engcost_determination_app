@@ -1,0 +1,20 @@
+(function (window) {
+  const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+  const MONTH_NAMES = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+  const toPersianDigits = v => String(v ?? '').replace(/[0-9]/g, d => PERSIAN_DIGITS[d]);
+  const normalizeDigits = v => String(v ?? '').replace(/[۰-۹]/g, d => PERSIAN_DIGITS.indexOf(d)).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+  const div = (a,b) => Math.floor(a/b);
+  function g2d(gy,gm,gd){return div((gy+div(gm-8,6)+100100)*1461,4)+div(153*((gm+9)%12)+2,5)+gd-34840408-div(div(gy+100100+div(gm-8,6),100)*3,4)+752;}
+  function d2g(jdn){let j=4*jdn+139361631;j=j+div(div(4*jdn+183187720,146097)*3,4)*4-3908;let i=div(j%1461,4)*5+308;let gd=div(i%153,5)+1;let gm=(div(i,153)%12)+1;let gy=div(j,1461)-100100+div(8-gm,6);return [gy,gm,gd];}
+  function jalCal(jy){const breaks=[-61,9,38,199,426,686,756,818,1111,1181,1210,1635,2060,2097,2192,2262,2324,2394,2456,3178];let gy=jy+621, leapJ=-14, jp=breaks[0], jump=0;if(jy<jp||jy>=breaks[breaks.length-1])throw new Error('سال جلالی خارج از محدوده پشتیبانی است.');for(let i=1;i<breaks.length;i++){const jm=breaks[i];jump=jm-jp;if(jy<jm)break;leapJ+=div(jump,33)*8+div(jump%33,4);jp=jm;}let n=jy-jp;leapJ+=div(n,33)*8+div((n%33)+3,4);if(jump%33===4&&jump-n===4)leapJ+=1;const leapG=div(gy,4)-div((div(gy,100)+1)*3,4)-150;const march=20+leapJ-leapG;if(jump-n<6)n=n-jump+div(jump+4,33)*33;let leap=((n+1)%33-1)%4;if(leap===-1)leap=4;return {leap,gy,march};}
+  function j2d(jy,jm,jd){const r=jalCal(jy);return g2d(r.gy,3,r.march)+(jm-1)*31-div(jm,7)*(jm-7)+jd-1;}
+  function gregorianToJalali(gy,gm,gd){let jy=gy-621;let r=jalCal(jy);const jdn1f=g2d(gy,3,r.march);let k=g2d(gy,gm,gd)-jdn1f;if(k>=0){if(k<=185)return [jy,1+div(k,31),(k%31)+1];k-=186;}else{jy-=1;k+=179;if(jalCal(jy).leap===0)k+=1;}return [jy,7+div(k,30),(k%30)+1];}
+  function isLeap(jy){return jalCal(jy).leap===0;}
+  function monthLength(jy,jm){return jm<=6?31:jm<=11?30:(isLeap(jy)?30:29);}
+  function jalaliToGregorian(jy,jm,jd){if(jm<1||jm>12||jd<1||jd>monthLength(jy,jm))throw new Error('تاریخ جلالی نامعتبر است.');let d=new Date(jy+621,2,1);const end=new Date(jy+622,2,31);while(d<=end){const got=gregorianToJalali(d.getFullYear(),d.getMonth()+1,d.getDate());if(got[0]===jy&&got[1]===jm&&got[2]===jd)return [d.getFullYear(),d.getMonth()+1,d.getDate()];d.setDate(d.getDate()+1);}throw new Error('تاریخ جلالی نامعتبر است.');}
+  function parseDate(value){if(!value)return null; if(value instanceof Date)return isNaN(value)?null:value; const d=new Date(String(value).replace(' ','T')); return isNaN(d)?null:d;}
+  function formatDate(value, fallback=''){const d=parseDate(value); if(!d)return fallback; const [jy,jm,jd]=gregorianToJalali(d.getFullYear(),d.getMonth()+1,d.getDate()); return toPersianDigits(`${jy.toString().padStart(4,'0')}/${String(jm).padStart(2,'0')}/${String(jd).padStart(2,'0')}`);}
+  function formatDateTime(value, includeTime=true, fallback=''){const d=parseDate(value); if(!d)return fallback; let out=formatDate(d,fallback); if(includeTime) out += ' - ' + toPersianDigits(`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`); return out;}
+  function parseJalaliInput(value, includeTime=false){const text=normalizeDigits(value).trim(); const m=text.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?:\s*(?:-|T|\s)\s*(\d{1,2}):(\d{2}))?$/); if(!m)throw new Error('تاریخ را در قالب ۱۴۰۵/۰۴/۰۷ وارد کنید.'); const [gy,gm,gd]=jalaliToGregorian(+m[1],+m[2],+m[3]); if(includeTime||m[4]){const hh=+(m[4]||0), mm=+(m[5]||0); if(hh>23||mm>59)throw new Error('زمان نامعتبر است.'); return `${gy}-${String(gm).padStart(2,'0')}-${String(gd).padStart(2,'0')}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00`; } return `${gy}-${String(gm).padStart(2,'0')}-${String(gd).padStart(2,'0')}`;}
+  window.JalaliDate = Object.freeze({MONTH_NAMES,toPersianDigits,normalizeDigits,gregorianToJalali,jalaliToGregorian,isLeap,monthLength,formatDate,formatDateTime,parseJalaliInput});
+})(window);
