@@ -1,0 +1,4 @@
+{
+  "_order": ["materials", "unit", "usage", "lost_percentage", "recycability_percentage", "cost_per_unit_in_currency", "cost_currency", "cost_of_material_in_its_currency", "cost_of_material_in_rial"],
+  "data": {"materials": ["اکسید سرب"], "unit": ["kg"], "usage": [12], "lost_percentage": [3], "recycability_percentage": [1], "cost_per_unit_in_currency": [250000], "cost_currency": ["IRR"], "cost_of_material_in_its_currency": [3000000], "cost_of_material_in_rial": [3000000]}
+}

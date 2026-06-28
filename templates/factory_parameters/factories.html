@@ -53,6 +53,34 @@
     // ===== DATA FROM FLASK =====
     const tableJSON = {{ table_json | safe }};
 
+    const COLUMN_DISPLAY_LABELS = {
+        'factory name': 'نام کارخانه',
+        'manager': 'مدیر',
+        'city': 'شهر',
+        'address': 'نشانی'
+    };
+    const DATA_DISPLAY_LABELS = {
+        'HajAmini': 'کارخانه حاج‌امینی',
+        'DinMohamadpour': 'کارخانه دین‌محمدپور',
+        'Arefi': 'کارخانه عارفی',
+        'Nasooz': 'کارخانه نسوز',
+        'TajdidPazir': 'کارخانه تجدیدپذیر',
+        'Amin Dehmolaee': 'امین دهملایی',
+        'Kian Abbasi': 'کیان عباسی',
+        'Sina Jahani': 'سینا جهانی',
+        'Amir Bina': 'امیر بینا',
+        'Hossein Zafari': 'حسین ظفری',
+        'Tehran': 'تهران',
+        'Qom': 'قم',
+        'Semnan': 'سمنان',
+        'Zanjan': 'زنجان',
+        'Naeimi st.': 'خیابان نعیمی',
+        'Saveh hw': 'بزرگراه ساوه',
+        'West Terminal': 'پایانه غرب'
+    };
+    function displayColumnName(columnName) { return COLUMN_DISPLAY_LABELS[columnName] || columnName; }
+    function displayDataValue(value) { return DATA_DISPLAY_LABELS[String(value)] || value || ''; }
+
     // headers follow _order exactly
     let headers = [...tableJSON._order];
 
@@ -133,7 +161,7 @@
         headers.forEach((h, i) => {
             const th = document.createElement("th");
             const icon = getColumnIcon(h);
-            th.innerHTML = `${icon} ${h.charAt(0).toUpperCase() + h.slice(1)}`;
+            th.innerHTML = `${icon} ${displayColumnName(h)}`;
             th.className = 'col-header';
             thead.appendChild(th);
         });
@@ -164,7 +192,7 @@
                 const value = row[h] ?? "";
                 const emoji = getCellEmoji(h, value);
                 
-                td.innerHTML = emoji ? `${emoji} ${value}` : value;
+                td.innerHTML = emoji ? `${emoji} ${displayDataValue(value)}` : displayDataValue(value);
                 
                 // Add special styling for different columns
                 const lowerName = h.toLowerCase();
@@ -192,7 +220,7 @@
                 <form method="POST" action="/factory_parameters/${encodeURIComponent(factoryName)}" style="margin:0;">
                     <input type="hidden" name="factory name" value="${factoryName ?? ""}">
                     <button type="submit" class="view-btn">
-                        <span class="btn-icon">🔍</span> مشاهده Details
+                        <span class="btn-icon">🔍</span> مشاهده جزئیات
                     </button>
                 </form>
             `;

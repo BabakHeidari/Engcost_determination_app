@@ -9,7 +9,8 @@ from modules.factory_parameters.routes import factory_parameters_bp
 from modules.cost_calculation.routes import cost_calculation_bp
 from modules.profile.routes import profile_bp
 import secrets
-from utils.localization import DEFAULT_DIRECTION, DEFAULT_LANGUAGE, DEFAULT_LOCALE, t
+from utils.localization import DEFAULT_DIRECTION, DEFAULT_LANGUAGE, DEFAULT_LOCALE, display_value, format_persian_digits, t
+from utils.demo_data import persian_demo_enabled
 
 
 app = Flask(__name__)
@@ -27,6 +28,9 @@ app.register_blueprint(factory_parameters_bp)
 app.register_blueprint(cost_calculation_bp, url_prefix="/cost")
 app.register_blueprint(profile_bp)
 
+app.jinja_env.filters["display_value"] = display_value
+app.jinja_env.filters["persian_digits"] = format_persian_digits
+
 @app.context_processor
 def inject_user():
     try:
@@ -39,6 +43,9 @@ def inject_user():
         "app_locale": DEFAULT_LOCALE,
         "app_direction": DEFAULT_DIRECTION,
         "t": t,
+        "display_value": display_value,
+        "format_persian_digits": format_persian_digits,
+        "persian_demo_enabled": persian_demo_enabled(),
     }
 
 @app.route("/")

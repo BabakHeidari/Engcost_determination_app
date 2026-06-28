@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from utils.paths import parent_path
 from utils.xlsxTojson import xlsx_to_json_convertor, to_json
+from utils.demo_data import demo_path_for
 from shutil import copy2
 import logging
 
@@ -9,6 +10,7 @@ import logging
 
 def load_json(file_path:str):
     try:
+        file_path = demo_path_for(file_path)
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data
