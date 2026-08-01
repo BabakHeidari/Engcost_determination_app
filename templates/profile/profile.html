@@ -761,7 +761,7 @@
         <div class="profile-header">
           <div class="avatar"><i class="fas fa-user-astronaut"></i></div>
           <div class="user-details">
-            <h3>${user.name} ${USING_BACKEND?'<span class="api-badge server" style="font-size:0.6rem;">فعال</span>':'<span class="api-badge local" style="font-size:0.6rem;">نمایشی</span>'}</h3>
+            <h3>${user.name} ${USING_BACKEND?'<span class="api-badge server" style="font-size:0.6rem;">فعال</span>':'<span class="api-badge local" style="font-size:0.6rem;">کاربر</span>'}</h3>
             <span class="role-tag"><i class="fas fa-id-badge"></i> ${displayRole(user.role)}</span>
             ${scopeInfo}
           </div>
@@ -889,7 +889,7 @@
           ${canAdd ? `<button class="btn btn-success btn-sm" onclick="openAddUserModal()" style="margin-bottom:0.8rem;width:100%;justify-content:center;"><i class="fas fa-user-plus"></i> افزودن کاربر جدید</button>` : ''}
           <div class="subordinate-list" id="subordinateListContainer">${subListHTML}</div>
         </div>
-        <div style="display:flex;gap:5px;align-items:center;justify-content:flex-start;">${USING_BACKEND?'<span class="api-badge server">API</span>':'<span class="api-badge local">نمایشی</span>'}</div>
+        <div style="display:flex;gap:5px;align-items:center;justify-content:flex-start;">${USING_BACKEND?'<span class="api-badge server">API</span>':'<span class="api-badge local">کاربر</span>'}</div>
         <hr>
         <div id="privilegeEditPanel" class="privilege-editor hidden">
           <div class="superintendent-info"><i class="fas fa-info-circle"></i> در نقش <strong>${displayRole(currentUser.role)}</strong>، دسترسی اعطاشده به ماژول‌ها نمی‌تواند از دسترسی‌های خود شما بیشتر باشد.</div>
@@ -1074,7 +1074,7 @@
       } else {
         currentUser = {...DEFAULT_USERS[0], privileges:{...DEFAULT_USERS[0].privileges}};
         users = JSON.parse(JSON.stringify(DEFAULT_USERS));
-        showNotification('حالت نمایشی فعال است.', 'info', 3000);
+        showNotification('حالت مدیریتی فعال است.', 'info', 3000);
       }
       updateTopBar();
       renderProfile();
@@ -1085,7 +1085,7 @@
     function createDemoSwitcher() {
       const d = document.createElement('div');
       d.style.cssText = 'position:fixed;bottom:20px;left:20px;background:white;padding:10px 15px;border-radius:30px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:1000;display:flex;gap:8px;align-items:center;font-size:0.8rem;';
-      d.innerHTML = `<span class="api-badge local">نمایشی</span> تغییر کاربر: <select id="demoUserSwitch" style="padding:5px;border-radius:20px;">${users.map(u => `<option value="${u.id}" ${u.id===currentUser.id?'selected':''}>${u.name} (${displayRole(u.role)})</option>`).join('')}</select>`;
+      d.innerHTML = `<span class="api-badge local">کاربر</span> تغییر کاربر: <select id="demoUserSwitch" style="padding:5px;border-radius:20px;">${users.map(u => `<option value="${u.id}" ${u.id===currentUser.id?'selected':''}>${u.name} (${displayRole(u.role)})</option>`).join('')}</select>`;
       document.body.appendChild(d);
       document.getElementById('demoUserSwitch').onchange = function() {
         const nu = users.find(u => u.id === parseInt(this.value));
