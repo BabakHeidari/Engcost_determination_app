@@ -1,14 +1,17 @@
 import json
 import multiprocessing
+import os
 from pathlib import Path
 from unittest import mock
 
 import pytest
 
+import utils.profile_store as profile_store
+
 from utils.profile_store import (
     ProfileDataStore,
     ProfileDataValidationError,
-    ProfileStoreError,
+    ProfileStoreNotInitializedError,
     public_user,
     validate_data,
 )
@@ -63,6 +66,17 @@ def test_created_records_receive_safe_defaults(tmp_path):
     assert created["factory_id"] is None
     assert created["revision"] == 1
     assert "password_hash" not in created
+
+
+def test_user_lookup_accepts_normalized_username(tmp_path):
+    path = tmp_path / "app_data.json"
+    write(path, document())
+    values = user()
+    values["username"] = "Named Admin"
+    ProfileDataStore(path).create_user(values)
+    found = ProfileDataStore(path).get_user_by_identifier("  NAMEDADMIN ")
+    assert found["id"] == "usr_1"
+    assert "password_hash" not in found
 
 
 @pytest.mark.parametrize("bad", [[], {"schema_version": 99}, {"schema_version": 1}])
@@ -132,6 +146,31 @@ def test_concurrent_writes_do_not_lose_updates(tmp_path):
     assert len(ProfileDataStore(path).list_users()) == 8
 
 
+def test_platform_lock_adapter_round_trip(tmp_path):
+    descriptor = os.open(tmp_path / "adapter.lock", os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        profile_store._prepare_lock_file(descriptor)
+        profile_store._acquire_file_lock(descriptor, exclusive=True)
+        profile_store._release_file_lock(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def test_windows_directory_sync_does_not_open_directory(tmp_path):
+    with mock.patch.object(profile_store.os, "name", "nt"), mock.patch.object(
+        profile_store.os, "open"
+    ) as open_mock:
+        profile_store._sync_parent_directory(tmp_path)
+    open_mock.assert_not_called()
+
+
+def test_windows_lock_import_is_conditional_and_documented():
+    source = Path(profile_store.__file__).read_text(encoding="utf-8")
+    assert 'if os.name == "nt":\n    import msvcrt\nelse:\n    import fcntl' in source
+    documentation = Path("docs/profile-json-data-access-layer.md").read_text(encoding="utf-8")
+    assert "Windows deployments use `msvcrt`" in documentation
+
+
 def test_backups_are_created_and_bounded(tmp_path):
     path = tmp_path / "app_data.json"
     write(path, document())
@@ -160,7 +199,7 @@ def test_password_hash_is_never_in_public_serialization():
 
 def test_absent_store_requires_explicit_initialization(tmp_path):
     store = ProfileDataStore(tmp_path / "app_data.json")
-    with pytest.raises(ProfileStoreError, match="not initialized"):
+    with pytest.raises(ProfileStoreNotInitializedError, match="not initialized"):
         store.load_data()
     initialized = store.initialize(ROLES)
     assert initialized["users"] == []

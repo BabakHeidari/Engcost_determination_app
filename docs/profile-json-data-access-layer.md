@@ -26,13 +26,13 @@ Malformed or absent storage raises a `ProfileStoreError`/`ProfileDataValidationE
 
 ## Lock, write, backup, and recovery behavior
 
-Reads take a shared advisory `fcntl` lock and mutations take an exclusive inter-process lock on the stable sibling `.lock` file. The exclusive lock covers reload, validation, ID allocation, duplicate checks, mutation, revision increment, candidate validation, backup, and replacement. A bounded timeout prevents indefinite waiting.
+On Linux/macOS, reads take a shared advisory `fcntl` lock and mutations take an exclusive lock. On Windows, `msvcrt` byte-range locking safely serializes readers and writers because it has no shared-lock operation. Both adapters lock the stable sibling `.lock` file. The exclusive lock covers reload, validation, ID allocation, duplicate checks, mutation, revision increment, candidate validation, backup, and replacement. A bounded timeout prevents indefinite waiting.
 
 Writes serialize to a uniquely named mode-`0600` temporary file in the target directory, flush and `fsync` it, parse and validate it again, then install it with `os.replace`. The containing directory is also synced where supported. A failed replacement removes the temporary candidate and leaves the prior canonical JSON intact.
 
 Before a normal replacement, the valid prior revision is copied to the non-web `backups/` directory and synced. `APP_DATA_BACKUP_LIMIT` controls rotation (default `5`, `0` disables backups); oldest matching backups are deleted so growth is bounded. Restore is an explicit operator action: stop writers, validate the chosen backup with `validate_data`, preserve the damaged file for investigation, and atomically place the selected revision while holding the same lock protocol.
 
-`fcntl` provides inter-process advisory locking on the project's Linux deployment environment. A move to Windows or a network filesystem requires a verified compatible lock adapter before deployment.
+Local Linux/macOS deployments use `fcntl`; Windows deployments use `msvcrt`. Network filesystems still require deployment-specific verification of their locking and atomic-replacement semantics.
 
 ## Explicit initialization and secure administrator bootstrap
 

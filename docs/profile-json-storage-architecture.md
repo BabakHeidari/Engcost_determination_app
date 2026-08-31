@@ -275,7 +275,7 @@ Rollback restores the pre-cutover configuration and protected legacy backup only
 Use one repository/service layer for every read-modify-write operation. Use a separate sibling lock file (for example `app_data.json.lock`) because locking the data inode itself is unsafe across atomic replacement.
 
 - Take a shared lock for reads where the platform/library supports reliable shared locks; take an exclusive lock for the entire read-validate-authorize-modify-validate-write sequence.
-- Use an established cross-process locking library, or a small platform adapter around operating-system advisory locks; do not use an in-process `threading.Lock` alone.
+- Use the implemented platform adapter: `fcntl.flock` on Linux/macOS and `msvcrt` byte-range locking on Windows. Windows serializes readers and writers because `msvcrt` has no shared-lock operation. Do not use an in-process `threading.Lock` alone.
 - Apply a bounded timeout and return a controlled service-unavailable/conflict response instead of waiting forever.
 - Under the exclusive lock, re-read the latest document and check document/user revisions to prevent lost updates from stale forms.
 - All application processes and maintenance/migration commands must use the same lock protocol. This design supports a single host/shared filesystem with lock semantics; network filesystems require explicit verification. It is not intended as a horizontally distributed database substitute.

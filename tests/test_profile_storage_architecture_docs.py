@@ -39,10 +39,9 @@ def test_profile_storage_architecture_covers_required_decisions():
     assert "os.replace" in document
 
 
-def test_phase_plan_preserves_documentation_only_stop_boundary():
+def test_phase_plan_records_authentication_stop_boundary():
     plan = IMPLEMENTATION_PLAN.read_text(encoding="utf-8")
 
-    assert "Phase 2 — JSON storage architecture | Complete in documentation" in plan
-    assert "Phase 3 and later | **Not started**" in plan
-    assert "No canonical file" in plan
-
+    assert "Phase 4 — authentication migration | Complete" in plan
+    assert "Profile administration remains disabled" in plan
+    assert "Phase 5 and later | **Not started**" in plan

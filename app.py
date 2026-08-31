@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, session
+from flask import Flask, redirect, url_for
 # from functools import wraps
 from modules.auth.routes import auth_bp
 from modules.desk.routes import desk_bp
@@ -9,6 +9,7 @@ from modules.factory_parameters.routes import factory_parameters_bp
 from modules.cost_calculation.routes import cost_calculation_bp
 from modules.profile.routes import profile_bp
 import secrets
+from utils.auth import load_current_user
 from utils.localization import DEFAULT_DIRECTION, DEFAULT_LANGUAGE, DEFAULT_LOCALE, display_value, format_jalali_date, format_jalali_datetime, format_persian_digits, parse_jalali_input, t
 from utils.demo_data import persian_demo_enabled
 
@@ -35,10 +36,8 @@ app.jinja_env.filters["jalali_datetime"] = format_jalali_datetime
 
 @app.context_processor
 def inject_user():
-    try:
-        user = session.get("user").capitalize()
-    except:
-        user = None
+    current_user = load_current_user()
+    user = current_user.get("full_name") or current_user.get("username") if current_user else None
     return {
         "user": user,
         "app_language": DEFAULT_LANGUAGE,

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import copy
 import errno
-import fcntl
 import json
 import os
 import tempfile
@@ -18,6 +17,12 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
+
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 
 SUPPORTED_SCHEMA_VERSION = 1
@@ -32,8 +37,50 @@ ROOT_FIELDS = {"schema_version", "metadata", *REQUIRED_COLLECTIONS}
 PLAINTEXT_PASSWORD_FIELDS = {"password", "plain_password", "plaintext_password"}
 
 
+def _prepare_lock_file(descriptor: int) -> None:
+    """Ensure Windows has a byte range available for ``msvcrt.locking``."""
+    if os.name == "nt" and os.fstat(descriptor).st_size == 0:
+        os.write(descriptor, b"\0")
+        os.fsync(descriptor)
+
+
+def _acquire_file_lock(descriptor: int, exclusive: bool) -> None:
+    if os.name == "nt":
+        # msvcrt has no shared lock, so Windows serializes readers and writers.
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+    else:
+        operation = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+        fcntl.flock(descriptor, operation | fcntl.LOCK_NB)
+
+
+def _release_file_lock(descriptor: int) -> None:
+    if os.name == "nt":
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+    else:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+
+
+def _sync_parent_directory(path: Path) -> None:
+    """Persist directory metadata where opening directories is supported."""
+    if os.name == "nt":
+        # Windows rejects os.open() on directories. The candidate file itself
+        # has already been flushed and os.replace() is atomic on local NTFS.
+        return
+    directory_fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
 class ProfileStoreError(Exception):
     """Base application-level storage error."""
+
+
+class ProfileStoreNotInitializedError(ProfileStoreError):
+    """The configured canonical store has not been created yet."""
 
 
 class ProfileDataValidationError(ProfileStoreError):
@@ -56,6 +103,16 @@ def normalize_email(value: str) -> str:
     if not isinstance(value, str):
         raise ProfileDataValidationError("User email must be a string")
     return unicodedata.normalize("NFKC", value).strip().casefold()
+
+
+def normalize_username(value: str) -> str:
+    if not isinstance(value, str):
+        raise ProfileDataValidationError("Username must be a string")
+    normalized = unicodedata.normalize("NFKC", value).strip().casefold()
+    # Usernames are token identifiers in this application, not display names.
+    # Ignore accidental whitespace so a legacy value such as "Mohsen 1224"
+    # remains reachable with the intended login identifier "Mohsen1224".
+    return "".join(normalized.split())
 
 
 def _required_string(record: dict, field: str, label: str) -> str:
@@ -114,18 +171,21 @@ def validate_data(data: dict) -> dict:
         factory_ids.add(factory_id)
         factory_codes.add(code)
 
-    user_ids, user_emails = set(), set()
+    user_ids, user_emails, usernames = set(), set(), set()
     for user in data["users"]:
         if not isinstance(user, dict):
             raise ProfileDataValidationError("User records must be objects")
         user_id = _required_string(user, "id", "User")
         email = normalize_email(user.get("email"))
+        username = normalize_username(user.get("username", user.get("email")))
         if not email:
             raise ProfileDataValidationError(f"User {user_id} email must not be empty")
         if user_id in user_ids:
             raise ProfileDataValidationError(f"Duplicate user id: {user_id}")
         if email in user_emails:
             raise ProfileDataValidationError(f"Duplicate normalized user email: {email}")
+        if not username or username in usernames:
+            raise ProfileDataValidationError(f"Duplicate or empty normalized username: {username}")
         if user.get("role") not in roles:
             raise ProfileDataValidationError(f"User {user_id} has an unrecognized role")
         factory_id = user.get("factory_id")
@@ -136,6 +196,7 @@ def validate_data(data: dict) -> dict:
             raise ProfileDataValidationError(f"User {user_id} password_hash must be a string")
         user_ids.add(user_id)
         user_emails.add(email)
+        usernames.add(username)
 
     override_ids = set()
     for override in data["user_permission_overrides"]:
@@ -204,14 +265,16 @@ class ProfileDataStore:
     def _lock(self, exclusive):
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         descriptor = os.open(self.lock_path, os.O_CREAT | os.O_RDWR, 0o600)
-        operation = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+        _prepare_lock_file(descriptor)
         deadline = time.monotonic() + self.lock_timeout
         while True:
             try:
-                fcntl.flock(descriptor, operation | fcntl.LOCK_NB)
+                _acquire_file_lock(descriptor, exclusive)
                 return descriptor
             except OSError as exc:
-                if exc.errno not in (errno.EACCES, errno.EAGAIN):
+                is_contention = exc.errno in (errno.EACCES, errno.EAGAIN, errno.EDEADLK)
+                is_contention = is_contention or getattr(exc, "winerror", None) in (33, 36)
+                if not is_contention:
                     os.close(descriptor)
                     raise ProfileStoreLockError("Unable to acquire profile data lock") from exc
                 if time.monotonic() >= deadline:
@@ -221,15 +284,17 @@ class ProfileDataStore:
 
     @staticmethod
     def _unlock(descriptor):
-        fcntl.flock(descriptor, fcntl.LOCK_UN)
-        os.close(descriptor)
+        try:
+            _release_file_lock(descriptor)
+        finally:
+            os.close(descriptor)
 
     def _load_unlocked(self):
         try:
             with self.path.open("r", encoding="utf-8") as stream:
                 data = json.load(stream)
         except FileNotFoundError as exc:
-            raise ProfileStoreError(
+            raise ProfileStoreNotInitializedError(
                 f"Profile data is not initialized: {self.path}. Run the explicit bootstrap process."
             ) from exc
         except (OSError, json.JSONDecodeError) as exc:
@@ -298,11 +363,7 @@ class ProfileDataStore:
             if create_backup:
                 self._backup_current(data["metadata"]["revision"] - 1)
             os.replace(temporary_name, self.path)
-            directory_fd = os.open(self.path.parent, os.O_RDONLY)
-            try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
+            _sync_parent_directory(self.path.parent)
         finally:
             if os.path.exists(temporary_name):
                 os.unlink(temporary_name)
@@ -328,6 +389,82 @@ class ProfileDataStore:
         normalized = normalize_email(email)
         user = next((u for u in self.load_data()["users"] if normalize_email(u["email"]) == normalized), None)
         return copy.deepcopy(user) if include_secret or user is None else public_user(user)
+
+    def get_user_by_identifier(self, identifier, include_secret=False):
+        normalized = normalize_username(identifier)
+        user = next(
+            (
+                item
+                for item in self.load_data()["users"]
+                if normalize_username(item.get("username", item["email"])) == normalized
+                or normalize_email(item["email"]) == normalized
+            ),
+            None,
+        )
+        return copy.deepcopy(user) if include_secret or user is None else public_user(user)
+
+    def authenticate_user(self, identifier, password, verifier):
+        """Verify a credential and record last login in one locked mutation."""
+        normalized = normalize_username(identifier)
+
+        def change(data):
+            user = next(
+                (
+                    item
+                    for item in data["users"]
+                    if normalize_username(item.get("username", item["email"])) == normalized
+                    or normalize_email(item["email"]) == normalized
+                ),
+                None,
+            )
+            if user is None or not user.get("is_active", False) or not verifier(user, password):
+                return None, False
+            user["last_login_at"] = _utc_now()
+            user["revision"] = user.get("revision", 1) + 1
+            return public_user(user), True
+
+        return self._mutate_conditionally(change)
+
+    def _mutate_conditionally(self, callback):
+        descriptor = self._lock(True)
+        try:
+            data = self._load_unlocked()
+            result, changed = callback(data)
+            if changed:
+                data["metadata"]["revision"] += 1
+                data["metadata"]["updated_at"] = _utc_now()
+                validate_data(data)
+                self._atomic_write(data)
+            return copy.deepcopy(result)
+        finally:
+            self._unlock(descriptor)
+
+    def change_password(self, user_id, new_hash):
+        if not isinstance(new_hash, str) or not new_hash:
+            raise ProfileDataValidationError("A generated password hash is required")
+        def change(data):
+            user = next((u for u in data["users"] if u["id"] == user_id), None)
+            if user is None or not user.get("is_active", False):
+                raise ProfileStoreError("User not found")
+            now = _utc_now()
+            user.update({
+                "password_hash": new_hash,
+                "password_scheme": "werkzeug",
+                "must_change_password": False,
+                "password_changed_at": now,
+                "updated_at": now,
+                "revision": user.get("revision", 1) + 1,
+            })
+            data["audit_events"].append({
+                "id": f"aud_{uuid.uuid4().hex}",
+                "occurred_at": now,
+                "actor_user_id": user_id,
+                "action": "user.password_changed",
+                "target_type": "user",
+                "target_id": user_id,
+            })
+            return public_user(user), True
+        return self._mutate_conditionally(change)
 
     def list_users(self):
         return [public_user(user) for user in self.load_data()["users"]]
