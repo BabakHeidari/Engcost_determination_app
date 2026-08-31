@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import copy
 import errno
-import fcntl
 import json
 import os
 import tempfile
@@ -18,6 +17,12 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
+
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 
 SUPPORTED_SCHEMA_VERSION = 1
@@ -30,6 +35,31 @@ REQUIRED_COLLECTIONS = (
 )
 ROOT_FIELDS = {"schema_version", "metadata", *REQUIRED_COLLECTIONS}
 PLAINTEXT_PASSWORD_FIELDS = {"password", "plain_password", "plaintext_password"}
+
+
+def _prepare_lock_file(descriptor: int) -> None:
+    """Ensure Windows has a byte range available for ``msvcrt.locking``."""
+    if os.name == "nt" and os.fstat(descriptor).st_size == 0:
+        os.write(descriptor, b"\0")
+        os.fsync(descriptor)
+
+
+def _acquire_file_lock(descriptor: int, exclusive: bool) -> None:
+    if os.name == "nt":
+        # msvcrt has no shared lock, so Windows serializes readers and writers.
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+    else:
+        operation = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+        fcntl.flock(descriptor, operation | fcntl.LOCK_NB)
+
+
+def _release_file_lock(descriptor: int) -> None:
+    if os.name == "nt":
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+    else:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
 
 
 class ProfileStoreError(Exception):
@@ -214,14 +244,16 @@ class ProfileDataStore:
     def _lock(self, exclusive):
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         descriptor = os.open(self.lock_path, os.O_CREAT | os.O_RDWR, 0o600)
-        operation = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+        _prepare_lock_file(descriptor)
         deadline = time.monotonic() + self.lock_timeout
         while True:
             try:
-                fcntl.flock(descriptor, operation | fcntl.LOCK_NB)
+                _acquire_file_lock(descriptor, exclusive)
                 return descriptor
             except OSError as exc:
-                if exc.errno not in (errno.EACCES, errno.EAGAIN):
+                is_contention = exc.errno in (errno.EACCES, errno.EAGAIN, errno.EDEADLK)
+                is_contention = is_contention or getattr(exc, "winerror", None) in (33, 36)
+                if not is_contention:
                     os.close(descriptor)
                     raise ProfileStoreLockError("Unable to acquire profile data lock") from exc
                 if time.monotonic() >= deadline:
@@ -231,8 +263,10 @@ class ProfileDataStore:
 
     @staticmethod
     def _unlock(descriptor):
-        fcntl.flock(descriptor, fcntl.LOCK_UN)
-        os.close(descriptor)
+        try:
+            _release_file_lock(descriptor)
+        finally:
+            os.close(descriptor)
 
     def _load_unlocked(self):
         try:

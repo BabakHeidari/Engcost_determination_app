@@ -1,9 +1,12 @@
 import json
 import multiprocessing
+import os
 from pathlib import Path
 from unittest import mock
 
 import pytest
+
+import utils.profile_store as profile_store
 
 from utils.profile_store import (
     ProfileDataStore,
@@ -130,6 +133,23 @@ def test_concurrent_writes_do_not_lose_updates(tmp_path):
         process.join(10)
         assert process.exitcode == 0
     assert len(ProfileDataStore(path).list_users()) == 8
+
+
+def test_platform_lock_adapter_round_trip(tmp_path):
+    descriptor = os.open(tmp_path / "adapter.lock", os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        profile_store._prepare_lock_file(descriptor)
+        profile_store._acquire_file_lock(descriptor, exclusive=True)
+        profile_store._release_file_lock(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def test_windows_lock_import_is_conditional_and_documented():
+    source = Path(profile_store.__file__).read_text(encoding="utf-8")
+    assert 'if os.name == "nt":\n    import msvcrt\nelse:\n    import fcntl' in source
+    documentation = Path("docs/profile-json-data-access-layer.md").read_text(encoding="utf-8")
+    assert "Windows deployments use `msvcrt`" in documentation
 
 
 def test_backups_are_created_and_bounded(tmp_path):
