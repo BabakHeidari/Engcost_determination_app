@@ -50,6 +50,7 @@ These runtime tests are planned, not added in Phase 2 because no runtime behavio
 ## Phase 4 implementation decisions
 
 - Runtime authentication consults only `APP_DATA_FILE` (default `instance/app_data.json`); it never falls back to either legacy credential artifact.
+- Operators initialize the canonical store once with `python -m scripts.migrate_auth_to_json`; missing storage produces a controlled Persian 503 response rather than a traceback or legacy fallback.
 - The attended migration command strictly recognizes legacy SHA-256 hashes. Unknown values become `password_hash: null` and remain reset-required; no password is invented.
 - Successful login stores only `user_id`, reloads active state from JSON on protected requests, and atomically records `last_login_at`.
 - A reset-required account is restricted to the Persian RTL password-change and logout flow. New passwords are Werkzeug-generated salted hashes, limited to 12–256 Unicode characters without truncation.

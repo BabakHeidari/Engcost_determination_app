@@ -2,6 +2,7 @@
 
 import argparse
 import hashlib
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,6 +14,16 @@ from utils.profile_store import ProfileDataStore, normalize_email
 
 SHA256_PATTERN = re.compile(r"[0-9a-fA-F]{64}\Z")
 ROLE_MAPPING = {"admin": "IT Admin", "user": "Office Staff"}
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_SOURCE = PROJECT_ROOT / "Data" / "Overall" / "auth_data.xlsx"
+
+
+def default_destination() -> Path:
+    configured = os.environ.get("APP_DATA_FILE")
+    if not configured:
+        return PROJECT_ROOT / "instance" / "app_data.json"
+    path = Path(configured)
+    return path if path.is_absolute() else PROJECT_ROOT / "instance" / path
 
 
 def migrate(source: Path, destination: Path) -> int:
@@ -66,8 +77,8 @@ def migrate(source: Path, destination: Path) -> int:
 
 def main():
     parser = argparse.ArgumentParser(description="Migrate legacy authentication users to canonical JSON")
-    parser.add_argument("source", type=Path)
-    parser.add_argument("destination", type=Path)
+    parser.add_argument("source", nargs="?", type=Path, default=DEFAULT_SOURCE)
+    parser.add_argument("destination", nargs="?", type=Path, default=default_destination())
     args = parser.parse_args()
     count = migrate(args.source, args.destination)
     print(f"Migration completed and verified: {count} user record(s).")

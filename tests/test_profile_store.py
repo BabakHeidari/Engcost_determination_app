@@ -11,7 +11,7 @@ import utils.profile_store as profile_store
 from utils.profile_store import (
     ProfileDataStore,
     ProfileDataValidationError,
-    ProfileStoreError,
+    ProfileStoreNotInitializedError,
     public_user,
     validate_data,
 )
@@ -180,7 +180,7 @@ def test_password_hash_is_never_in_public_serialization():
 
 def test_absent_store_requires_explicit_initialization(tmp_path):
     store = ProfileDataStore(tmp_path / "app_data.json")
-    with pytest.raises(ProfileStoreError, match="not initialized"):
+    with pytest.raises(ProfileStoreNotInitializedError, match="not initialized"):
         store.load_data()
     initialized = store.initialize(ROLES)
     assert initialized["users"] == []

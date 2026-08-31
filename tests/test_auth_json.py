@@ -95,3 +95,18 @@ def test_existing_migrated_sha256_user_can_authenticate(client):
 def test_legacy_file_cannot_override_canonical_store(client):
     assert "read_excel" not in __import__("utils.auth", fromlist=["x"]).__dict__
     assert login(client[0], "user@example.com", "درست-Password-123").status_code == 302
+
+
+def test_missing_canonical_store_returns_setup_message_without_traceback(tmp_path):
+    app_module.app.config.update(
+        TESTING=True,
+        APP_DATA_FILE=str(tmp_path / "missing.json"),
+        SECRET_KEY="test-secret",
+    )
+    with app_module.app.test_client() as web:
+        response = login(web, "admin", "admin")
+    assert response.status_code == 503
+    body = response.get_data(as_text=True)
+    assert "اطلاعات کاربران هنوز منتقل نشده است" in body
+    assert "ProfileStoreError" not in body
+    assert "app_data.json" not in body

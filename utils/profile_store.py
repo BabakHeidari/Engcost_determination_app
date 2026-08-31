@@ -66,6 +66,10 @@ class ProfileStoreError(Exception):
     """Base application-level storage error."""
 
 
+class ProfileStoreNotInitializedError(ProfileStoreError):
+    """The configured canonical store has not been created yet."""
+
+
 class ProfileDataValidationError(ProfileStoreError):
     """The canonical document is unsafe or incompatible."""
 
@@ -273,7 +277,7 @@ class ProfileDataStore:
             with self.path.open("r", encoding="utf-8") as stream:
                 data = json.load(stream)
         except FileNotFoundError as exc:
-            raise ProfileStoreError(
+            raise ProfileStoreNotInitializedError(
                 f"Profile data is not initialized: {self.path}. Run the explicit bootstrap process."
             ) from exc
         except (OSError, json.JSONDecodeError) as exc:

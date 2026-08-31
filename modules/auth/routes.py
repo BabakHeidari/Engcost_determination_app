@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash
 
 from utils.auth import authenticate, get_profile_store, load_current_user, validate_password
 from utils.localization import t
+from utils.profile_store import ProfileStoreError, ProfileStoreNotInitializedError
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -12,7 +13,17 @@ auth_bp = Blueprint("auth", __name__)
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        result = authenticate(request.form.get("username"), request.form.get("password"))
+        try:
+            result = authenticate(request.form.get("username"), request.form.get("password"))
+        except ProfileStoreNotInitializedError:
+            flash(
+                "اطلاعات کاربران هنوز منتقل نشده است. ابتدا دستور مهاجرت درج‌شده در مستندات راه‌اندازی را اجرا کنید.",
+                "warning",
+            )
+            return render_template("auth/login.html"), 503
+        except ProfileStoreError:
+            flash("سرویس ورود موقتاً در دسترس نیست. لطفاً با مدیر سامانه تماس بگیرید.", "danger")
+            return render_template("auth/login.html"), 503
         if result is not None:
             session.clear()
             session["user_id"] = result.user["id"]
