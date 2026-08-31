@@ -108,7 +108,11 @@ def normalize_email(value: str) -> str:
 def normalize_username(value: str) -> str:
     if not isinstance(value, str):
         raise ProfileDataValidationError("Username must be a string")
-    return unicodedata.normalize("NFKC", value).strip().casefold()
+    normalized = unicodedata.normalize("NFKC", value).strip().casefold()
+    # Usernames are token identifiers in this application, not display names.
+    # Ignore accidental whitespace so a legacy value such as "Mohsen 1224"
+    # remains reachable with the intended login identifier "Mohsen1224".
+    return "".join(normalized.split())
 
 
 def _required_string(record: dict, field: str, label: str) -> str:

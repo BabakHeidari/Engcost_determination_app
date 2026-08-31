@@ -17,7 +17,7 @@ def client(tmp_path):
     store = ProfileDataStore(path)
     store.initialize(ROLES)
     store.create_user({
-        "id": "usr_active", "username": "active-user", "email": "user@example.com",
+        "id": "usr_active", "username": "active user", "email": "user@example.com",
         "full_name": "کاربر", "role": "IT Admin", "factory_id": None, "is_active": True,
         "must_change_password": False, "password_hash": generate_password_hash("درست-Password-123"),
         "password_scheme": "werkzeug", "revision": 1,
@@ -59,7 +59,7 @@ def test_login_normalization_session_safety_and_atomic_last_login(client):
 
 
 def test_login_accepts_normalized_username(client):
-    response = login(client[0], "  ACTIVE-USER ", "درست-Password-123")
+    response = login(client[0], "  ACTIVEUSER ", "درست-Password-123")
     assert response.status_code == 302
     assert response.location.endswith("/workdesk")
 

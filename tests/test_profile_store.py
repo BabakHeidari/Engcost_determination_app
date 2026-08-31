@@ -72,9 +72,9 @@ def test_user_lookup_accepts_normalized_username(tmp_path):
     path = tmp_path / "app_data.json"
     write(path, document())
     values = user()
-    values["username"] = "Named-Admin"
+    values["username"] = "Named Admin"
     ProfileDataStore(path).create_user(values)
-    found = ProfileDataStore(path).get_user_by_identifier("  NAMED-ADMIN ")
+    found = ProfileDataStore(path).get_user_by_identifier("  NAMEDADMIN ")
     assert found["id"] == "usr_1"
     assert "password_hash" not in found
 
