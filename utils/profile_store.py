@@ -58,6 +58,12 @@ def normalize_email(value: str) -> str:
     return unicodedata.normalize("NFKC", value).strip().casefold()
 
 
+def normalize_username(value: str) -> str:
+    if not isinstance(value, str):
+        raise ProfileDataValidationError("Username must be a string")
+    return unicodedata.normalize("NFKC", value).strip().casefold()
+
+
 def _required_string(record: dict, field: str, label: str) -> str:
     value = record.get(field)
     if not isinstance(value, str) or not value.strip():
@@ -114,18 +120,21 @@ def validate_data(data: dict) -> dict:
         factory_ids.add(factory_id)
         factory_codes.add(code)
 
-    user_ids, user_emails = set(), set()
+    user_ids, user_emails, usernames = set(), set(), set()
     for user in data["users"]:
         if not isinstance(user, dict):
             raise ProfileDataValidationError("User records must be objects")
         user_id = _required_string(user, "id", "User")
         email = normalize_email(user.get("email"))
+        username = normalize_username(user.get("username", user.get("email")))
         if not email:
             raise ProfileDataValidationError(f"User {user_id} email must not be empty")
         if user_id in user_ids:
             raise ProfileDataValidationError(f"Duplicate user id: {user_id}")
         if email in user_emails:
             raise ProfileDataValidationError(f"Duplicate normalized user email: {email}")
+        if not username or username in usernames:
+            raise ProfileDataValidationError(f"Duplicate or empty normalized username: {username}")
         if user.get("role") not in roles:
             raise ProfileDataValidationError(f"User {user_id} has an unrecognized role")
         factory_id = user.get("factory_id")
@@ -136,6 +145,7 @@ def validate_data(data: dict) -> dict:
             raise ProfileDataValidationError(f"User {user_id} password_hash must be a string")
         user_ids.add(user_id)
         user_emails.add(email)
+        usernames.add(username)
 
     override_ids = set()
     for override in data["user_permission_overrides"]:
@@ -328,6 +338,61 @@ class ProfileDataStore:
         normalized = normalize_email(email)
         user = next((u for u in self.load_data()["users"] if normalize_email(u["email"]) == normalized), None)
         return copy.deepcopy(user) if include_secret or user is None else public_user(user)
+
+    def authenticate_user(self, identifier, password, verifier):
+        """Verify a credential and record last login in one locked mutation."""
+        normalized = normalize_email(identifier)
+
+        def change(data):
+            user = next((u for u in data["users"] if normalize_email(u["email"]) == normalized), None)
+            if user is None or not user.get("is_active", False) or not verifier(user, password):
+                return None, False
+            user["last_login_at"] = _utc_now()
+            user["revision"] = user.get("revision", 1) + 1
+            return public_user(user), True
+
+        return self._mutate_conditionally(change)
+
+    def _mutate_conditionally(self, callback):
+        descriptor = self._lock(True)
+        try:
+            data = self._load_unlocked()
+            result, changed = callback(data)
+            if changed:
+                data["metadata"]["revision"] += 1
+                data["metadata"]["updated_at"] = _utc_now()
+                validate_data(data)
+                self._atomic_write(data)
+            return copy.deepcopy(result)
+        finally:
+            self._unlock(descriptor)
+
+    def change_password(self, user_id, new_hash):
+        if not isinstance(new_hash, str) or not new_hash:
+            raise ProfileDataValidationError("A generated password hash is required")
+        def change(data):
+            user = next((u for u in data["users"] if u["id"] == user_id), None)
+            if user is None or not user.get("is_active", False):
+                raise ProfileStoreError("User not found")
+            now = _utc_now()
+            user.update({
+                "password_hash": new_hash,
+                "password_scheme": "werkzeug",
+                "must_change_password": False,
+                "password_changed_at": now,
+                "updated_at": now,
+                "revision": user.get("revision", 1) + 1,
+            })
+            data["audit_events"].append({
+                "id": f"aud_{uuid.uuid4().hex}",
+                "occurred_at": now,
+                "actor_user_id": user_id,
+                "action": "user.password_changed",
+                "target_type": "user",
+                "target_id": user_id,
+            })
+            return public_user(user), True
+        return self._mutate_conditionally(change)
 
     def list_users(self):
         return [public_user(user) for user in self.load_data()["users"]]

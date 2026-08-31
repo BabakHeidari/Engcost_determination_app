@@ -8,7 +8,9 @@ This plan was created during Phase 2 because no existing profile implementation-
 | --- | --- | --- |
 | Phase 1 — current-state discovery | External/not present in this checkout | The requested `docs/profile-module-current-state.md` was not present. Phase 2 repeated the storage/authentication investigation needed for its decision. |
 | Phase 2 — JSON storage architecture | Complete in documentation | Select the canonical store, define schemas, migration, password, locking, atomic-write, backup, Excel, and implementation decisions. |
-| Phase 3 and later | **Not started** | Runtime repository, migration tooling, authentication changes, profile APIs/UI integration, and rollout must be separately requested and scoped. |
+| Phase 3 — JSON data-access layer | Complete | Centralized validation, locking, atomic writes, backups, and safe serializers. |
+| Phase 4 — authentication migration | Complete | Canonical JSON login/current-user loading, legacy migration command, password reset flow, and authentication tests. Profile administration remains disabled. |
+| Phase 5 and later | **Not started** | Profile rendering/APIs, administration, authorization management, and later rollout work remain separately scoped. |
 
 ## Phase 2 decision update
 
@@ -45,6 +47,14 @@ These runtime tests are planned, not added in Phase 2 because no runtime behavio
 - Persian RTL/Jalali presentation boundaries after UI integration;
 - regression checks proving costing modules and data contracts are unchanged.
 
+## Phase 4 implementation decisions
+
+- Runtime authentication consults only `APP_DATA_FILE` (default `instance/app_data.json`); it never falls back to either legacy credential artifact.
+- The attended migration command strictly recognizes legacy SHA-256 hashes. Unknown values become `password_hash: null` and remain reset-required; no password is invented.
+- Successful login stores only `user_id`, reloads active state from JSON on protected requests, and atomically records `last_login_at`.
+- A reset-required account is restricted to the Persian RTL password-change and logout flow. New passwords are Werkzeug-generated salted hashes, limited to 12–256 Unicode characters without truncation.
+- Password changes and their secret-free audit event share one locked atomic mutation. Profile rendering and administration were not connected.
+
 ## Stop point
 
-Phase 2 ends with documentation and its documentation-contract test. No canonical file, example credential store, migration script, persistence service, route, template, runtime-behavior test, or runtime configuration has been implemented. The next phase has not been started.
+Phase 4 ends after authentication cutover and its tests. Profile rendering still uses its existing demo-only page, and no Profile administration endpoint, permission editor, or later-phase feature was started.
