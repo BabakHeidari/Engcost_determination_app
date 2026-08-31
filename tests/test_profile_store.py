@@ -68,6 +68,17 @@ def test_created_records_receive_safe_defaults(tmp_path):
     assert "password_hash" not in created
 
 
+def test_user_lookup_accepts_normalized_username(tmp_path):
+    path = tmp_path / "app_data.json"
+    write(path, document())
+    values = user()
+    values["username"] = "Named-Admin"
+    ProfileDataStore(path).create_user(values)
+    found = ProfileDataStore(path).get_user_by_identifier("  NAMED-ADMIN ")
+    assert found["id"] == "usr_1"
+    assert "password_hash" not in found
+
+
 @pytest.mark.parametrize("bad", [[], {"schema_version": 99}, {"schema_version": 1}])
 def test_invalid_schema_fails(bad):
     with pytest.raises(ProfileDataValidationError):

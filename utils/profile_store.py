@@ -377,12 +377,33 @@ class ProfileDataStore:
         user = next((u for u in self.load_data()["users"] if normalize_email(u["email"]) == normalized), None)
         return copy.deepcopy(user) if include_secret or user is None else public_user(user)
 
+    def get_user_by_identifier(self, identifier, include_secret=False):
+        normalized = normalize_username(identifier)
+        user = next(
+            (
+                item
+                for item in self.load_data()["users"]
+                if normalize_username(item.get("username", item["email"])) == normalized
+                or normalize_email(item["email"]) == normalized
+            ),
+            None,
+        )
+        return copy.deepcopy(user) if include_secret or user is None else public_user(user)
+
     def authenticate_user(self, identifier, password, verifier):
         """Verify a credential and record last login in one locked mutation."""
-        normalized = normalize_email(identifier)
+        normalized = normalize_username(identifier)
 
         def change(data):
-            user = next((u for u in data["users"] if normalize_email(u["email"]) == normalized), None)
+            user = next(
+                (
+                    item
+                    for item in data["users"]
+                    if normalize_username(item.get("username", item["email"])) == normalized
+                    or normalize_email(item["email"]) == normalized
+                ),
+                None,
+            )
             if user is None or not user.get("is_active", False) or not verifier(user, password):
                 return None, False
             user["last_login_at"] = _utc_now()
