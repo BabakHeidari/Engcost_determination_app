@@ -1,0 +1,13 @@
+{
+  "audit_events": [],
+  "factories": [],
+  "metadata": {
+    "created_at": "2026-08-01T00:00:00Z",
+    "revision": 1,
+    "updated_at": "2026-08-01T00:00:00Z"
+  },
+  "role_permissions": {},
+  "schema_version": 1,
+  "user_permission_overrides": [],
+  "users": []
+}

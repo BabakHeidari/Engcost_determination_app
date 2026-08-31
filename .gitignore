@@ -1,1 +1,5 @@
 *.pyc
+instance/app_data.json
+instance/app_data.json.lock
+instance/backups/
+instance/.*.tmp
