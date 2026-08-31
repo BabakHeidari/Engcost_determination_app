@@ -62,6 +62,19 @@ def _release_file_lock(descriptor: int) -> None:
         fcntl.flock(descriptor, fcntl.LOCK_UN)
 
 
+def _sync_parent_directory(path: Path) -> None:
+    """Persist directory metadata where opening directories is supported."""
+    if os.name == "nt":
+        # Windows rejects os.open() on directories. The candidate file itself
+        # has already been flushed and os.replace() is atomic on local NTFS.
+        return
+    directory_fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
 class ProfileStoreError(Exception):
     """Base application-level storage error."""
 
@@ -346,11 +359,7 @@ class ProfileDataStore:
             if create_backup:
                 self._backup_current(data["metadata"]["revision"] - 1)
             os.replace(temporary_name, self.path)
-            directory_fd = os.open(self.path.parent, os.O_RDONLY)
-            try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
+            _sync_parent_directory(self.path.parent)
         finally:
             if os.path.exists(temporary_name):
                 os.unlink(temporary_name)

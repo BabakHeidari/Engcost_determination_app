@@ -31,6 +31,10 @@ def main() -> None:
         store.initialize(ROLES)
 
     username = input("Username [Mohsen1224]: ").strip() or "Mohsen1224"
+    existing = store.get_user_by_identifier(username)
+    if existing is not None:
+        print(f"IT administrator already exists: {existing['username']}")
+        return
     email = input("Email: ").strip()
     full_name = input("Full name: ").strip() or username
     password = getpass.getpass("Password: ")

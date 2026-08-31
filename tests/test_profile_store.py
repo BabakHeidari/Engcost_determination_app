@@ -156,6 +156,14 @@ def test_platform_lock_adapter_round_trip(tmp_path):
         os.close(descriptor)
 
 
+def test_windows_directory_sync_does_not_open_directory(tmp_path):
+    with mock.patch.object(profile_store.os, "name", "nt"), mock.patch.object(
+        profile_store.os, "open"
+    ) as open_mock:
+        profile_store._sync_parent_directory(tmp_path)
+    open_mock.assert_not_called()
+
+
 def test_windows_lock_import_is_conditional_and_documented():
     source = Path(profile_store.__file__).read_text(encoding="utf-8")
     assert 'if os.name == "nt":\n    import msvcrt\nelse:\n    import fcntl' in source
