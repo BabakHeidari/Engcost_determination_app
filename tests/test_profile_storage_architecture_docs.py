@@ -45,4 +45,5 @@ def test_phase_plan_records_authentication_stop_boundary():
     assert "Phase 4 — authentication migration | Complete" in plan
     assert "Profile administration remains disabled" in plan
     assert "Phase 5 — read-only Profile | Complete" in plan
-    assert "Phase 6 and later | **Not started**" in plan
+    assert "Phase 6 — add user with initial password | **Complete**" in plan
+    assert "Phase 7 and later | **Not started**" in plan

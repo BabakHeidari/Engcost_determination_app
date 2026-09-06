@@ -11,7 +11,8 @@ This plan was created during Phase 2 because no existing profile implementation-
 | Phase 3 — JSON data-access layer | Complete | Centralized validation, locking, atomic writes, backups, and safe serializers. |
 | Phase 4 — authentication migration | Complete | Canonical JSON login/current-user loading, legacy migration command, password reset flow, and authentication tests. Profile administration remains disabled. |
 | Phase 5 — read-only Profile | Complete | Safe JSON-backed rendering, scoped visibility, effective permissions, and real audit history. |
-| Phase 6 and later | **Not started** | Profile mutation APIs, administration, and authorization management remain separately scoped. |
+| Phase 6 — add user with initial password | **Complete** | Authorization-aware user creation, initial password hashing, atomic audit, Persian modal, and focused tests. General editing remains disabled. |
+| Phase 7 and later | **Not started** | General user editing and other Profile mutations remain separately scoped. |
 
 ## Phase 2 decision update
 
@@ -72,3 +73,15 @@ Phase 4 ends after authentication cutover and its tests. Profile rendering still
 ## Phase 5 stop point
 
 Phase 5 ends with read-only Profile rendering and focused automated tests. No add-user, edit-user, factory mutation, privilege mutation, or later-phase endpoint was implemented.
+
+## Phase 6 implementation decisions
+
+- `POST /api/profile/users` is the sole create-user API. It derives the actor from the authenticated session and rejects client-supplied IDs, creator fields, hashes, and permission fields.
+- The existing central 12–256 Unicode-character password policy is reused and now explicitly rejects empty or whitespace-only values. Passwords are compared without normalization or truncation and hashed immediately with Werkzeug.
+- IT administrators may assign configured roles globally; official administrators may assign non-IT administrative/staff roles; factory administrators may create only factory staff in their own factory. Factory-scoped roles require an active factory, while other roles reject factory assignment.
+- ID allocation, duplicate-email enforcement, actor/role/factory authorization, insertion, and the secret-free `user.created` audit event share one locked atomic transaction in the canonical JSON store.
+- New accounts are active and have `must_change_password: true`; the existing first-login password-change gate is therefore reused.
+
+## Phase 6 stop point
+
+Phase 6 ends after Add User and initial-password behavior. General user editing, activation changes, password resets by administrators, factory mutation, and permission mutation were not started.
