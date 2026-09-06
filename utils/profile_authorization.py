@@ -15,11 +15,18 @@ USER = "USER"
 SYSTEM_ROLES = frozenset({IT_ADMIN, FINANCE_ECONOMIC_ADMIN, USER})
 TOP_LEVEL_ROLES = frozenset({IT_ADMIN, FINANCE_ECONOMIC_ADMIN})
 SCOPE_TYPES = frozenset({"GLOBAL", "FACTORY"})
-PERMISSIONS = frozenset({"READ", "WRITE"})
+PERMISSION_ORDER = ("READ", "WRITE", "MODIFY")
+PERMISSIONS = frozenset(PERMISSION_ORDER)
+PERMISSION_LEVELS = {
+    "NONE": (),
+    "READ": ("READ",),
+    "WRITE": ("READ", "WRITE"),
+    "MODIFY": PERMISSION_ORDER,
+}
 
 # Scope follows the actual routes: pages/actions operating on a selected factory
 # are factory scoped; the shell, shared material table and aggregate dashboard are
-# global. READ and WRITE are independent capabilities (WRITE does not imply READ).
+# global. Permission levels are hierarchical: MODIFY includes WRITE and READ.
 MODULE_SCOPES = {
     "DESK": frozenset({"GLOBAL"}),
     # Dashboard shell is global; its optional factory filter is factory scoped.
@@ -63,7 +70,7 @@ def canonicalize_access_grants(grants: object, factory_ids) -> list[dict]:
         combined.setdefault((scope, factory_id, module), set()).update(permissions)
     return [
         {"scope_type": scope, "factory_id": factory_id, "module": module,
-         "permissions": sorted(values)}
+         "permissions": [permission for permission in PERMISSION_ORDER if permission in values]}
         for (scope, factory_id, module), values in sorted(
             combined.items(), key=lambda item: (item[0][0], item[0][1] or "", item[0][2])
         )
@@ -93,8 +100,10 @@ def can_access_module(user, module, factory_id=None, permission="READ") -> bool:
         if not isinstance(grant, dict):
             continue
         if (grant.get("scope_type") == expected_scope and grant.get("factory_id") == factory_id
-                and grant.get("module") == module and permission in grant.get("permissions", [])):
-            return True
+                and grant.get("module") == module):
+            granted = max((PERMISSION_ORDER.index(value) for value in grant.get("permissions", [])
+                           if value in PERMISSIONS), default=-1)
+            return granted >= PERMISSION_ORDER.index(permission)
     return False
 
 
