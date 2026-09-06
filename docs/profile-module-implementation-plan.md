@@ -10,7 +10,8 @@ This plan was created during Phase 2 because no existing profile implementation-
 | Phase 2 — JSON storage architecture | Complete in documentation | Select the canonical store, define schemas, migration, password, locking, atomic-write, backup, Excel, and implementation decisions. |
 | Phase 3 — JSON data-access layer | Complete | Centralized validation, locking, atomic writes, backups, and safe serializers. |
 | Phase 4 — authentication migration | Complete | Canonical JSON login/current-user loading, legacy migration command, password reset flow, and authentication tests. Profile administration remains disabled. |
-| Phase 5 and later | **Not started** | Profile rendering/APIs, administration, authorization management, and later rollout work remain separately scoped. |
+| Phase 5 — read-only Profile | Complete | Safe JSON-backed rendering, scoped visibility, effective permissions, and real audit history. |
+| Phase 6 and later | **Not started** | Profile mutation APIs, administration, and authorization management remain separately scoped. |
 
 ## Phase 2 decision update
 
@@ -59,3 +60,15 @@ These runtime tests are planned, not added in Phase 2 because no runtime behavio
 ## Stop point
 
 Phase 4 ends after authentication cutover and its tests. Profile rendering still uses its existing demo-only page, and no Profile administration endpoint, permission editor, or later-phase feature was started.
+
+## Phase 5 implementation decisions
+
+- The protected Profile route reloads one validated snapshot from the canonical JSON store and builds a dedicated, allow-listed view model.
+- Global-scope roles may see active users and factories globally. Factory-scoped users see active users and the active factory in their assignment; non-factory, non-global users see only themselves and no factory registry.
+- Effective permissions combine the authenticated user's role permissions with explicit allow/deny overrides on the server. The page displays these values but cannot mutate them.
+- Audit history is sourced only from canonical audit events visible to the current user; absent events produce an explicit empty state. Secret-bearing details and internal revisions are never included.
+- All add/edit user, factory, and privilege controls and demo data were removed from production rendering. Server-provided feature flags remain false for every unfinished mutation.
+
+## Phase 5 stop point
+
+Phase 5 ends with read-only Profile rendering and focused automated tests. No add-user, edit-user, factory mutation, privilege mutation, or later-phase endpoint was implemented.
