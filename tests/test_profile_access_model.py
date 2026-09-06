@@ -34,6 +34,10 @@ def test_top_level_admin_profile_uses_full_access_state_without_iterating_sentin
 
     class Store:
         @staticmethod
+        def merge_factories(candidates):
+            return {"created": [], "created_count": 0}
+
+        @staticmethod
         def load_data():
             return {"users": [admin], "factories": [], "audit_events": []}
 

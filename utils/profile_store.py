@@ -170,6 +170,7 @@ def validate_data(data: dict) -> dict:
             raise ProfileDataValidationError("Factory records must be objects")
         factory_id = _required_string(factory, "id", "Factory")
         code = _required_string(factory, "code", "Factory").strip().casefold()
+        _required_string(factory, "name", "Factory")
         if factory_id in factory_ids:
             raise ProfileDataValidationError(f"Duplicate factory id: {factory_id}")
         if code in factory_codes:
@@ -644,6 +645,43 @@ class ProfileDataStore:
 
     def list_factories(self):
         return copy.deepcopy(self.load_data()["factories"])
+
+    def list_active_factories(self):
+        """Return only public fields for factories assignable to new grants."""
+        return [
+            {key: copy.deepcopy(factory.get(key)) for key in ("id", "code", "name", "display_name", "location")}
+            for factory in self.load_data()["factories"] if factory.get("is_active", True)
+        ]
+
+    def merge_factories(self, candidates):
+        """Add new discovered factories without overwriting canonical records."""
+        if not isinstance(candidates, list):
+            raise ProfileDataValidationError("Factory candidates must be a list")
+        proposed = copy.deepcopy(candidates)
+
+        def change(data):
+            existing_ids = {factory["id"] for factory in data["factories"]}
+            existing_codes = {factory["code"].strip().casefold() for factory in data["factories"]}
+            created = []
+            for candidate in proposed:
+                if not isinstance(candidate, dict):
+                    raise ProfileDataValidationError("Factory candidate must be an object")
+                factory_id = _required_string(candidate, "id", "Factory")
+                code = _required_string(candidate, "code", "Factory").strip()
+                _required_string(candidate, "name", "Factory")
+                if factory_id in existing_ids or code.casefold() in existing_codes:
+                    continue
+                candidate["code"] = code
+                candidate.setdefault("is_active", True)
+                candidate.setdefault("location", None)
+                candidate.setdefault("revision", 1)
+                data["factories"].append(candidate)
+                existing_ids.add(factory_id)
+                existing_codes.add(code.casefold())
+                created.append(copy.deepcopy(candidate))
+            return {"created": created, "created_count": len(created)}, bool(created)
+
+        return self._mutate_conditionally(change)
 
     def create_factory(self, values):
         candidate = copy.deepcopy(values)

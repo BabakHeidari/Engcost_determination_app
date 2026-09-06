@@ -8,6 +8,7 @@ from utils.profile_authorization import (
     get_effective_access,
     is_top_level_admin,
 )
+from utils.factory_registry import populate_factory_registry
 from utils.profile_store import ProfileStoreError
 
 ROLE_LABELS = {
@@ -53,6 +54,9 @@ def _group_grants(user, factory_names):
 
 
 def build_profile_view_model(store, authenticated_user):
+    # One-way discovery import: after this merge, the Profile UI reads only the
+    # canonical JSON registry returned below.
+    populate_factory_registry(store)
     data = store.load_data()
     current = next((u for u in data["users"] if u["id"] == authenticated_user["id"]), None)
     if current is None or not current.get("is_active", False):

@@ -122,3 +122,18 @@ Clearly identified IT and Official administrators map to `IT_ADMIN` and
 `FINANCE_ECONOMIC_ADMIN`. Ambiguous ordinary legacy accounts are retained with
 no grants and their IDs are recorded in
 `metadata.access_model_migration.review_user_ids` for manual review.
+
+## Phase 6.5A — canonical factory registry (complete)
+
+Five operational factory identities were discovered and imported one-way into
+the canonical JSON registry. Existing operational keys are stable IDs/codes;
+manual canonical records are never overwritten. `ProfileDataStore` performs the
+locked, validated, backed-up atomic merge, exposes a safe active-only list, and
+server-side grant validation continues to reject inactive or unknown IDs.
+
+The Add User modal receives active factories only through the Profile view
+model, supports repeated rows for different factory/module permissions, displays
+name plus code, and shows a truthful Persian empty-registry message. No demo
+fallback or second runtime source was added. Phase 7 remains not started. Full
+source inventory and identity decisions are in
+`docs/factory-registry-discovery.md`.

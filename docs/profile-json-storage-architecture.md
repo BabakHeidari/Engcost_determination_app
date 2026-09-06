@@ -396,3 +396,18 @@ Prepared audit action contracts for later mutation phases are
 `SYSTEM_ROLE_CHANGED`, `JOB_TITLE_CHANGED`, `ACCESS_GRANTS_CHANGED`, and
 `TOP_LEVEL_ADMIN_UPDATED`; event metadata must never contain secrets or raw
 requests.
+
+## Phase 6.5A factory-registry population
+
+The five discovered operational keys are persisted as stable factory IDs and
+codes in the canonical application JSON. Discovery from existing operational
+JSON/directories is a one-way import through `merge_factories`; routes and
+browser code never use those sources as a parallel Profile runtime store.
+Existing same-ID or same-code canonical records are preserved. New records are
+validated and committed using the existing lock, backup, and atomic replace.
+
+Only active records are returned by the public assignment-list service and
+accepted for new factory grants. Inactive records remain stored for historical
+references. Future factories must enter through the canonical service or the
+future factory-management workflow, not a hard-coded frontend list. See
+`docs/factory-registry-discovery.md` for sources, ambiguity, and ID rationale.

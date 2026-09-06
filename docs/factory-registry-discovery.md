@@ -1,0 +1,60 @@
+# گزارش کشف و ثبت کارخانه‌ها
+
+## نتیجه
+
+در بررسی داده‌های موجود، ۱۷ مشاهده هویتی به پنج کارخانه یکتا رسید. فهرست
+`Data/Overall/factories.json` کامل‌ترین رکورد جدولی نام، شهر و نشانی است؛ نام‌های
+سطح اول `Data/Factories/` کلیدهای عملیاتی مورد استفاده مسیرها و محاسبات هستند؛
+`Data/Factories/__metadata.json` و `Data/Overall/ProductsLater.json` شواهد
+همخوان دیگری فراهم می‌کنند.
+
+| شناسه کارخانه در رجیستری | نام نمایشی | کد موجود | منابع | مقدار اصلی | اطمینان | یادداشت |
+| --- | --- | --- | --- | --- | --- | --- |
+| `Arefi` | کارخانه عارفی | `Arefi` | `Data/Overall/factories.json`، `Data/Factories/Arefi/`، `Data/Factories/__metadata.json` | `Arefi` | زیاد | فایل پارامتر و پوشه عملیاتی دارد. |
+| `DinMohamadpour` | کارخانه دین‌محمدپور | `DinMohamadpour` | `Data/Overall/factories.json`، `Data/Factories/DinMohamadpour/`، `Data/Factories/__metadata.json`، `Data/Overall/ProductsLater.json` | `DinMohamadpour` | زیاد | فایل قدیمی XLSX املای `DinMohammadpour` دارد؛ ادغام خودکار این املا انجام نشد. |
+| `HajAmini` | کارخانه حاج‌امینی | `HajAmini` | `Data/Overall/factories.json`، `Data/Factories/HajAmini/`، `Data/Factories/__metadata.json`، `Data/Overall/ProductsLater.json` | `HajAmini` | زیاد | پوشه، محصول و پارامتر فعال دارد. |
+| `Nasooz` | کارخانه نسوز | `Nasooz` | `Data/Overall/factories.json`، `Data/Factories/Nasooz/`، `Data/Factories/__metadata.json`، `Data/Overall/ProductsLater.json` | `Nasooz` | زیاد | پوشه، محصول و پارامتر فعال دارد. |
+| `TajdidPazir` | کارخانه تجدیدپذیر | `TajdidPazir` | `Data/Overall/factories.json`، `Data/Factories/__metadata.json` | `TajdidPazir` | متوسط | در جدول و فراداده هست، ولی پوشه عملیاتی در این checkout وجود ندارد. برای حذف/غیرفعال‌سازی نیازمند بررسی مدیر است. |
+
+## موجودی منابع بررسی‌شده
+
+- JSON: جدول کارخانه‌ها، فهرست محصولات، هر دو فایل فراداده پوشه کارخانه‌ها،
+  فایل‌های `Factory_Data*.json`، پیش‌بینی تولید، وزن دسته‌ها و فایل‌های BOM.
+- XLSX: `Data/Overall/factories.xlsx`، `Products.xlsx`، `ProductsLater.xlsx`،
+  الگوی کارخانه و فایل‌های `Factory_Data.xlsx` در چهار پوشه موجود. XLSX کارخانه
+  فقط سه مقدار قدیمی دارد و منبع زمان اجرای Profile نیست.
+- ساختار پوشه: تمام مسیرهای سطح اول تا سوم زیر `Data/Factories/`.
+- کد و UI: مسیرهای factory/product/cost، helperهای `utils/`، قالب‌های فعال و
+  قدیمی، داده‌های demo و نگاشت‌های بومی‌سازی.
+- CSV یا فایل پیکربندی مستقل حاوی هویت کارخانه در checkout یافت نشد.
+
+## تکرار، ناسازگاری و بررسی دستی
+
+- ۱۲ مشاهده تکراری، شواهد یکسان برای پنج شناسه بالا بودند و رکورد اضافه نساختند.
+- `DinMohammadpour` در XLSX قدیمی در برابر `DinMohamadpour` در JSON، پوشه،
+  فراداده و محصولات یک ناسازگاری املایی است. importer از حدس/ادغام رشته مشابه
+  خودداری می‌کند؛ مقدار پشتیبانی‌شده توسط چهار منبع فعال انتخاب شد و املای قدیمی
+  برای بررسی دستی ثبت است.
+- `TajdidPazir` فاقد پوشه عملیاتی جاری است. رکورد حذف نشد و فعلاً مطابق جدول
+  کارخانه‌ها فعال ثبت شد؛ وضعیت آن نیازمند تأیید کسب‌وکار است.
+- منابع عملیاتی ID یا code جداگانه ندارند. هیچ نام خالی در جدول JSON فعال نبود.
+
+## راهبرد شناسه
+
+نام عملیاتی موجود عیناً به‌عنوان `id`، `code` و `operational_key` حفظ می‌شود،
+زیرا همین مقدار در مسیر فایل، محصول، پارامتر و درخواست‌های موجود استفاده می‌شود.
+شناسه از موقعیت آرایه ساخته نمی‌شود و با مرتب‌سازی تغییر نمی‌کند. رشته‌های مشابه
+ولی نابرابر بدون مدرک ادغام نمی‌شوند.
+
+## جریان ثبت و استفاده
+
+`utils.factory_registry` منابع را فقط برای import کشف می‌کند و رکوردها را از
+طریق `ProfileDataStore.merge_factories()` زیر lock در JSON اصلی ادغام می‌کند.
+رکوردهای دستی هم‌ID/هم‌کد بازنویسی نمی‌شوند. Profile پس از این import یک‌طرفه،
+گزینه‌ها را فقط از snapshot رجیستری canonical می‌سازد؛ مرورگر هیچ فایل داده‌ای
+را مستقیم نمی‌خواند. فایل catalog دوم ساخته نشده است.
+
+فقط کارخانه‌های `is_active: true` برای grant جدید قابل انتخاب‌اند. رکورد غیرفعال
+حذف نمی‌شود و برای تاریخچه/ارجاع آینده باقی می‌ماند. کارخانه آینده باید با همین
+service یا workflow مدیریت کارخانه افزوده شود؛ فهرست hard-coded یا fallback
+نمایشی در Profile ممنوع است.

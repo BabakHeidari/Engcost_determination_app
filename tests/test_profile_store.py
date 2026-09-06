@@ -105,7 +105,7 @@ def test_invalid_factory_reference_fails():
     bad["access_grants"] = [{"scope_type": "FACTORY", "factory_id": "fac_missing", "module": "PRODUCT", "permissions": ["READ"]}]
     bad["system_role"] = "USER"
     data["users"] = [bad]
-    with pytest.raises(ProfileDataValidationError, match="unknown"):
+    with pytest.raises(ProfileDataValidationError, match="ناشناخته"):
         validate_data(data)
 
 
@@ -132,7 +132,7 @@ def test_failed_replace_preserves_previous_file(tmp_path):
     store = ProfileDataStore(path)
     with mock.patch("utils.profile_store.os.replace", side_effect=OSError("disk failure")):
         with pytest.raises(OSError, match="disk failure"):
-            store.create_factory({"id": "fac_1", "code": "F1"})
+            store.create_factory({"id": "fac_1", "code": "F1", "name": "کارخانه"})
     assert path.read_bytes() == before
     assert validate_data(json.loads(path.read_text(encoding="utf-8")))
 
@@ -179,7 +179,7 @@ def test_backups_are_created_and_bounded(tmp_path):
     write(path, document())
     store = ProfileDataStore(path, backup_limit=2)
     for index in range(4):
-        store.create_factory({"id": f"fac_{index}", "code": f"F{index}"})
+        store.create_factory({"id": f"fac_{index}", "code": f"F{index}", "name": f"کارخانه {index}"})
     backups = list((tmp_path / "backups").glob("app_data.*.json"))
     assert len(backups) == 2
     for backup in backups:
