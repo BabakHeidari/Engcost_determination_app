@@ -34,8 +34,15 @@ def _public_user(user):
 
 
 def _group_grants(user, factory_names):
+    effective_access = get_effective_access(user)
+    # Top-level administrators are represented by the compact FULL_ACCESS
+    # sentinel, not by a list of stored grants. The template renders that state
+    # through ``full_access`` and must not try to treat the sentinel's key as a
+    # grant object.
+    if not isinstance(effective_access, list):
+        return []
     groups = []
-    for grant in get_effective_access(user):
+    for grant in effective_access:
         groups.append({
             "scope_type": grant["scope_type"],
             "scope_label": "سراسری" if grant["scope_type"] == "GLOBAL" else factory_names.get(grant["factory_id"], grant["factory_id"]),

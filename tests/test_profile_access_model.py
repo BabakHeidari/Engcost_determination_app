@@ -8,6 +8,7 @@ from utils.profile_authorization import (
     get_effective_access, is_top_level_admin,
 )
 from utils.profile_store import ProfileDataStore
+from utils.profile_view import build_profile_view_model
 
 
 def account(role="USER", grants=None, title=""):
@@ -21,6 +22,24 @@ def test_parallel_admins_have_dynamic_identical_full_access():
         assert get_effective_access(user) == {"full_access": True}
         assert can_access_module(user, "COST_CALCULATION", "future_factory", "WRITE")
         assert can_access_module(user, "DASHBOARD", permission="READ")
+
+
+@pytest.mark.parametrize("role", ["IT_ADMIN", "FINANCE_ECONOMIC_ADMIN"])
+def test_top_level_admin_profile_uses_full_access_state_without_iterating_sentinel(role):
+    admin = {
+        "id": "admin", "username": "admin", "email": "admin@example.com",
+        "full_name": "مدیر", "system_role": role, "job_title": "",
+        "access_grants": [], "is_active": True,
+    }
+
+    class Store:
+        @staticmethod
+        def load_data():
+            return {"users": [admin], "factories": [], "audit_events": []}
+
+    model = build_profile_view_model(Store(), admin)
+    assert model["full_access"] is True
+    assert model["effective_grants"] == []
 
 
 def test_user_is_deny_by_default_and_job_title_is_inert():
