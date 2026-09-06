@@ -1,6 +1,7 @@
 from flask import Blueprint, g, jsonify, render_template, request
 
 from utils.auth import get_profile_store, login_required
+from utils.profile_factories import prepare_new_factory
 from utils.profile_store import ProfileDataConflictError, ProfileDataValidationError, ProfileStoreError
 from utils.profile_users import prepare_new_user
 from utils.profile_view import build_profile_view_model
@@ -34,3 +35,18 @@ def create_user():
     except OSError:
         return jsonify({"ok": False, "message": "ذخیره کاربر امکان‌پذیر نشد."}), 503
     return jsonify({"ok": True, "user": user}), 201
+
+
+@profile_bp.post("/api/profile/factories")
+@login_required
+def create_factory():
+    try:
+        candidate = prepare_new_factory(request.get_json(silent=True))
+        factory = get_profile_store().create_factory_as_actor(g.current_user["id"], candidate)
+    except ProfileDataConflictError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 409
+    except ProfileDataValidationError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    except (ProfileStoreError, OSError):
+        return jsonify({"ok": False, "message": "ذخیره کارخانه امکان‌پذیر نشد."}), 503
+    return jsonify({"ok": True, "factory": factory}), 201

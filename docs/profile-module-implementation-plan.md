@@ -12,6 +12,7 @@ This plan was created during Phase 2 because no existing profile implementation-
 | Phase 4 — authentication migration | Complete | Canonical JSON login/current-user loading, legacy migration command, password reset flow, and authentication tests. Profile administration remains disabled. |
 | Phase 5 — read-only Profile | Complete | Safe JSON-backed rendering, scoped visibility, effective permissions, and real audit history. |
 | Phase 6 — add user with initial password | **Complete** | Authorization-aware user creation, initial password hashing, atomic audit, Persian modal, and focused tests. General editing remains disabled. |
+| Phase 6.7 — factory creation | **Complete** | Equal top-level-admin creation, canonical locked/atomic persistence and audit, and dynamic Add User registry integration. |
 | Phase 7 and later | **Not started** | General user editing and other Profile mutations remain separately scoped. |
 
 ## Phase 2 decision update
@@ -78,7 +79,7 @@ Phase 5 ends with read-only Profile rendering and focused automated tests. No ad
 
 - `POST /api/profile/users` is the sole create-user API. It derives the actor from the authenticated session and rejects client-supplied IDs, creator fields, hashes, and permission fields.
 - The existing central 12–256 Unicode-character password policy is reused and now explicitly rejects empty or whitespace-only values. Passwords are compared without normalization or truncation and hashed immediately with Werkzeug.
-- IT administrators may assign configured roles globally; official administrators may assign non-IT administrative/staff roles; factory administrators may create only factory staff in their own factory. Factory-scoped roles require an active factory, while other roles reject factory assignment.
+- This historical Phase 6 role rule was superseded by Phase 6.5: either top-level administrator may create any of the three canonical roles with identical authority; ordinary users receive only explicit grants to active factories/modules.
 - ID allocation, duplicate-email enforcement, actor/role/factory authorization, insertion, and the secret-free `user.created` audit event share one locked atomic transaction in the canonical JSON store.
 - New accounts are active and have `must_change_password: true`; the existing first-login password-change gate is therefore reused.
 
@@ -137,3 +138,22 @@ name plus code, and shows a truthful Persian empty-registry message. No demo
 fallback or second runtime source was added. Phase 7 remains not started. Full
 source inventory and identity decisions are in
 `docs/factory-registry-discovery.md`.
+
+## Phase 6.7 — top-level factory creation (complete)
+
+Both `IT_ADMIN` and `FINANCE_ECONOMIC_ADMIN`, and only those roles, may create
+an active factory through the Persian Profile modal and
+`POST /api/profile/factories`. The actor is derived from the authenticated
+session and revalidated inside the store lock. Factory and `FACTORY_CREATED`
+audit insertion share one canonical mutation; client authority/internal fields,
+duplicate case-insensitive codes/IDs, and normalized duplicate display names
+are rejected.
+
+The response returns only safe factory fields. The page adds the returned
+factory to its canonical registry display and the Add User grant selectors
+without a restart or hard-coded browser registry. Top-level access remains
+implicit through `system_role`; no grants are added to administrators or
+ordinary users. No data migration was required. Factory edit/deactivate/delete
+strategy is deferred: preserve stable IDs and historical references and prefer
+deactivation over deletion. General user editing and all Phase 7 work were not
+started.

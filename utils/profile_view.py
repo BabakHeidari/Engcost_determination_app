@@ -5,6 +5,7 @@ from utils.profile_authorization import (
     PERMISSIONS,
     TOP_LEVEL_ROLES,
     can_manage_users,
+    can_manage_factories,
     get_effective_access,
     is_top_level_admin,
 )
@@ -77,7 +78,7 @@ def build_profile_view_model(store, authenticated_user):
         "users": [_public_user(u) for u in visible_users],
         "factories": [{"id": f["id"], "code": f["code"], "name": factory_names[f["id"]], "location": f.get("location")} for f in visible_factories],
         "audit_events": audit_events,
-        "features": {"add_user": can_manage_users(current), "edit_user": False, "add_factory": False, "edit_permissions": False},
+        "features": {"add_user": can_manage_users(current), "edit_user": False, "add_factory": can_manage_factories(current), "edit_permissions": False},
         "create_user": {
             "roles": [{"value": key, "label": ROLE_LABELS[key], "is_admin": key in TOP_LEVEL_ROLES} for key in ("IT_ADMIN", "FINANCE_ECONOMIC_ADMIN", "USER")],
             "modules": [{"value": key, "label": MODULE_LABELS[key], "scope": next(iter(scopes))} for key, scopes in MODULE_SCOPES.items()],

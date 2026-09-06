@@ -411,3 +411,21 @@ accepted for new factory grants. Inactive records remain stored for historical
 references. Future factories must enter through the canonical service or the
 future factory-management workflow, not a hard-coded frontend list. See
 `docs/factory-registry-discovery.md` for sources, ambiguity, and ID rationale.
+
+## Phase 6.7 factory creation
+
+`POST /api/profile/factories` delegates to `ProfileDataStore.create_factory_as_actor`.
+The service reloads the active actor and full document under the existing
+inter-process exclusive lock, accepts only `code`, `name`, and optional
+`location`, and creates the factory plus its `FACTORY_CREATED` audit event in a
+single validated write. The existing temporary-file flush/fsync, configured
+backup, atomic replace, and directory-sync policy therefore applies unchanged.
+
+For new records the administrator-supplied canonical code is also the stable
+factory ID, matching the Phase 6.5A `id == code` convention without depending on
+array order. Codes are 1–64 ASCII letters/digits plus `.`, `_`, or `-`, begin
+with an alphanumeric character, and are unique case-insensitively. Display names
+are NFKC-normalized, whitespace-collapsed, case-folded, and unique; comparison
+uses `display_name` for discovered records and `name` otherwise. Location is
+descriptive only. New records are active and no operational factory directory,
+ordinary-user grant, or administrator grant is created.

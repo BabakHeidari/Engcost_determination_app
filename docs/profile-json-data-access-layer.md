@@ -18,6 +18,13 @@ Runtime code must use the repository methods rather than opening `app_data.json`
 
 Phase 6 additionally uses `create_user_as_actor` for the web create-user flow. Unlike the lower-level bootstrap/migration method, it reloads and authorizes the session actor, validates role and factory scope, allocates the ID, enforces email uniqueness, inserts the user, and appends its safe audit event under one exclusive lock and one atomic replacement.
 
+Phase 6.7 similarly uses `create_factory_as_actor`: it rechecks the active
+session actor under the exclusive lock, permits either top-level administrator
+role equally, validates code/name uniqueness against the latest document, and
+inserts the active factory and `FACTORY_CREATED` event in the same atomic
+replacement. It returns only public factory fields and does not create a second
+registry, operational directory, or any user grants.
+
 User lookup/list methods return public copies with password and password-hash fields recursively removed. Only a future authentication service may deliberately request the secret-bearing record with `include_secret=True`; such a value must never cross a template, API, log, audit, or JavaScript boundary.
 
 ## Validation and failure behavior
