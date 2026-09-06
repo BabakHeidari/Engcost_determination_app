@@ -70,26 +70,29 @@
           <label class="form-label">عنوان شغلی (بدون اثر دسترسی)</label><input class="form-control mb-3" name="job_title" maxlength="160">
           <label class="form-label">نقش سامانه</label><select class="form-select mb-3" name="system_role">{% for role in profile.create_user.roles %}<option value="{{ role.value }}">{{ role.label }}</option>{% endfor %}</select>
           <label class="form-check mb-3"><input class="form-check-input" type="checkbox" name="is_active"> حساب فعال باشد</label>
-          <label class="form-label">دسترسی‌های صریح کاربر عادی (JSON)</label><textarea class="form-control technical-value" name="access_grants" rows="7" aria-describedby="grantHelp"></textarea><small id="grantHelp">شناسه‌ها از رجیستری مشترک کارخانه و تعریف‌های ماژول/مجوز اعتبارسنجی می‌شوند.</small>
+          <section id="editAccessManager" class="access-manager" aria-label="مدیریت دسترسی"></section>
           <hr><h4 class="fs-6">بازنشانی جداگانه گذرواژه</h4><input class="form-control mb-2" type="password" name="reset_password" autocomplete="new-password" minlength="12" placeholder="گذرواژه جدید"><input class="form-control" type="password" name="reset_confirmation" autocomplete="new-password" minlength="12" placeholder="تکرار گذرواژه جدید">
         </div>
         <div class="modal-footer"><button class="btn btn-danger" id="resetPasswordSubmit" type="button">بازنشانی گذرواژه</button><button class="btn btn-primary" type="submit">ذخیره تغییرات</button></div>
       </form>
     </div></div>
   </div>
+  <script id="accessManagerConfig" type="application/json">{{ profile.access_manager|tojson }}</script>
+  <script src="{{ url_for('static', filename='js/profile-access-manager.js') }}"></script>
   <script>
   (() => {
     const form = document.getElementById('editUserForm'); const message = document.getElementById('editUserMessage');
     document.querySelectorAll('.edit-user').forEach(button => button.addEventListener('click', () => {
       const user = JSON.parse(button.dataset.user); form.reset(); message.className = 'alert d-none';
       for (const key of ['user_id','expected_revision','full_name','email','job_title','system_role']) form.elements[key].value = key === 'user_id' ? user.id : user[key];
-      form.elements.is_active.checked = user.is_active; form.elements.access_grants.value = JSON.stringify(user.access_grants || [], null, 2);
+      form.elements.is_active.checked = user.is_active; window.profileAccessManager.load('editAccessManager', user.access_state || {global:{},factories:{}}); window.profileAccessManager.toggleRole('editAccessManager', user.system_role);
       form.elements.reset_password.value = ''; form.elements.reset_confirmation.value = '';
     }));
     const show = (text, ok=false) => { message.textContent=text; message.className=`alert alert-${ok?'success':'danger'}`; };
-    form.addEventListener('submit', async event => { event.preventDefault(); let grants; try { grants=JSON.parse(form.elements.access_grants.value || '[]'); } catch (_) { show('ساختار JSON دسترسی‌ها نامعتبر است.'); return; }
-      const id=form.elements.user_id.value; const payload={expected_revision:Number(form.elements.expected_revision.value), full_name:form.elements.full_name.value, email:form.elements.email.value, job_title:form.elements.job_title.value, system_role:form.elements.system_role.value, is_active:form.elements.is_active.checked, access_grants:grants};
-      const response=await fetch(`/api/profile/users/${encodeURIComponent(id)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const result=await response.json(); if(!response.ok){show(result.message||'ویرایش ناموفق بود.');return;} window.location.reload();
+    form.elements.system_role.addEventListener('change', () => window.profileAccessManager.toggleRole('editAccessManager', form.elements.system_role.value));
+    form.addEventListener('submit', async event => { event.preventDefault(); const submit=event.submitter; submit.disabled=true;
+      const id=form.elements.user_id.value; const payload={expected_revision:Number(form.elements.expected_revision.value), full_name:form.elements.full_name.value, email:form.elements.email.value, job_title:form.elements.job_title.value, system_role:form.elements.system_role.value, is_active:form.elements.is_active.checked, access_grants:window.profileAccessManager.serialize('editAccessManager')};
+      try { const response=await fetch(`/api/profile/users/${encodeURIComponent(id)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const result=await response.json(); if(!response.ok){show(result.message||'ویرایش ناموفق بود.');return;} window.location.reload(); } catch(_){show('ارتباط با سرور برقرار نشد.');} finally {submit.disabled=false;}
     });
     document.getElementById('resetPasswordSubmit').addEventListener('click', async () => { const password=form.elements.reset_password.value; if(password !== form.elements.reset_confirmation.value){show('گذرواژه و تکرار آن یکسان نیستند.');return;} const id=form.elements.user_id.value;
       const response=await fetch(`/api/profile/users/${encodeURIComponent(id)}/password-reset`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password,password_confirmation:form.elements.reset_confirmation.value,expected_revision:Number(form.elements.expected_revision.value)})}); const result=await response.json(); if(!response.ok){show(result.message||'بازنشانی ناموفق بود.');return;} show('گذرواژه بازنشانی شد. کاربر در ورود بعدی باید آن را تغییر دهد.',true); form.elements.expected_revision.value=result.user.revision; form.elements.reset_password.value=''; form.elements.reset_confirmation.value='';
@@ -110,7 +113,7 @@
           <label class="form-label" for="newUserRole">نقش سامانه</label><select class="form-select mb-3" id="newUserRole" name="system_role" required><option value="">انتخاب کنید</option>{% for role in profile.create_user.roles %}<option value="{{ role.value }}" data-is-admin="{{ 'true' if role.is_admin else 'false' }}">{{ role.label }}</option>{% endfor %}</select>
           <label class="form-label" for="newUserJobTitle">عنوان شغلی</label><input class="form-control mb-3" id="newUserJobTitle" name="job_title" maxlength="160">
           <p id="fullAccessHelp" class="alert alert-info" hidden>این نقش به‌صورت خودکار دسترسی کامل دارد و نیازی به ثبت دسترسی جزئی نیست.</p>
-          <div id="grantEditor"><div class="d-flex justify-content-between align-items-center mb-2"><strong>دسترسی‌های صریح</strong><button class="btn btn-sm btn-secondary" id="addGrant" type="button">افزودن دسترسی</button></div><p class="empty-state{% if profile.factories %} d-none{% endif %}" id="grantFactoryEmptyState">هیچ کارخانه‌ای در داده‌های سیستم ثبت نشده است.</p><div id="grantRows"></div><template id="grantTemplate"><div class="grant-row"><select class="form-select grant-module" aria-label="ماژول"><option value="">ماژول</option>{% for module in profile.create_user.modules %}<option value="{{ module.value }}" data-scope="{{ module.scope }}">{{ module.label }}</option>{% endfor %}</select><select class="form-select grant-factory" aria-label="کارخانه"><option value="">کارخانه</option>{% for factory in profile.factories %}<option value="{{ factory.id }}">{{ factory.name }} ({{ factory.code }})</option>{% endfor %}</select><label><input type="checkbox" value="READ"> مشاهده</label><label><input type="checkbox" value="WRITE"> ثبت و تغییر</label><button class="btn btn-sm btn-danger remove-grant" type="button">حذف</button></div></template></div>
+          <section id="createAccessManager" class="access-manager" aria-label="مدیریت دسترسی"></section>
           <label class="form-label" for="newUserInitialPassword">گذرواژه اولیه</label><input class="form-control mb-3" type="password" autocomplete="new-password" id="newUserInitialPassword" name="initial_password" minlength="12" maxlength="256" required>
           <label class="form-label" for="newUserInitialPasswordConfirmation">تکرار گذرواژه اولیه</label><input class="form-control" type="password" autocomplete="new-password" id="newUserInitialPasswordConfirmation" name="initial_password_confirmation" minlength="12" maxlength="256" required>
         </div>
@@ -124,19 +127,15 @@
     const form = document.getElementById('createUserForm');
     const message = document.getElementById('createUserMessage');
     const role = document.getElementById('newUserRole');
-    const grantEditor = document.getElementById('grantEditor');
-    const grantRows = document.getElementById('grantRows');
     const fullAccessHelp = document.getElementById('fullAccessHelp');
-    const addGrant = () => { const row = document.getElementById('grantTemplate').content.firstElementChild.cloneNode(true); row.querySelector('.remove-grant').addEventListener('click', () => row.remove()); row.querySelector('.grant-module').addEventListener('change', event => { const globalScope = event.target.selectedOptions[0]?.dataset.scope === 'GLOBAL'; row.querySelector('.grant-factory').hidden = globalScope; row.querySelector('.grant-factory').value = ''; }); grantRows.appendChild(row); };
-    document.getElementById('addGrant').addEventListener('click', addGrant);
+    window.profileAccessManager.load('createAccessManager', {global:{},factories:{}});
     const passwordFields = [document.getElementById('newUserInitialPassword'), document.getElementById('newUserInitialPasswordConfirmation')];
     const clearPasswords = () => passwordFields.forEach(field => { field.value = ''; });
     modal.addEventListener('hidden.bs.modal', clearPasswords);
     role.addEventListener('change', () => {
       const isAdmin = role.selectedOptions[0]?.dataset.isAdmin === 'true';
-      grantEditor.hidden = isAdmin;
       fullAccessHelp.hidden = !isAdmin;
-      if (!isAdmin && !grantRows.children.length) addGrant();
+      window.profileAccessManager.toggleRole('createAccessManager', role.value);
     });
     role.dispatchEvent(new Event('change'));
     form.addEventListener('submit', async event => {
@@ -146,11 +145,7 @@
         message.textContent = 'گذرواژه و تکرار آن یکسان نیستند.'; message.className = 'alert alert-danger'; return;
       }
       const payload = Object.fromEntries(new FormData(form).entries());
-      payload.access_grants = [...grantRows.querySelectorAll('.grant-row')].filter(row => row.querySelector('.grant-module').value).map(row => {
-        const module = row.querySelector('.grant-module');
-        const scope_type = module.selectedOptions[0].dataset.scope;
-        return {scope_type, factory_id: scope_type === 'GLOBAL' ? null : row.querySelector('.grant-factory').value, module: module.value, permissions: [...row.querySelectorAll('input:checked')].map(input => input.value)};
-      });
+      payload.access_grants = window.profileAccessManager.serialize('createAccessManager');
       const response = await fetch('{{ url_for("profile.create_user") }}', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
       const result = await response.json();
       if (!response.ok) { message.textContent = result.message || 'ذخیره کاربر ناموفق بود.'; message.className = 'alert alert-danger'; return; }
@@ -186,9 +181,7 @@
       const option = document.createElement('option');
       option.value = factory.id;
       option.textContent = `${factory.name} (${factory.code})`;
-      document.querySelectorAll('.grant-factory').forEach(select => select.appendChild(option.cloneNode(true)));
-      const templateSelect = document.getElementById('grantTemplate')?.content.querySelector('.grant-factory');
-      if (templateSelect) templateSelect.appendChild(option.cloneNode(true));
+      window.location.reload();
     };
     form.addEventListener('submit', async event => {
       event.preventDefault();
@@ -224,6 +217,6 @@
   {% endif %}
 </main>
 <style>
-  .profile-page{max-width:1200px;margin:0 auto;color:#172b3f}.profile-hero{background:linear-gradient(105deg,#0b1e33,#1a3350);color:#fff;border-radius:24px;padding:1.5rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}.hero-actions{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}.profile-kicker{color:#b9d4ef;margin:0 0 .35rem}.profile-hero h2{margin:0}.role-badge{background:#ffd966;color:#0b1e33;padding:.45rem 1rem;border-radius:999px;font-weight:700}.profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}.profile-card{background:#fff;border:1px solid #e5eaf0;border-radius:20px;padding:1.4rem;box-shadow:0 8px 24px rgba(15,35,55,.05)}.profile-card h3{font-size:1.1rem;margin:0 0 1rem}.section-card{margin-top:1rem}.details-list{margin:0}.details-list div{display:flex;justify-content:space-between;gap:1rem;padding:.65rem 0;border-bottom:1px solid #edf0f4}.details-list div:last-child{border:0}.details-list dd{margin:0}.technical-value{direction:ltr;unicode-bidi:isolate}.permission-list,.factory-list,.history-list{list-style:none;padding:0;margin:0;display:grid;gap:.65rem}.permission-list li,.factory-list li,.history-list li{background:#f6f8fb;border-radius:12px;padding:.75rem 1rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}.factory-list small{width:100%;color:#657587}.full-access-state{background:#e8f6ee;color:#17653a;border-radius:12px;padding:1rem;text-align:center;font-weight:700}.grant-row{display:grid;grid-template-columns:1.4fr 1.2fr auto auto auto;gap:.5rem;align-items:center;margin-bottom:.75rem}.empty-state{background:#f7f9fb;border:1px dashed #cfd8e3;border-radius:12px;color:#66788a;padding:1rem;text-align:center}.table-responsive{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:right}th,td{padding:.75rem;border-bottom:1px solid #e9edf2}.readonly-notice{text-align:center;color:#536779;margin:1rem 0}.btn{border:1px solid #d0d7e5;padding:.55rem 1.1rem;border-radius:20px;background:#f4f7fd;color:#1e3a5f}@media(max-width:760px){.profile-grid{grid-template-columns:1fr}.profile-hero{align-items:flex-start;flex-direction:column}}
+  .profile-page{max-width:1200px;margin:0 auto;color:#172b3f}.profile-hero{background:linear-gradient(105deg,#0b1e33,#1a3350);color:#fff;border-radius:24px;padding:1.5rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}.hero-actions{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}.profile-kicker{color:#b9d4ef;margin:0 0 .35rem}.profile-hero h2{margin:0}.role-badge{background:#ffd966;color:#0b1e33;padding:.45rem 1rem;border-radius:999px;font-weight:700}.profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}.profile-card{background:#fff;border:1px solid #e5eaf0;border-radius:20px;padding:1.4rem;box-shadow:0 8px 24px rgba(15,35,55,.05)}.profile-card h3{font-size:1.1rem;margin:0 0 1rem}.section-card{margin-top:1rem}.details-list{margin:0}.details-list div{display:flex;justify-content:space-between;gap:1rem;padding:.65rem 0;border-bottom:1px solid #edf0f4}.details-list div:last-child{border:0}.details-list dd{margin:0}.technical-value{direction:ltr;unicode-bidi:isolate}.permission-list,.factory-list,.history-list{list-style:none;padding:0;margin:0;display:grid;gap:.65rem}.permission-list li,.factory-list li,.history-list li{background:#f6f8fb;border-radius:12px;padding:.75rem 1rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}.factory-list small{width:100%;color:#657587}.full-access-state,.admin-access-panel{background:#e8f6ee;color:#17653a;border-radius:12px;padding:1rem;text-align:center;font-weight:700}.access-section,.factory-access-card{border:1px solid #dce4ed;border-radius:14px;padding:1rem;margin-top:.75rem}.module-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,220px);align-items:center;gap:1rem;padding:.55rem 0;border-bottom:1px solid #edf0f4}.factory-card-header,.access-actions{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap}.access-summary{font-size:.85rem;color:#607286}.empty-state{background:#f7f9fb;border:1px dashed #cfd8e3;border-radius:12px;color:#66788a;padding:1rem;text-align:center}.table-responsive{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:right}th,td{padding:.75rem;border-bottom:1px solid #e9edf2}.readonly-notice{text-align:center;color:#536779;margin:1rem 0}.btn{border:1px solid #d0d7e5;padding:.55rem 1.1rem;border-radius:20px;background:#f4f7fd;color:#1e3a5f}@media(max-width:760px){.profile-grid{grid-template-columns:1fr}.profile-hero{align-items:flex-start;flex-direction:column}.module-row{grid-template-columns:1fr}.modal-dialog{margin:.5rem}}
 </style>
 {% endblock %}

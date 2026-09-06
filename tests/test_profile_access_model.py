@@ -9,6 +9,7 @@ from utils.profile_authorization import (
 )
 from utils.profile_store import ProfileDataStore
 from utils.profile_view import build_profile_view_model
+from utils.profile_access_manager import access_state_to_grants, grants_to_access_state
 
 
 def account(role="USER", grants=None, title=""):
@@ -68,11 +69,40 @@ def test_grants_are_paired_deduplicated_and_scoped():
     assert can_access_module(user, "GENERAL_PARAMETERS")
 
 
+@pytest.mark.parametrize(("level", "permissions"), [
+    ("NONE", None), ("READ", ["READ"]), ("WRITE", ["READ", "WRITE"]),
+    ("MODIFY", ["READ", "WRITE", "MODIFY"]),
+])
+def test_visual_levels_serialize_to_hierarchical_permissions(level, permissions):
+    grants = access_state_to_grants({"global": {"PROFILE": level}, "factories": {}})
+    assert (grants[0]["permissions"] if grants else None) == permissions
+
+
+def test_visual_access_round_trip_multiple_scopes_and_normalizes_duplicates():
+    canonical = canonicalize_access_grants([
+        {"scope_type": "GLOBAL", "factory_id": None, "module": "PROFILE", "permissions": ["WRITE"]},
+        {"scope_type": "GLOBAL", "factory_id": None, "module": "PROFILE", "permissions": ["READ"]},
+        {"scope_type": "FACTORY", "factory_id": "F1", "module": "PRODUCT", "permissions": ["MODIFY"]},
+        {"scope_type": "FACTORY", "factory_id": "F2", "module": "PRODUCT", "permissions": ["READ"]},
+    ], {"F1", "F2"})
+    state = grants_to_access_state(canonical)
+    assert state == {"global": {"PROFILE": "WRITE"}, "factories": {
+        "F1": {"PRODUCT": "MODIFY"}, "F2": {"PRODUCT": "READ"}}}
+    assert grants_to_access_state(access_state_to_grants(state)) == state
+
+
+def test_profile_template_uses_visual_selector_not_raw_json():
+    template = open("templates/profile/profile.html", encoding="utf-8").read()
+    assert 'name="access_grants"' not in template
+    assert "grant-row" not in template
+    assert "profile-access-manager.js" in template
+
+
 @pytest.mark.parametrize("grant", [
     {"scope_type": "OTHER", "factory_id": None, "module": "DASHBOARD", "permissions": ["READ"]},
     {"scope_type": "FACTORY", "factory_id": "missing", "module": "PRODUCT", "permissions": ["READ"]},
     {"scope_type": "GLOBAL", "factory_id": None, "module": "UNKNOWN", "permissions": ["READ"]},
-    {"scope_type": "GLOBAL", "factory_id": None, "module": "DASHBOARD", "permissions": ["MODIFY"]},
+    {"scope_type": "GLOBAL", "factory_id": None, "module": "DASHBOARD", "permissions": ["DELETE"]},
 ])
 def test_unknown_grant_values_fail_closed(grant):
     with pytest.raises(ValueError):

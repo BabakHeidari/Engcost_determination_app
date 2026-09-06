@@ -102,7 +102,7 @@ and a visual list of granular grants. Only either top-level administrator may
 create an account. Administrator editing, deactivation, promotion and reset UI
 remain Phase 7 work and were not started.
 
-`READ` and `WRITE` are independent capabilities. `DASHBOARD`, `DESK`, `PROFILE`
+`READ < WRITE < MODIFY` are hierarchical capabilities. `DASHBOARD`, `DESK`, `PROFILE`
 and `GENERAL_PARAMETERS` are global based on their current routes;
 `FACTORY_PARAMETERS`, `PRODUCT`, and `COST_CALCULATION` operate on selected
 factory data and are factory-scoped. This classification is centralized in
@@ -181,3 +181,15 @@ See `docs/factory-integration-inventory.md` for the complete classification.
   inventory row.
 
 Phase 7 was not started by Phase 6.8.
+
+## Phase 7.1 — Visual Access Manager (complete)
+
+Phase 7.1 replaces production raw-JSON grant editing in both Add User and Edit
+User with a Persian RTL Visual Access Manager. GLOBAL modules are rows in a
+separate global section. FACTORY-scoped module rows live in collapsible cards
+sourced from the canonical dynamic registry, with exactly one hierarchical
+NONE/READ/WRITE/MODIFY selector per row. A single parser/serializer pair
+normalizes effective levels and serializes canonical grants deterministically.
+Top-level peers retain implicit full access and see no granular editor.
+
+Phase 8 application-wide enforcement was not started by this phase.

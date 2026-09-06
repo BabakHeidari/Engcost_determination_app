@@ -11,6 +11,7 @@ from utils.profile_authorization import (
 )
 from utils.factory_service import FactoryService
 from utils.profile_store import ProfileStoreError
+from utils.profile_access_manager import grants_to_access_state
 
 ROLE_LABELS = {
     "IT_ADMIN": "مدیر IT",
@@ -22,7 +23,7 @@ MODULE_LABELS = {
     "GENERAL_PARAMETERS": "پارامترهای عمومی", "FACTORY_PARAMETERS": "پارامترهای کارخانه",
     "PRODUCT": "محصول", "COST_CALCULATION": "محاسبه بهای تمام‌شده",
 }
-PERMISSION_LABELS = {"READ": "مشاهده", "WRITE": "ثبت و تغییر"}
+PERMISSION_LABELS = {"READ": "فقط مشاهده", "WRITE": "ثبت اطلاعات", "MODIFY": "ویرایش کامل"}
 
 
 def _public_user(user):
@@ -33,7 +34,7 @@ def _public_user(user):
         "system_role_label": ROLE_LABELS[user["system_role"]],
         "job_title": user.get("job_title", ""), "last_login_at": user.get("last_login_at"),
         "is_active": bool(user.get("is_active")), "revision": user.get("revision", 1),
-        "access_grants": user.get("access_grants", []),
+        "access_state": grants_to_access_state(user.get("access_grants", [])),
     }
 
 
@@ -83,6 +84,14 @@ def build_profile_view_model(store, authenticated_user):
         "factories": visible_factories,
         "audit_events": audit_events,
         "features": {"add_user": can_manage_users(current), "edit_user": can_manage_users(current), "add_factory": can_manage_factories(current), "edit_permissions": can_manage_users(current)},
+        "access_manager": {
+            "factories": [dict(FactoryService._public(f), is_active=bool(f.get("is_active", True))) for f in data["factories"]],
+            "global_modules": [{"value": key, "label": MODULE_LABELS[key]} for key, scopes in MODULE_SCOPES.items() if "GLOBAL" in scopes],
+            "factory_modules": [{"value": key, "label": MODULE_LABELS[key]} for key, scopes in MODULE_SCOPES.items() if "FACTORY" in scopes],
+            "levels": [{"value": value, "label": label} for value, label in (
+                ("NONE", "بدون دسترسی"), ("READ", "فقط مشاهده"),
+                ("WRITE", "ثبت اطلاعات"), ("MODIFY", "ویرایش کامل"))],
+        },
         "create_user": {
             "roles": [{"value": key, "label": ROLE_LABELS[key], "is_admin": key in TOP_LEVEL_ROLES} for key in ("IT_ADMIN", "FINANCE_ECONOMIC_ADMIN", "USER")],
             "modules": [
