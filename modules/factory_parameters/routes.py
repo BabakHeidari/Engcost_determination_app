@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, request, session
+from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 from utils.auth import login_required
 from utils.paths import factories_path, parent_path, product_path
 from utils.load_data import load_category_weights_of_costs, load_json, load_factory_summery, load_factory_subfield
@@ -61,10 +61,17 @@ def factory_parameters():
 #     return jsonify({"status": "ok", "saved_to": saving_path})
 
 
-@factory_parameters_bp.route("/factory_parameters/<factory_name>", methods=["POST"])
+@factory_parameters_bp.route("/factory_parameters/<factory_name>", methods=["GET", "POST"])
 @login_required
 def factory_details(factory_name):
-    factory = request.form["factory name"]
+    if request.method == "POST":
+        # Preserve compatibility with already-rendered legacy forms while using
+        # Post/Redirect/Get so refresh and browser Back never require resubmission.
+        return redirect(
+            url_for("factory_parameters.factory_details", factory_name=factory_name),
+            code=303,
+        )
+    factory = factory_name
     session["factory_name"] = factory
     factory_json, fac_path = load_factory_summery(factory)
     session["fac_path"] = fac_path.replace(".json", "")
@@ -107,8 +114,18 @@ def save_factory_subfields():
 @factory_parameters_bp.route("/factory_parameters/<factory_name>/<Subfield>", methods=["POST", "GET"])
 @login_required
 def subfield(factory_name, Subfield):
-    factory_name = session.get("factory_name")
-    Subfield = request.form["Subfield"]
+    if request.method == "POST":
+        # Old table forms posted the subfield value. Canonicalize that request
+        # into a bookmarkable GET URL before rendering any data.
+        return redirect(
+            url_for(
+                "factory_parameters.subfield",
+                factory_name=factory_name,
+                Subfield=Subfield,
+            ),
+            code=303,
+        )
+    session["factory_name"] = factory_name
     subfield_json, sub_path = load_factory_subfield(factory_name, Subfield)
     session["sub_path"], session["subfield"] = sub_path.replace(".json", ""), Subfield
     # print(subfield_json)

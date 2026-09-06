@@ -26,7 +26,7 @@ class ModulePersianLocalizationTests(unittest.TestCase):
         details = self.read_template("templates/factory_parameters/factory_details.html")
         self.assertIn("نام کارخانه", factories)
         self.assertIn("کارخانه دین‌محمدپور", factories)
-        self.assertIn('name="factory name"', factories)
+        self.assertIn('const factoryUrl = `/factory_parameters/', factories)
         self.assertIn("function displayDataValue", factories)
         self.assertIn("ساختار هزینه با موفقیت ذخیره شد", details)
         self.assertIn("selling_share_of_category", details)

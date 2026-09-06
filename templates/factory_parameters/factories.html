@@ -216,14 +216,8 @@
             const factoryName = row[headers[0]]; // First column - factory name
             const managerName = row[headers[1]]; // Second column - manager
             
-            view.innerHTML = `
-                <form method="POST" action="/factory_parameters/${encodeURIComponent(factoryName)}" style="margin:0;">
-                    <input type="hidden" name="factory name" value="${factoryName ?? ""}">
-                    <button type="submit" class="view-btn">
-                        <span class="btn-icon">🔍</span> مشاهده جزئیات
-                    </button>
-                </form>
-            `;
+            const factoryUrl = `/factory_parameters/${encodeURIComponent(factoryName)}`;
+            view.innerHTML = `<a href="${factoryUrl}" class="view-btn"><span class="btn-icon">🔍</span> مشاهده جزئیات</a>`;
             view.className = 'view-cell';
 
             tr.appendChild(view);
