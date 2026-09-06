@@ -25,6 +25,7 @@ from utils.profile_authorization import (
     USER,
     canonicalize_access_grants,
     is_top_level_admin,
+    would_leave_active_admin,
 )
 
 
@@ -653,6 +654,92 @@ class ProfileDataStore:
             user["revision"] = user.get("revision", 1) + 1
             user["updated_at"] = _utc_now()
             return public_user(user)
+        return self._mutate(change)
+
+    def update_user_as_actor(self, actor_user_id, user_id, changes, expected_revision):
+        """Authorize, validate, edit and audit an account in one transaction."""
+        updates = copy.deepcopy(changes)
+
+        def change(data):
+            actor = next((u for u in data["users"] if u["id"] == actor_user_id), None)
+            target = next((u for u in data["users"] if u["id"] == user_id), None)
+            if actor is None or not actor.get("is_active") or not is_top_level_admin(actor):
+                raise ProfileDataValidationError("فقط مدیر سطح بالا مجاز به ویرایش کاربران است.")
+            if target is None:
+                raise ProfileStoreError("User not found")
+            if target.get("revision", 1) != expected_revision:
+                raise ProfileDataConflictError("اطلاعات کاربر تغییر کرده است؛ صفحه را تازه‌سازی کنید.")
+            sensitive = {"system_role", "is_active", "email"} & set(updates)
+            if actor_user_id == user_id and sensitive:
+                raise ProfileDataValidationError("تغییر حساس حساب مدیر باید توسط مدیر سطح بالای دیگری انجام شود.")
+            if is_top_level_admin(target) and sensitive and actor_user_id == user_id:
+                raise ProfileDataValidationError("مدیر نمی‌تواند تغییر حساس را روی حساب خود انجام دهد.")
+            new_role = updates.get("system_role", target["system_role"])
+            new_active = updates.get("is_active", target.get("is_active", False))
+            if would_leave_active_admin(data, user_id, new_role, new_active):
+                raise ProfileDataValidationError("سامانه باید حداقل یک مدیر سطح بالای فعال داشته باشد.")
+            email = normalize_email(updates.get("email", target["email"]))
+            if any(u["id"] != user_id and normalize_email(u["email"]) == email for u in data["users"]):
+                raise ProfileDataConflictError("ایمیل قبلاً ثبت شده است.")
+            active_factory_ids = {f["id"] for f in data["factories"] if f.get("is_active", True)}
+            all_factory_ids = {f["id"] for f in data["factories"]}
+            raw_grants = updates.get("access_grants", target.get("access_grants", []))
+            # Existing inactive-factory grants remain valid historical records;
+            # a submitted replacement may only assign currently active factories.
+            permitted_factory_ids = active_factory_ids if "access_grants" in updates else all_factory_ids
+            try:
+                grants = canonicalize_access_grants(raw_grants, permitted_factory_ids)
+            except ValueError as exc:
+                raise ProfileDataValidationError(str(exc)) from None
+            if new_role in TOP_LEVEL_ROLES:
+                grants = []
+            now = _utc_now()
+            before = {"system_role": target["system_role"], "is_active": target.get("is_active", False)}
+            target.update(updates)
+            target.update({"email": email, "email_normalized": email,
+                           "system_role": new_role, "access_grants": grants,
+                           "updated_at": now, "updated_by_id": actor_user_id,
+                           "revision": target.get("revision", 1) + 1})
+            if "email" in updates:
+                target["username"] = email
+            changed_fields = sorted(key for key in updates if key != "access_grants")
+            if grants != raw_grants or "access_grants" in updates:
+                changed_fields.append("access_grants")
+            details = {"changed_fields": sorted(set(changed_fields))}
+            if "system_role" in updates:
+                details["system_role"] = {"before": before["system_role"], "after": new_role}
+            if "is_active" in updates:
+                details["is_active"] = {"before": before["is_active"], "after": new_active}
+            data["audit_events"].append({"id": f"aud_{uuid.uuid4().hex}", "occurred_at": now,
+                "actor_user_id": actor_user_id, "action": "user.updated", "target_type": "user",
+                "target_id": user_id, "details": details})
+            return public_user(target)
+        return self._mutate(change)
+
+    def reset_password_as_actor(self, actor_user_id, user_id, password_hash, expected_revision):
+        """Reset a target password without exposing or auditing secret material."""
+        if not isinstance(password_hash, str) or not password_hash:
+            raise ProfileDataValidationError("هش گذرواژه معتبر نیست.")
+        def change(data):
+            actor = next((u for u in data["users"] if u["id"] == actor_user_id), None)
+            target = next((u for u in data["users"] if u["id"] == user_id), None)
+            if actor is None or not actor.get("is_active") or not is_top_level_admin(actor):
+                raise ProfileDataValidationError("فقط مدیر سطح بالا مجاز به بازنشانی گذرواژه است.")
+            if target is None:
+                raise ProfileStoreError("User not found")
+            if target.get("revision", 1) != expected_revision:
+                raise ProfileDataConflictError("اطلاعات کاربر تغییر کرده است؛ صفحه را تازه‌سازی کنید.")
+            if is_top_level_admin(target) and actor_user_id == user_id:
+                raise ProfileDataValidationError("گذرواژه مدیر سطح بالا باید توسط مدیر سطح بالای دیگری بازنشانی شود.")
+            now = _utc_now()
+            target.update({"password_hash": password_hash, "password_scheme": "werkzeug",
+                "must_change_password": True, "password_changed_at": now, "updated_at": now,
+                "updated_by_id": actor_user_id, "revision": target.get("revision", 1) + 1})
+            data["audit_events"].append({"id": f"aud_{uuid.uuid4().hex}", "occurred_at": now,
+                "actor_user_id": actor_user_id, "action": "user.password_reset",
+                "target_type": "user", "target_id": user_id,
+                "details": {"must_change_password": True}})
+            return public_user(target)
         return self._mutate(change)
 
     def list_factories(self):

@@ -18,3 +18,7 @@ and the returned registry record is immediately available to Add User grants.
 An existing schema-v1 canonical file is upgraded automatically on its first
 read/login using the locked, backed-up, atomic migration. The standalone
 migration command remains available for proactive operational cutovers.
+
+## Phase 7 account management
+
+Phase 7 adds administrator user editing, canonical access-grant replacement, role transitions, activation/deactivation, optimistic revision checks, and a separate administrator password-reset operation. Both top-level roles have identical authority; sensitive changes to a top-level account require a different top-level administrator, and no operation may remove the final active top-level administrator. See `docs/profile-user-management.md` for details.

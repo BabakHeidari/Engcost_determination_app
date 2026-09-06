@@ -32,6 +32,8 @@ def _public_user(user):
         "email": user["email"], "system_role": user["system_role"],
         "system_role_label": ROLE_LABELS[user["system_role"]],
         "job_title": user.get("job_title", ""), "last_login_at": user.get("last_login_at"),
+        "is_active": bool(user.get("is_active")), "revision": user.get("revision", 1),
+        "access_grants": user.get("access_grants", []),
     }
 
 
@@ -61,7 +63,7 @@ def build_profile_view_model(store, authenticated_user):
         raise ProfileStoreError("Authenticated user is unavailable")
     admin = is_top_level_admin(current)
     factory_names = {f["id"]: f.get("display_name") or f.get("name") or f["code"] for f in data["factories"]}
-    visible_users = [u for u in data["users"] if u.get("is_active") and (admin or u["id"] == current["id"])]
+    visible_users = [u for u in data["users"] if admin or (u.get("is_active") and u["id"] == current["id"])]
     # Profile access management may show any factory granted in any business
     # module.  Administrators implicitly receive every active registry entry.
     visible_factories = [FactoryService._public(f) for f in data["factories"] if f.get("is_active", True)] if admin else [
@@ -80,7 +82,7 @@ def build_profile_view_model(store, authenticated_user):
         "users": [_public_user(u) for u in visible_users],
         "factories": visible_factories,
         "audit_events": audit_events,
-        "features": {"add_user": can_manage_users(current), "edit_user": False, "add_factory": can_manage_factories(current), "edit_permissions": False},
+        "features": {"add_user": can_manage_users(current), "edit_user": can_manage_users(current), "add_factory": can_manage_factories(current), "edit_permissions": can_manage_users(current)},
         "create_user": {
             "roles": [{"value": key, "label": ROLE_LABELS[key], "is_admin": key in TOP_LEVEL_ROLES} for key in ("IT_ADMIN", "FINANCE_ECONOMIC_ADMIN", "USER")],
             "modules": [

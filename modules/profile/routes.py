@@ -3,7 +3,7 @@ from flask import Blueprint, g, jsonify, render_template, request
 from utils.auth import get_profile_store, login_required
 from utils.profile_factories import prepare_new_factory
 from utils.profile_store import ProfileDataConflictError, ProfileDataValidationError, ProfileStoreError
-from utils.profile_users import prepare_new_user
+from utils.profile_users import prepare_new_user, prepare_password_reset, prepare_user_update
 from utils.profile_view import build_profile_view_model
 
 
@@ -35,6 +35,36 @@ def create_user():
     except OSError:
         return jsonify({"ok": False, "message": "ذخیره کاربر امکان‌پذیر نشد."}), 503
     return jsonify({"ok": True, "user": user}), 201
+
+
+@profile_bp.patch("/api/profile/users/<user_id>")
+@login_required
+def edit_user(user_id):
+    try:
+        changes, revision = prepare_user_update(request.get_json(silent=True))
+        user = get_profile_store().update_user_as_actor(g.current_user["id"], user_id, changes, revision)
+    except ProfileDataConflictError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 409
+    except ProfileDataValidationError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    except ProfileStoreError:
+        return jsonify({"ok": False, "message": "ویرایش کاربر امکان‌پذیر نشد."}), 503
+    return jsonify({"ok": True, "user": user})
+
+
+@profile_bp.post("/api/profile/users/<user_id>/password-reset")
+@login_required
+def reset_user_password(user_id):
+    try:
+        password_hash, revision = prepare_password_reset(request.get_json(silent=True))
+        user = get_profile_store().reset_password_as_actor(g.current_user["id"], user_id, password_hash, revision)
+    except ProfileDataConflictError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 409
+    except ProfileDataValidationError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    except ProfileStoreError:
+        return jsonify({"ok": False, "message": "بازنشانی گذرواژه امکان‌پذیر نشد."}), 503
+    return jsonify({"ok": True, "user": user})
 
 
 @profile_bp.post("/api/profile/factories")
