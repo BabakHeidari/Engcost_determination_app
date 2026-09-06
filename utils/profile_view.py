@@ -1,130 +1,75 @@
-"""Safe, read-only presentation model for the authenticated Profile page."""
+"""Safe presentation model for the canonical Profile access model."""
 
-from __future__ import annotations
-
-import copy
-
+from utils.profile_authorization import (
+    MODULE_SCOPES,
+    PERMISSIONS,
+    TOP_LEVEL_ROLES,
+    can_manage_users,
+    get_effective_access,
+    is_top_level_admin,
+)
 from utils.profile_store import ProfileStoreError
 
-
 ROLE_LABELS = {
-    "IT Admin": "مدیر فناوری اطلاعات",
-    "Official Admin": "مدیر سازمانی",
-    "Factory Admin": "مدیر کارخانه",
-    "Office Staff": "کارشناس ستادی",
-    "Factory Staff": "کارشناس کارخانه",
+    "IT_ADMIN": "مدیر IT",
+    "FINANCE_ECONOMIC_ADMIN": "مدیر مالی و اقتصادی",
+    "USER": "کاربر",
 }
+MODULE_LABELS = {
+    "DESK": "میز کار", "DASHBOARD": "داشبورد", "PROFILE": "پروفایل",
+    "GENERAL_PARAMETERS": "پارامترهای عمومی", "FACTORY_PARAMETERS": "پارامترهای کارخانه",
+    "PRODUCT": "محصول", "COST_CALCULATION": "محاسبه بهای تمام‌شده",
+}
+PERMISSION_LABELS = {"READ": "مشاهده", "WRITE": "ثبت و تغییر"}
 
 
-def _effective_permissions(data, user):
-    role = data["role_permissions"].get(user["role"], {})
-    permissions = copy.deepcopy(role.get("permissions", {}))
-    for override in data["user_permission_overrides"]:
-        if override.get("user_id") != user["id"]:
-            continue
-        module = override.get("module")
-        actions = override.get("actions", [])
-        if not isinstance(module, str) or not isinstance(actions, list):
-            continue
-        current = set(permissions.get(module, []))
-        if override.get("effect") == "deny":
-            current.difference_update(actions)
-        elif override.get("effect") == "allow":
-            current.update(actions)
-        permissions[module] = sorted(current)
-    return permissions
-
-
-def _has_global_scope(data, user):
-    return data["role_permissions"].get(user["role"], {}).get("scope") == "global"
-
-
-def _public_user(user, factory_names):
+def _public_user(user):
     return {
-        "id": user["id"],
-        "username": user.get("username", ""),
+        "id": user["id"], "username": user.get("username", ""),
         "full_name": user.get("full_name") or user.get("username") or user["email"],
-        "email": user["email"],
-        "role": user["role"],
-        "role_label": ROLE_LABELS.get(user["role"], user["role"]),
-        "factory_id": user.get("factory_id"),
-        "factory_name": factory_names.get(user.get("factory_id")),
-        "last_login_at": user.get("last_login_at"),
+        "email": user["email"], "system_role": user["system_role"],
+        "system_role_label": ROLE_LABELS[user["system_role"]],
+        "job_title": user.get("job_title", ""), "last_login_at": user.get("last_login_at"),
     }
+
+
+def _group_grants(user, factory_names):
+    groups = []
+    for grant in get_effective_access(user):
+        groups.append({
+            "scope_type": grant["scope_type"],
+            "scope_label": "سراسری" if grant["scope_type"] == "GLOBAL" else factory_names.get(grant["factory_id"], grant["factory_id"]),
+            "module": grant["module"], "module_label": MODULE_LABELS[grant["module"]],
+            "permissions": [PERMISSION_LABELS[p] for p in grant["permissions"]],
+        })
+    return groups
 
 
 def build_profile_view_model(store, authenticated_user):
-    """Load one canonical snapshot and return only browser-safe profile fields."""
     data = store.load_data()
-    current = next(
-        (user for user in data["users"] if user["id"] == authenticated_user["id"]), None
-    )
+    current = next((u for u in data["users"] if u["id"] == authenticated_user["id"]), None)
     if current is None or not current.get("is_active", False):
         raise ProfileStoreError("Authenticated user is unavailable")
-
-    global_scope = _has_global_scope(data, current)
-    factory_id = current.get("factory_id")
-    visible_factories = [
-        factory for factory in data["factories"]
-        if factory.get("is_active", True)
-        and (global_scope or (factory_id is not None and factory["id"] == factory_id))
-    ]
-    factory_names = {
-        factory["id"]: factory.get("display_name") or factory.get("name") or factory["code"]
-        for factory in data["factories"]
-    }
-    visible_users = [
-        user for user in data["users"]
-        if user.get("is_active", False)
-        and (
-            global_scope
-            or user["id"] == current["id"]
-            or (factory_id is not None and user.get("factory_id") == factory_id)
-        )
-    ]
-    visible_user_ids = {user["id"] for user in visible_users}
-    audit_events = [
-        {
-            "id": event["id"],
-            "occurred_at": event.get("occurred_at"),
-            "action": event.get("action", ""),
-            "outcome": event.get("outcome"),
-        }
-        for event in data["audit_events"]
-        if event.get("actor_user_id") == current["id"]
-        or event.get("target_id") == current["id"]
-        or (global_scope and event.get("target_id") in visible_user_ids)
-    ]
-    audit_events.sort(key=lambda event: event.get("occurred_at") or "", reverse=True)
-
-    creatable_roles = {
-        "IT Admin": list(data["role_permissions"]),
-        "Official Admin": ["Official Admin", "Factory Admin", "Office Staff", "Factory Staff"],
-        "Factory Admin": ["Factory Staff"],
-    }.get(current["role"], [])
+    admin = is_top_level_admin(current)
+    factory_names = {f["id"]: f.get("display_name") or f.get("name") or f["code"] for f in data["factories"]}
+    visible_users = [u for u in data["users"] if u.get("is_active") and (admin or u["id"] == current["id"])]
+    visible_factories = [f for f in data["factories"] if f.get("is_active", True) and (admin or any(
+        g["scope_type"] == "FACTORY" and g["factory_id"] == f["id"] for g in current["access_grants"]
+    ))]
+    visible_ids = {u["id"] for u in visible_users}
+    audit_events = [{"id": e["id"], "occurred_at": e.get("occurred_at"), "action": e.get("action", ""), "outcome": e.get("outcome")}
+                    for e in data["audit_events"] if e.get("actor_user_id") == current["id"] or e.get("target_id") == current["id"] or (admin and e.get("target_id") in visible_ids)]
+    audit_events.sort(key=lambda e: e.get("occurred_at") or "", reverse=True)
     return {
-        "current_user": _public_user(current, factory_names),
-        "effective_permissions": _effective_permissions(data, current),
-        "users": [_public_user(user, factory_names) for user in visible_users],
-        "factories": [
-            {
-                "id": factory["id"],
-                "code": factory["code"],
-                "name": factory_names[factory["id"]],
-                "location": factory.get("location"),
-            }
-            for factory in visible_factories
-        ],
+        "current_user": _public_user(current), "full_access": admin,
+        "effective_grants": _group_grants(current, factory_names),
+        "users": [_public_user(u) for u in visible_users],
+        "factories": [{"id": f["id"], "code": f["code"], "name": factory_names[f["id"]], "location": f.get("location")} for f in visible_factories],
         "audit_events": audit_events,
-        "features": {
-            "add_user": bool(creatable_roles),
-            "edit_user": False,
-            "add_factory": False,
-            "edit_permissions": False,
+        "features": {"add_user": can_manage_users(current), "edit_user": False, "add_factory": False, "edit_permissions": False},
+        "create_user": {
+            "roles": [{"value": key, "label": ROLE_LABELS[key], "is_admin": key in TOP_LEVEL_ROLES} for key in ("IT_ADMIN", "FINANCE_ECONOMIC_ADMIN", "USER")],
+            "modules": [{"value": key, "label": MODULE_LABELS[key], "scope": next(iter(scopes))} for key, scopes in MODULE_SCOPES.items()],
+            "permissions": [{"value": key, "label": PERMISSION_LABELS[key]} for key in sorted(PERMISSIONS)],
         },
-        "create_user": {"roles": [
-            {"value": role, "label": ROLE_LABELS.get(role, role),
-             "requires_factory": data["role_permissions"][role].get("scope") == "factory"}
-            for role in creatable_roles if role in data["role_permissions"]
-        ]},
     }

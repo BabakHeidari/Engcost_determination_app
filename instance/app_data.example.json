@@ -7,7 +7,7 @@
     "updated_at": "2026-08-01T00:00:00Z"
   },
   "role_permissions": {},
-  "schema_version": 1,
+  "schema_version": 2,
   "user_permission_overrides": [],
   "users": []
 }

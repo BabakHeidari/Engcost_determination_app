@@ -337,7 +337,7 @@ No item below is implemented in Phase 2.
 
 Existing costing modules, `utils.cost_determiners.py`, BOM/material files, and factory cost files are explicitly outside this plan.
 
-## 18. Open product decisions
+## 18. Historical Phase 2 open decisions (superseded where resolved by Phase 6.5)
 
 1. Is login retained as username-based, changed to normalized email, or allowed by either unique identifier?
 2. What are the approved stable role keys, hierarchy, module/action matrix, and meanings of `Write` versus `Modify`?
@@ -356,3 +356,36 @@ Existing costing modules, `utils.cost_determiners.py`, BOM/material files, and f
 ## Phase 2 conclusion and risks
 
 The real login store and flow are now identified, and `APP_DATA_FILE` pointing to one `app_data.json` is selected for the future identity/profile domain. Major remaining risks are the weak legacy hashes, committed credential artifacts, a hard-coded Flask secret key, lack of CSRF/rate limiting, session checks that do not reload active users, client-only demo authorization, no current locking/atomic writes, unresolved role semantics, and the operational limits of one-file concurrency. These are findings and future work only. Phase 3 or any later implementation phase has not been started.
+
+## Phase 6.5 superseding authorization decision
+
+Schema version 2 supersedes the role hierarchy and permission schema described
+above wherever they conflict. The canonical user authorization fields are
+`system_role`, non-security `job_title`, and `access_grants`. Valid system roles
+are `IT_ADMIN`, `FINANCE_ECONOMIC_ADMIN`, and `USER`; both administrator values
+have identical implicit full access and therefore persist an empty grant list.
+
+A grant contains exactly `scope_type`, `factory_id`, `module`, and
+`permissions`. `GLOBAL` requires a null factory and a global module; `FACTORY`
+requires an active, known factory and a factory module. Permissions are the
+independent values `READ` and `WRITE`. Duplicate scope/factory/module entries
+are merged and permissions sorted before persistence. Unknown and malformed
+values fail closed.
+
+The legacy top-level `role_permissions` and `user_permission_overrides`
+containers remain empty compatibility fields in schema v2, are rejected when
+non-empty, and are never authorization inputs. Official Admin, Factory Admin,
+Office Staff, Factory Staff, role-derived ordinary access, hierarchical roles,
+and the one-Factory-Admin rule are obsolete.
+
+Schema-v1 migration is explicit and locked. It validates the complete v2
+candidate before creating a backup and atomically replacing the canonical file.
+It preserves identity, email, password hash, active state, timestamps and
+revisions. Ambiguous ordinary access is not guessed: accounts receive no grants
+and are listed for administrator review in migration metadata. Excel remains a
+one-time input/report format, never a live runtime store.
+
+Prepared audit action contracts for later mutation phases are
+`SYSTEM_ROLE_CHANGED`, `JOB_TITLE_CHANGED`, `ACCESS_GRANTS_CHANGED`, and
+`TOP_LEVEL_ADMIN_UPDATED`; event metadata must never contain secrets or raw
+requests.

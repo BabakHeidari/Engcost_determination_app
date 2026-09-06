@@ -4,7 +4,7 @@
   <button class="btn btn-secondary mb-3" type="button" onclick="history.back()">بازگشت</button>
   <header class="profile-hero">
     <div><p class="profile-kicker">پروفایل کاربر</p><h2>{{ profile.current_user.full_name }}</h2></div>
-    <div class="hero-actions"><span class="role-badge">{{ profile.current_user.role_label }}</span>{% if profile.features.add_user %}<button class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#createUserModal">افزودن کاربر</button>{% endif %}</div>
+    <div class="hero-actions"><span class="role-badge">{{ profile.current_user.system_role_label }}</span>{% if profile.features.add_user %}<button class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#createUserModal">افزودن کاربر</button>{% endif %}</div>
   </header>
 
   <section class="profile-grid" aria-label="اطلاعات پروفایل">
@@ -13,28 +13,30 @@
       <dl class="details-list">
         <div><dt>نام کاربری</dt><dd class="technical-value">{{ profile.current_user.username or 'ثبت نشده' }}</dd></div>
         <div><dt>ایمیل</dt><dd class="technical-value">{{ profile.current_user.email }}</dd></div>
-        <div><dt>نقش</dt><dd>{{ profile.current_user.role_label }}</dd></div>
-        <div><dt>کارخانه</dt><dd>{{ profile.current_user.factory_name or 'بدون تخصیص کارخانه' }}</dd></div>
+        <div><dt>نقش سامانه</dt><dd>{{ profile.current_user.system_role_label }}</dd></div>
+        <div><dt>عنوان شغلی</dt><dd>{{ profile.current_user.job_title or 'ثبت نشده' }}</dd></div>
       </dl>
     </article>
 
     <article class="profile-card">
       <h3>دسترسی‌های مؤثر</h3>
-      {% if profile.effective_permissions %}
+      {% if profile.full_access %}
+      <p class="full-access-state">دسترسی کامل به همه کارخانه‌ها، ماژول‌ها و عملیات</p>
+      {% elif profile.effective_grants %}
       <ul class="permission-list">
-        {% for module, actions in profile.effective_permissions|dictsort %}
-        <li><strong class="technical-value">{{ module }}</strong><span>{{ actions|join('، ') if actions else 'بدون دسترسی' }}</span></li>
+        {% for grant in profile.effective_grants %}
+        <li><strong>{{ grant.scope_label }} ← {{ grant.module_label }}</strong><span>{{ grant.permissions|join('، ') }}</span></li>
         {% endfor %}
       </ul>
-      {% else %}<p class="empty-state">هیچ دسترسی مؤثری ثبت نشده است.</p>{% endif %}
+      {% else %}<p class="empty-state">هیچ دسترسی صریحی ثبت نشده است.</p>{% endif %}
     </article>
   </section>
 
   <section class="profile-card section-card">
     <h3>کاربران قابل مشاهده</h3>
     {% if profile.users %}
-    <div class="table-responsive"><table><thead><tr><th>نام</th><th>نقش</th><th>کارخانه</th></tr></thead><tbody>
-      {% for item in profile.users %}<tr><td>{{ item.full_name }}</td><td>{{ item.role_label }}</td><td>{{ item.factory_name or 'بدون تخصیص' }}</td></tr>{% endfor %}
+    <div class="table-responsive"><table><thead><tr><th>نام</th><th>نقش سامانه</th><th>عنوان شغلی</th></tr></thead><tbody>
+      {% for item in profile.users %}<tr><td>{{ item.full_name }}</td><td>{{ item.system_role_label }}</td><td>{{ item.job_title or 'ثبت نشده' }}</td></tr>{% endfor %}
     </tbody></table></div>
     {% else %}<p class="empty-state">کاربر قابل مشاهده‌ای وجود ندارد.</p>{% endif %}
   </section>
@@ -64,8 +66,10 @@
           <div id="createUserMessage" class="alert d-none" role="alert"></div>
           <label class="form-label" for="newUserFullName">نام و نام خانوادگی</label><input class="form-control mb-3" id="newUserFullName" name="full_name" maxlength="120" required>
           <label class="form-label" for="newUserEmail">ایمیل</label><input class="form-control mb-3 technical-value" id="newUserEmail" name="email" type="email" maxlength="254" required>
-          <label class="form-label" for="newUserRole">نقش</label><select class="form-select mb-3" id="newUserRole" name="role" required><option value="">انتخاب کنید</option>{% for role in profile.create_user.roles %}<option value="{{ role.value }}" data-requires-factory="{{ 'true' if role.requires_factory else 'false' }}">{{ role.label }}</option>{% endfor %}</select>
-          <div id="factoryField"><label class="form-label" for="newUserFactory">کارخانه</label><select class="form-select mb-3" id="newUserFactory" name="factory_id"><option value="">انتخاب کنید</option>{% for factory in profile.factories %}<option value="{{ factory.id }}">{{ factory.name }}</option>{% endfor %}</select></div>
+          <label class="form-label" for="newUserRole">نقش سامانه</label><select class="form-select mb-3" id="newUserRole" name="system_role" required><option value="">انتخاب کنید</option>{% for role in profile.create_user.roles %}<option value="{{ role.value }}" data-is-admin="{{ 'true' if role.is_admin else 'false' }}">{{ role.label }}</option>{% endfor %}</select>
+          <label class="form-label" for="newUserJobTitle">عنوان شغلی</label><input class="form-control mb-3" id="newUserJobTitle" name="job_title" maxlength="160">
+          <p id="fullAccessHelp" class="alert alert-info" hidden>این نقش به‌صورت خودکار دسترسی کامل دارد و نیازی به ثبت دسترسی جزئی نیست.</p>
+          <div id="grantEditor"><div class="d-flex justify-content-between align-items-center mb-2"><strong>دسترسی‌های صریح</strong><button class="btn btn-sm btn-secondary" id="addGrant" type="button">افزودن دسترسی</button></div><div id="grantRows"></div><template id="grantTemplate"><div class="grant-row"><select class="form-select grant-module" aria-label="ماژول"><option value="">ماژول</option>{% for module in profile.create_user.modules %}<option value="{{ module.value }}" data-scope="{{ module.scope }}">{{ module.label }}</option>{% endfor %}</select><select class="form-select grant-factory" aria-label="کارخانه"><option value="">کارخانه</option>{% for factory in profile.factories %}<option value="{{ factory.id }}">{{ factory.name }}</option>{% endfor %}</select><label><input type="checkbox" value="READ"> مشاهده</label><label><input type="checkbox" value="WRITE"> ثبت و تغییر</label><button class="btn btn-sm btn-danger remove-grant" type="button">حذف</button></div></template></div>
           <label class="form-label" for="newUserInitialPassword">گذرواژه اولیه</label><input class="form-control mb-3" type="password" autocomplete="new-password" id="newUserInitialPassword" name="initial_password" minlength="12" maxlength="256" required>
           <label class="form-label" for="newUserInitialPasswordConfirmation">تکرار گذرواژه اولیه</label><input class="form-control" type="password" autocomplete="new-password" id="newUserInitialPasswordConfirmation" name="initial_password_confirmation" minlength="12" maxlength="256" required>
         </div>
@@ -79,16 +83,19 @@
     const form = document.getElementById('createUserForm');
     const message = document.getElementById('createUserMessage');
     const role = document.getElementById('newUserRole');
-    const factory = document.getElementById('newUserFactory');
-    const factoryField = document.getElementById('factoryField');
+    const grantEditor = document.getElementById('grantEditor');
+    const grantRows = document.getElementById('grantRows');
+    const fullAccessHelp = document.getElementById('fullAccessHelp');
+    const addGrant = () => { const row = document.getElementById('grantTemplate').content.firstElementChild.cloneNode(true); row.querySelector('.remove-grant').addEventListener('click', () => row.remove()); row.querySelector('.grant-module').addEventListener('change', event => { const globalScope = event.target.selectedOptions[0]?.dataset.scope === 'GLOBAL'; row.querySelector('.grant-factory').hidden = globalScope; row.querySelector('.grant-factory').value = ''; }); grantRows.appendChild(row); };
+    document.getElementById('addGrant').addEventListener('click', addGrant);
     const passwordFields = [document.getElementById('newUserInitialPassword'), document.getElementById('newUserInitialPasswordConfirmation')];
     const clearPasswords = () => passwordFields.forEach(field => { field.value = ''; });
     modal.addEventListener('hidden.bs.modal', clearPasswords);
     role.addEventListener('change', () => {
-      const required = role.selectedOptions[0]?.dataset.requiresFactory === 'true';
-      factory.required = required;
-      factoryField.hidden = !required;
-      if (!required) factory.value = '';
+      const isAdmin = role.selectedOptions[0]?.dataset.isAdmin === 'true';
+      grantEditor.hidden = isAdmin;
+      fullAccessHelp.hidden = !isAdmin;
+      if (!isAdmin && !grantRows.children.length) addGrant();
     });
     role.dispatchEvent(new Event('change'));
     form.addEventListener('submit', async event => {
@@ -98,6 +105,11 @@
         message.textContent = 'گذرواژه و تکرار آن یکسان نیستند.'; message.className = 'alert alert-danger'; return;
       }
       const payload = Object.fromEntries(new FormData(form).entries());
+      payload.access_grants = [...grantRows.querySelectorAll('.grant-row')].filter(row => row.querySelector('.grant-module').value).map(row => {
+        const module = row.querySelector('.grant-module');
+        const scope_type = module.selectedOptions[0].dataset.scope;
+        return {scope_type, factory_id: scope_type === 'GLOBAL' ? null : row.querySelector('.grant-factory').value, module: module.value, permissions: [...row.querySelectorAll('input:checked')].map(input => input.value)};
+      });
       const response = await fetch('{{ url_for("profile.create_user") }}', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
       const result = await response.json();
       if (!response.ok) { message.textContent = result.message || 'ذخیره کاربر ناموفق بود.'; message.className = 'alert alert-danger'; return; }
@@ -109,6 +121,6 @@
   {% endif %}
 </main>
 <style>
-  .profile-page{max-width:1200px;margin:0 auto;color:#172b3f}.profile-hero{background:linear-gradient(105deg,#0b1e33,#1a3350);color:#fff;border-radius:24px;padding:1.5rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}.hero-actions{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}.profile-kicker{color:#b9d4ef;margin:0 0 .35rem}.profile-hero h2{margin:0}.role-badge{background:#ffd966;color:#0b1e33;padding:.45rem 1rem;border-radius:999px;font-weight:700}.profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}.profile-card{background:#fff;border:1px solid #e5eaf0;border-radius:20px;padding:1.4rem;box-shadow:0 8px 24px rgba(15,35,55,.05)}.profile-card h3{font-size:1.1rem;margin:0 0 1rem}.section-card{margin-top:1rem}.details-list{margin:0}.details-list div{display:flex;justify-content:space-between;gap:1rem;padding:.65rem 0;border-bottom:1px solid #edf0f4}.details-list div:last-child{border:0}.details-list dd{margin:0}.technical-value{direction:ltr;unicode-bidi:isolate}.permission-list,.factory-list,.history-list{list-style:none;padding:0;margin:0;display:grid;gap:.65rem}.permission-list li,.factory-list li,.history-list li{background:#f6f8fb;border-radius:12px;padding:.75rem 1rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}.factory-list small{width:100%;color:#657587}.empty-state{background:#f7f9fb;border:1px dashed #cfd8e3;border-radius:12px;color:#66788a;padding:1rem;text-align:center}.table-responsive{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:right}th,td{padding:.75rem;border-bottom:1px solid #e9edf2}.readonly-notice{text-align:center;color:#536779;margin:1rem 0}.btn{border:1px solid #d0d7e5;padding:.55rem 1.1rem;border-radius:20px;background:#f4f7fd;color:#1e3a5f}@media(max-width:760px){.profile-grid{grid-template-columns:1fr}.profile-hero{align-items:flex-start;flex-direction:column}}
+  .profile-page{max-width:1200px;margin:0 auto;color:#172b3f}.profile-hero{background:linear-gradient(105deg,#0b1e33,#1a3350);color:#fff;border-radius:24px;padding:1.5rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}.hero-actions{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}.profile-kicker{color:#b9d4ef;margin:0 0 .35rem}.profile-hero h2{margin:0}.role-badge{background:#ffd966;color:#0b1e33;padding:.45rem 1rem;border-radius:999px;font-weight:700}.profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}.profile-card{background:#fff;border:1px solid #e5eaf0;border-radius:20px;padding:1.4rem;box-shadow:0 8px 24px rgba(15,35,55,.05)}.profile-card h3{font-size:1.1rem;margin:0 0 1rem}.section-card{margin-top:1rem}.details-list{margin:0}.details-list div{display:flex;justify-content:space-between;gap:1rem;padding:.65rem 0;border-bottom:1px solid #edf0f4}.details-list div:last-child{border:0}.details-list dd{margin:0}.technical-value{direction:ltr;unicode-bidi:isolate}.permission-list,.factory-list,.history-list{list-style:none;padding:0;margin:0;display:grid;gap:.65rem}.permission-list li,.factory-list li,.history-list li{background:#f6f8fb;border-radius:12px;padding:.75rem 1rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}.factory-list small{width:100%;color:#657587}.full-access-state{background:#e8f6ee;color:#17653a;border-radius:12px;padding:1rem;text-align:center;font-weight:700}.grant-row{display:grid;grid-template-columns:1.4fr 1.2fr auto auto auto;gap:.5rem;align-items:center;margin-bottom:.75rem}.empty-state{background:#f7f9fb;border:1px dashed #cfd8e3;border-radius:12px;color:#66788a;padding:1rem;text-align:center}.table-responsive{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:right}th,td{padding:.75rem;border-bottom:1px solid #e9edf2}.readonly-notice{text-align:center;color:#536779;margin:1rem 0}.btn{border:1px solid #d0d7e5;padding:.55rem 1.1rem;border-radius:20px;background:#f4f7fd;color:#1e3a5f}@media(max-width:760px){.profile-grid{grid-template-columns:1fr}.profile-hero{align-items:flex-start;flex-direction:column}}
 </style>
 {% endblock %}

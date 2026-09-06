@@ -17,12 +17,12 @@ from utils.profile_store import (
 )
 
 
-ROLES = {"IT Admin": {"scope": "global", "permissions": {}}}
+ROLES = {}
 
 
 def document():
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "metadata": {"revision": 1},
         "users": [],
         "factories": [],
@@ -40,8 +40,8 @@ def user(user_id="usr_1", email="admin@example.com", factory_id=None):
     return {
         "id": user_id,
         "email": email,
-        "role": "IT Admin",
-        "factory_id": factory_id,
+        "system_role": "IT_ADMIN",
+        "email_normalized": email.casefold(), "job_title": "", "access_grants": [],
         "password_hash": "scrypt:secret-hash-material",
     }
 
@@ -63,7 +63,7 @@ def test_created_records_receive_safe_defaults(tmp_path):
     path = tmp_path / "app_data.json"
     write(path, document())
     created = ProfileDataStore(path).create_user(user())
-    assert created["factory_id"] is None
+    assert created["access_grants"] == []
     assert created["revision"] == 1
     assert "password_hash" not in created
 
@@ -79,7 +79,7 @@ def test_user_lookup_accepts_normalized_username(tmp_path):
     assert "password_hash" not in found
 
 
-@pytest.mark.parametrize("bad", [[], {"schema_version": 99}, {"schema_version": 1}])
+@pytest.mark.parametrize("bad", [[], {"schema_version": 99}, {"schema_version": 2}])
 def test_invalid_schema_fails(bad):
     with pytest.raises(ProfileDataValidationError):
         validate_data(bad)
@@ -101,8 +101,11 @@ def test_duplicate_normalized_emails_fail():
 
 def test_invalid_factory_reference_fails():
     data = document()
-    data["users"] = [user(factory_id="fac_missing")]
-    with pytest.raises(ProfileDataValidationError, match="unknown factory"):
+    bad = user()
+    bad["access_grants"] = [{"scope_type": "FACTORY", "factory_id": "fac_missing", "module": "PRODUCT", "permissions": ["READ"]}]
+    bad["system_role"] = "USER"
+    data["users"] = [bad]
+    with pytest.raises(ProfileDataValidationError, match="unknown"):
         validate_data(data)
 
 

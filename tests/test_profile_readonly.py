@@ -6,12 +6,7 @@ import app as app_module
 from utils.profile_store import ProfileDataStore
 
 
-ROLES = {
-    "IT Admin": {"scope": "global", "permissions": {"user_profile": ["read"]}},
-    "Factory Admin": {"scope": "factory", "permissions": {"dashboard": ["read", "write"]}},
-    "Factory Staff": {"scope": "factory", "permissions": {"dashboard": ["read"]}},
-    "Office Staff": {"scope": "office", "permissions": {"dashboard": ["read"]}},
-}
+ROLES = {}
 
 
 def add_user(store, user_id, role, factory_id=None, full_name=None):
@@ -20,8 +15,8 @@ def add_user(store, user_id, role, factory_id=None, full_name=None):
         "username": user_id,
         "email": f"{user_id}@example.com",
         "full_name": full_name or user_id,
-        "role": role,
-        "factory_id": factory_id,
+        "system_role": role, "job_title": full_name or "",
+        "access_grants": ([{"scope_type": "FACTORY", "factory_id": factory_id, "module": "PRODUCT", "permissions": ["READ"]}] if factory_id else []),
         "is_active": True,
         "must_change_password": False,
         "password_hash": f"scrypt:secret-{user_id}",
@@ -36,11 +31,11 @@ def profile_app(tmp_path):
     store.initialize(ROLES)
     store.create_factory({"id": "fac_a", "code": "A", "name": "واقعی الف", "is_active": True})
     store.create_factory({"id": "fac_b", "code": "B", "name": "واقعی ب", "is_active": True})
-    add_user(store, "usr_admin", "IT Admin", full_name="مدیر واقعی")
-    add_user(store, "usr_a_admin", "Factory Admin", "fac_a", "مدیر کارخانه الف")
-    add_user(store, "usr_a_staff", "Factory Staff", "fac_a", "کارشناس کارخانه الف")
-    add_user(store, "usr_b_staff", "Factory Staff", "fac_b", "کارشناس کارخانه ب")
-    add_user(store, "usr_office", "Office Staff", full_name="کارشناس ستادی")
+    add_user(store, "usr_admin", "IT_ADMIN", full_name="مدیر واقعی")
+    add_user(store, "usr_a_admin", "USER", "fac_a", "مدیر کارخانه الف")
+    add_user(store, "usr_a_staff", "USER", "fac_a", "کارشناس کارخانه الف")
+    add_user(store, "usr_b_staff", "USER", "fac_b", "کارشناس کارخانه ب")
+    add_user(store, "usr_office", "USER", full_name="کارشناس ستادی")
     store.append_audit_event({
         "id": "aud_real", "occurred_at": "2026-08-01T12:30:00Z",
         "actor_user_id": "usr_a_admin", "action": "profile.viewed",
@@ -80,10 +75,10 @@ def test_non_admin_sees_only_self(profile_app):
     assert "کارشناس کارخانه الف" not in body
 
 
-def test_factory_scoped_visibility_and_real_audit(profile_app):
+def test_ordinary_user_sees_only_self_and_real_audit(profile_app):
     body = authenticated_client(profile_app[0], "usr_a_admin").get("/profile/profile").get_data(as_text=True)
-    assert "مدیر کارخانه الف" in body and "کارشناس کارخانه الف" in body
-    assert "کارشناس کارخانه ب" not in body and "واقعی ب" not in body
+    assert "مدیر کارخانه الف" in body
+    assert "کارشناس کارخانه الف" not in body and "کارشناس کارخانه ب" not in body and "واقعی ب" not in body
     assert "profile.viewed" in body
 
 

@@ -18,6 +18,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
+from utils.profile_authorization import (
+    SYSTEM_ROLES,
+    TOP_LEVEL_ROLES,
+    USER,
+    canonicalize_access_grants,
+    is_top_level_admin,
+)
+
 
 if os.name == "nt":
     import msvcrt
@@ -25,7 +33,7 @@ else:
     import fcntl
 
 
-SUPPORTED_SCHEMA_VERSION = 1
+SUPPORTED_SCHEMA_VERSION = 2
 REQUIRED_COLLECTIONS = (
     "users",
     "factories",
@@ -134,7 +142,7 @@ def _reject_plaintext_passwords(value, path="root") -> None:
 
 
 def validate_data(data: dict) -> dict:
-    """Validate a complete schema-v1 document, raising a clear domain error."""
+    """Validate a complete schema-v2 document, raising a clear domain error."""
     if not isinstance(data, dict):
         raise ProfileDataValidationError("Profile data root must be an object")
     if data.get("schema_version") != SUPPORTED_SCHEMA_VERSION:
@@ -153,10 +161,8 @@ def validate_data(data: dict) -> dict:
             raise ProfileDataValidationError(f"Required collection {name} has an invalid type")
     _reject_plaintext_passwords(data)
 
-    roles = set(data["role_permissions"])
-    for role, definition in data["role_permissions"].items():
-        if not isinstance(role, str) or not role or not isinstance(definition, dict):
-            raise ProfileDataValidationError("Role permission entries must be named objects")
+    if data["role_permissions"] or data["user_permission_overrides"]:
+        raise ProfileDataValidationError("Legacy role permissions and overrides must be empty")
 
     factory_ids, factory_codes = set(), set()
     for factory in data["factories"]:
@@ -186,30 +192,27 @@ def validate_data(data: dict) -> dict:
             raise ProfileDataValidationError(f"Duplicate normalized user email: {email}")
         if not username or username in usernames:
             raise ProfileDataValidationError(f"Duplicate or empty normalized username: {username}")
-        if user.get("role") not in roles:
-            raise ProfileDataValidationError(f"User {user_id} has an unrecognized role")
-        factory_id = user.get("factory_id")
-        if factory_id is not None and factory_id not in factory_ids:
-            raise ProfileDataValidationError(f"User {user_id} references an unknown factory")
+        if user.get("system_role") not in SYSTEM_ROLES:
+            raise ProfileDataValidationError(f"User {user_id} has an unrecognized system_role")
+        if user.get("email_normalized") != email:
+            raise ProfileDataValidationError(f"User {user_id} has an invalid email_normalized")
+        job_title = user.get("job_title", "")
+        if not isinstance(job_title, str) or len(job_title) > 160:
+            raise ProfileDataValidationError(f"User {user_id} has an invalid job_title")
+        try:
+            canonical_grants = canonicalize_access_grants(user.get("access_grants", []), factory_ids)
+        except ValueError as exc:
+            raise ProfileDataValidationError(f"User {user_id}: {exc}") from None
+        if is_top_level_admin(user) and canonical_grants:
+            raise ProfileDataValidationError(f"Top-level user {user_id} must not store grants")
+        if canonical_grants != user.get("access_grants"):
+            raise ProfileDataValidationError(f"User {user_id} access_grants are not canonical")
         password_hash = user.get("password_hash")
         if password_hash is not None and not isinstance(password_hash, str):
             raise ProfileDataValidationError(f"User {user_id} password_hash must be a string")
         user_ids.add(user_id)
         user_emails.add(email)
         usernames.add(username)
-
-    override_ids = set()
-    for override in data["user_permission_overrides"]:
-        if not isinstance(override, dict):
-            raise ProfileDataValidationError("Permission overrides must be objects")
-        override_id = _required_string(override, "id", "Permission override")
-        if override_id in override_ids:
-            raise ProfileDataValidationError(f"Duplicate permission override id: {override_id}")
-        if override.get("user_id") not in user_ids:
-            raise ProfileDataValidationError(f"Override {override_id} references an unknown user")
-        if override.get("factory_id") is not None and override["factory_id"] not in factory_ids:
-            raise ProfileDataValidationError(f"Override {override_id} references an unknown factory")
-        override_ids.add(override_id)
 
     audit_ids = set()
     for event in data["audit_events"]:
@@ -320,13 +323,66 @@ class ProfileDataStore:
                 "metadata": {"created_at": now, "updated_at": now, "revision": 1},
                 "users": [],
                 "factories": [],
-                "role_permissions": copy.deepcopy(role_permissions or {}),
+                # Retained as empty compatibility containers in schema v2. They
+                # are never consulted as authorization authorities.
+                "role_permissions": {},
                 "user_permission_overrides": [],
                 "audit_events": [],
             }
             validate_data(data)
             self._atomic_write(data, create_backup=False)
             return copy.deepcopy(data)
+        finally:
+            self._unlock(descriptor)
+
+    def migrate_access_model(self):
+        """Migrate a schema-v1 role document to v2 under the normal write lock.
+
+        Ambiguous ordinary-role permissions are intentionally not translated;
+        affected IDs are recorded for administrator review rather than over-granted.
+        """
+        descriptor = self._lock(True)
+        try:
+            with self.path.open("r", encoding="utf-8") as stream:
+                data = json.load(stream)
+            if data.get("schema_version") == SUPPORTED_SCHEMA_VERSION:
+                validate_data(data)
+                return {"migrated": False, "review_user_ids": []}
+            if data.get("schema_version") != 1 or not isinstance(data.get("users"), list):
+                raise ProfileDataValidationError("Only a valid schema-v1 document can be migrated")
+            review_ids = []
+            role_mapping = {
+                "IT Admin": "IT_ADMIN", "IT_ADMIN": "IT_ADMIN",
+                "Official Admin": "FINANCE_ECONOMIC_ADMIN",
+                "FINANCE_ECONOMIC_ADMIN": "FINANCE_ECONOMIC_ADMIN",
+            }
+            for user in data["users"]:
+                legacy_role = user.pop("role", user.get("system_role"))
+                system_role = role_mapping.get(legacy_role, USER)
+                if system_role == USER and legacy_role not in ("USER", "user"):
+                    review_ids.append(user.get("id"))
+                user["system_role"] = system_role
+                user["email"] = normalize_email(user.get("email"))
+                user["email_normalized"] = user["email"]
+                user.setdefault("job_title", "")
+                # Old role scope/override intent cannot safely express the new
+                # per-factory/per-module grant pairs, so ordinary users fail closed.
+                user["access_grants"] = []
+                user.pop("factory_id", None)
+                user.setdefault("updated_by_id", user.get("created_by_id"))
+            data["schema_version"] = SUPPORTED_SCHEMA_VERSION
+            data["role_permissions"] = {}
+            data["user_permission_overrides"] = []
+            data.setdefault("metadata", {})["access_model_migration"] = {
+                "completed_at": _utc_now(),
+                "review_user_ids": [value for value in review_ids if isinstance(value, str)],
+            }
+            data["metadata"]["revision"] = max(1, data["metadata"].get("revision", 1)) + 1
+            data["metadata"]["updated_at"] = _utc_now()
+            validate_data(data)
+            # _atomic_write creates and fsyncs a backup before replacement.
+            self._atomic_write(data, create_backup=True)
+            return {"migrated": True, "review_user_ids": review_ids}
         finally:
             self._unlock(descriptor)
 
@@ -474,8 +530,15 @@ class ProfileDataStore:
         def change(data):
             candidate.setdefault("id", f"usr_{uuid.uuid4().hex}")
             candidate["email"] = normalize_email(candidate.get("email"))
+            candidate["email_normalized"] = candidate["email"]
             candidate.setdefault("revision", 1)
-            candidate.setdefault("factory_id", None)
+            candidate.setdefault("system_role", USER)
+            candidate.setdefault("job_title", "")
+            candidate["access_grants"] = canonicalize_access_grants(
+                candidate.get("access_grants", []), {f["id"] for f in data["factories"]}
+            )
+            if is_top_level_admin(candidate):
+                candidate["access_grants"] = []
             if any(u["id"] == candidate["id"] for u in data["users"]):
                 raise ProfileDataConflictError("User id already exists")
             if any(normalize_email(u["email"]) == candidate["email"] for u in data["users"]):
@@ -492,41 +555,39 @@ class ProfileDataStore:
             actor = next((u for u in data["users"] if u["id"] == actor_user_id), None)
             if actor is None or not actor.get("is_active", False):
                 raise ProfileDataValidationError("کاربر ایجادکننده معتبر نیست.")
-            actor_role, target_role = actor.get("role"), candidate.get("role")
-            assignments = {
-                "IT Admin": set(data["role_permissions"]),
-                "Official Admin": {"Official Admin", "Factory Admin", "Office Staff", "Factory Staff"},
-                "Factory Admin": {"Factory Staff"},
-            }
-            if target_role not in data["role_permissions"] or target_role not in assignments.get(actor_role, set()):
-                raise ProfileDataValidationError("شما مجاز به اختصاص این نقش نیستید.")
-            role_scope = data["role_permissions"][target_role].get("scope")
-            factory_id = candidate.get("factory_id")
-            factory = next((f for f in data["factories"] if f["id"] == factory_id and f.get("is_active", True)), None)
-            if role_scope == "factory" and factory is None:
-                raise ProfileDataValidationError("برای این نقش، کارخانه معتبر الزامی است.")
-            if role_scope != "factory" and factory_id is not None:
-                raise ProfileDataValidationError("این نقش نباید به کارخانه تخصیص یابد.")
-            if actor_role == "Factory Admin" and factory_id != actor.get("factory_id"):
-                raise ProfileDataValidationError("ایجاد کاربر برای کارخانه دیگر مجاز نیست.")
+            if not is_top_level_admin(actor):
+                raise ProfileDataValidationError("فقط مدیر سطح بالا مجاز به ایجاد کاربر است.")
+            target_role = candidate.get("system_role")
+            if target_role not in SYSTEM_ROLES:
+                raise ProfileDataValidationError("نقش سامانه نامعتبر است.")
+            active_factory_ids = {f["id"] for f in data["factories"] if f.get("is_active", True)}
+            try:
+                grants = canonicalize_access_grants(candidate.get("access_grants", []), active_factory_ids)
+            except ValueError as exc:
+                raise ProfileDataValidationError(str(exc)) from None
+            if target_role in TOP_LEVEL_ROLES:
+                grants = []
             email = normalize_email(candidate.get("email"))
             if any(normalize_email(u["email"]) == email for u in data["users"]):
                 raise ProfileDataConflictError("ایمیل قبلاً ثبت شده است.")
             now = _utc_now()
             new_user = {
                 "id": f"usr_{uuid.uuid4().hex}", "username": email, "email": email,
-                "full_name": candidate["full_name"], "role": target_role, "factory_id": factory_id,
+                "email_normalized": email, "full_name": candidate["full_name"],
+                "system_role": target_role, "job_title": candidate.get("job_title", ""),
+                "access_grants": grants,
                 "is_active": True, "must_change_password": True,
                 "password_hash": candidate["password_hash"], "password_scheme": "werkzeug",
                 "created_at": now, "updated_at": now, "created_by_id": actor_user_id,
+                "updated_by_id": actor_user_id,
                 "last_login_at": None, "password_changed_at": None, "revision": 1,
             }
             data["users"].append(new_user)
             data["audit_events"].append({
                 "id": f"aud_{uuid.uuid4().hex}", "occurred_at": now,
                 "actor_user_id": actor_user_id, "action": "user.created",
-                "target_type": "user", "target_id": new_user["id"], "factory_id": factory_id,
-                "details": {"role": target_role},
+                "target_type": "user", "target_id": new_user["id"],
+                "details": {"system_role": target_role},
             })
             return public_user(new_user)
 

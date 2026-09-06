@@ -84,3 +84,11 @@ Restrict the directory to `0700` and the file/lock/backups to `0600`. A later ph
 ## Phase boundary
 
 No Profile UI, route, login, logout, session, current-user loading, authorization decorator, costing formula, or operational factory data was changed. User migration and runtime cutover have not started.
+
+## Phase 6.5 authorization note
+
+Schema v2 authorization is derived only from `system_role` plus per-user
+`access_grants`; `job_title` has no security effect. Legacy role definitions
+and permission overrides are empty compatibility collections and are not read
+by authorization code. See `docs/profile-json-storage-architecture.md` for the
+superseding schema and migration contract.

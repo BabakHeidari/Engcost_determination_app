@@ -10,19 +10,13 @@ from utils.profile_store import ProfileDataConflictError, ProfileDataStore
 from utils.profile_users import prepare_new_user
 
 
-ROLES = {
-    "IT Admin": {"scope": "global", "permissions": {}},
-    "Official Admin": {"scope": "global", "permissions": {}},
-    "Factory Admin": {"scope": "factory", "permissions": {}},
-    "Office Staff": {"scope": "office", "permissions": {}},
-    "Factory Staff": {"scope": "factory", "permissions": {}},
-}
+ROLES = {}
 
 
 def seed_user(store, user_id, role, factory_id=None):
     store.create_user({
         "id": user_id, "username": user_id, "email": f"{user_id}@example.com",
-        "full_name": user_id, "role": role, "factory_id": factory_id, "is_active": True,
+        "full_name": user_id, "system_role": role, "job_title": "", "access_grants": [], "is_active": True,
         "must_change_password": False, "password_hash": generate_password_hash("Admin-Password-123"),
         "password_scheme": "werkzeug", "revision": 1,
     })
@@ -35,9 +29,9 @@ def add_user_app(tmp_path):
     store.initialize(ROLES)
     store.create_factory({"id": "fac_a", "code": "A", "name": "الف", "is_active": True})
     store.create_factory({"id": "fac_b", "code": "B", "name": "ب", "is_active": True})
-    seed_user(store, "usr_admin", "IT Admin")
-    seed_user(store, "usr_factory", "Factory Admin", "fac_a")
-    seed_user(store, "usr_staff", "Factory Staff", "fac_a")
+    seed_user(store, "usr_admin", "IT_ADMIN")
+    seed_user(store, "usr_factory", "USER")
+    seed_user(store, "usr_staff", "USER")
     app_module.app.config.update(TESTING=True, APP_DATA_FILE=str(path), SECRET_KEY="test")
     return app_module.app, path
 
@@ -51,8 +45,7 @@ def client_as(app, user_id):
 
 def payload(**changes):
     value = {
-        "full_name": "کاربر جدید", "email": "NEW@Example.com", "role": "Office Staff",
-        "factory_id": "", "initial_password": "گذرواژه-اولیه-۱۲۳",
+        "full_name": "کاربر جدید", "email": "NEW@Example.com", "system_role": "USER", "job_title": "کارشناس", "access_grants": [], "initial_password": "گذرواژه-اولیه-۱۲۳",
         "initial_password_confirmation": "گذرواژه-اولیه-۱۲۳",
     }
     value.update(changes)
@@ -79,9 +72,9 @@ def test_authorized_creation_stores_only_hash_and_safe_audit(add_user_app):
     ("usr_staff", {}, 400),
     ("usr_admin", {"initial_password_confirmation": "different"}, 400),
     ("usr_admin", {"initial_password": "   ", "initial_password_confirmation": "   "}, 400),
-    ("usr_admin", {"role": "Unknown"}, 400),
-    ("usr_admin", {"role": "Factory Staff", "factory_id": "missing"}, 400),
-    ("usr_factory", {"role": "Factory Staff", "factory_id": "fac_b"}, 400),
+    ("usr_admin", {"system_role": "Unknown"}, 400),
+    ("usr_admin", {"access_grants": [{"scope_type": "FACTORY", "factory_id": "missing", "module": "PRODUCT", "permissions": ["READ"]}]}, 400),
+    ("usr_factory", {}, 400),
 ])
 def test_authorization_and_validation_failures(add_user_app, user_id, changes, status):
     response = client_as(add_user_app[0], user_id).post("/api/profile/users", json=payload(**changes))
@@ -96,14 +89,13 @@ def test_duplicate_and_hostile_identity_fields_are_rejected(add_user_app):
     assert web.post("/api/profile/users", json=payload(email="three@example.com", created_by_id="usr_staff")).status_code == 400
 
 
-def test_client_actor_id_is_ignored_in_favor_of_session(add_user_app):
+def test_client_actor_id_is_rejected(add_user_app):
     app, path = add_user_app
     response = client_as(app, "usr_admin").post(
         "/api/profile/users", json=payload(actor_id="usr_staff")
     )
-    assert response.status_code == 201
-    created = next(u for u in ProfileDataStore(path).load_data()["users"] if u["email"] == "new@example.com")
-    assert created["created_by_id"] == "usr_admin"
+    assert response.status_code == 400
+    assert not any(u["email"] == "new@example.com" for u in ProfileDataStore(path).load_data()["users"])
 
 
 def test_concurrent_duplicate_email_creates_exactly_one(add_user_app):

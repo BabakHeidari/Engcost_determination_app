@@ -9,12 +9,6 @@ from utils.profile_store import ProfileDataStore, ProfileStoreNotInitializedErro
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-ROLES = {
-    "IT Admin": {"scope": "global", "permissions": {}},
-    "Office Staff": {"scope": "global", "permissions": {}},
-}
-
-
 def store_path() -> Path:
     configured = os.environ.get("APP_DATA_FILE")
     if not configured:
@@ -28,7 +22,7 @@ def main() -> None:
     try:
         store.load_data()
     except ProfileStoreNotInitializedError:
-        store.initialize(ROLES)
+        store.initialize()
 
     username = input("Username [Mohsen1224]: ").strip() or "Mohsen1224"
     if any(character.isspace() for character in username):
@@ -50,8 +44,9 @@ def main() -> None:
         "username": username,
         "email": email,
         "full_name": full_name,
-        "role": "IT Admin",
-        "factory_id": None,
+        "system_role": "IT_ADMIN",
+        "job_title": "",
+        "access_grants": [],
         "is_active": True,
         "must_change_password": False,
         "revision": 1,
