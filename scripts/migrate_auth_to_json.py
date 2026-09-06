@@ -13,7 +13,7 @@ from utils.profile_store import ProfileDataStore, normalize_email
 
 
 SHA256_PATTERN = re.compile(r"[0-9a-fA-F]{64}\Z")
-ROLE_MAPPING = {"admin": "IT Admin", "user": "Office Staff"}
+ROLE_MAPPING = {"admin": "IT_ADMIN", "user": "USER"}
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = PROJECT_ROOT / "Data" / "Overall" / "auth_data.xlsx"
 
@@ -51,8 +51,9 @@ def migrate(source: Path, destination: Path) -> int:
             "username": username,
             "email": username,
             "full_name": username,
-            "role": role,
-            "factory_id": None,
+            "system_role": role,
+            "job_title": "",
+            "access_grants": [],
             "is_active": True,
             "must_change_password": True,
             "password_hash": legacy_hash.casefold() if compatible else None,
@@ -66,10 +67,7 @@ def migrate(source: Path, destination: Path) -> int:
         seen.add(username)
 
     store = ProfileDataStore(destination)
-    store.initialize({
-        "IT Admin": {"scope": "global", "permissions": {}},
-        "Office Staff": {"scope": "global", "permissions": {}},
-    })
+    store.initialize()
     for user in users:
         store.create_user(user)
     return len(users)

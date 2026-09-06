@@ -339,6 +339,9 @@ Existing costing modules, `utils.cost_determiners.py`, BOM/material files, and f
 
 ## 18. Open product decisions
 
+The following are historical Phase 2 questions and are superseded where Phase
+6.5 has resolved them.
+
 1. Is login retained as username-based, changed to normalized email, or allowed by either unique identifier?
 2. What are the approved stable role keys, hierarchy, module/action matrix, and meanings of `Write` versus `Modify`?
 3. Which roles require a factory, and can a user belong to more than one factory? The proposed version-1 schema assumes at most one.
@@ -356,3 +359,55 @@ Existing costing modules, `utils.cost_determiners.py`, BOM/material files, and f
 ## Phase 2 conclusion and risks
 
 The real login store and flow are now identified, and `APP_DATA_FILE` pointing to one `app_data.json` is selected for the future identity/profile domain. Major remaining risks are the weak legacy hashes, committed credential artifacts, a hard-coded Flask secret key, lack of CSRF/rate limiting, session checks that do not reload active users, client-only demo authorization, no current locking/atomic writes, unresolved role semantics, and the operational limits of one-file concurrency. These are findings and future work only. Phase 3 or any later implementation phase has not been started.
+
+## Phase 6.5 superseding authorization decision
+
+Schema version 2 supersedes the role hierarchy and permission schema described
+above wherever they conflict. The canonical user authorization fields are
+`system_role`, non-security `job_title`, and `access_grants`. Valid system roles
+are `IT_ADMIN`, `FINANCE_ECONOMIC_ADMIN`, and `USER`; both administrator values
+have identical implicit full access and therefore persist an empty grant list.
+
+A grant contains exactly `scope_type`, `factory_id`, `module`, and
+`permissions`. `GLOBAL` requires a null factory and a global module; `FACTORY`
+requires an active, known factory and a factory module. Permissions are the
+independent values `READ` and `WRITE`. Duplicate scope/factory/module entries
+are merged and permissions sorted before persistence. Unknown and malformed
+values fail closed.
+
+The legacy top-level `role_permissions` and `user_permission_overrides`
+containers remain empty compatibility fields in schema v2, are rejected when
+non-empty, and are never authorization inputs. Official Admin, Factory Admin,
+Office Staff, Factory Staff, role-derived ordinary access, hierarchical roles,
+and the one-Factory-Admin rule are obsolete.
+
+Schema-v1 migration is automatic on the first runtime read or mutation and may
+also be run proactively with the operator command. Both paths are locked and
+idempotent. They validate the complete v2 candidate before creating a backup
+and atomically replacing the canonical file. This preserves existing Phase 6
+login behavior across deployment rather than presenting valid credentials as a
+temporarily unavailable login service.
+It preserves identity, email, password hash, active state, timestamps and
+revisions. Ambiguous ordinary access is not guessed: accounts receive no grants
+and are listed for administrator review in migration metadata. Excel remains a
+one-time input/report format, never a live runtime store.
+
+Prepared audit action contracts for later mutation phases are
+`SYSTEM_ROLE_CHANGED`, `JOB_TITLE_CHANGED`, `ACCESS_GRANTS_CHANGED`, and
+`TOP_LEVEL_ADMIN_UPDATED`; event metadata must never contain secrets or raw
+requests.
+
+## Phase 6.5A factory-registry population
+
+The five discovered operational keys are persisted as stable factory IDs and
+codes in the canonical application JSON. Discovery from existing operational
+JSON/directories is a one-way import through `merge_factories`; routes and
+browser code never use those sources as a parallel Profile runtime store.
+Existing same-ID or same-code canonical records are preserved. New records are
+validated and committed using the existing lock, backup, and atomic replace.
+
+Only active records are returned by the public assignment-list service and
+accepted for new factory grants. Inactive records remain stored for historical
+references. Future factories must enter through the canonical service or the
+future factory-management workflow, not a hard-coded frontend list. See
+`docs/factory-registry-discovery.md` for sources, ambiguity, and ID rationale.

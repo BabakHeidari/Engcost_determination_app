@@ -85,3 +85,55 @@ Phase 5 ends with read-only Profile rendering and focused automated tests. No ad
 ## Phase 6 stop point
 
 Phase 6 ends after Add User and initial-password behavior. General user editing, activation changes, password resets by administrators, factory mutation, and permission mutation were not started.
+
+## Phase 6.5 — canonical access-model migration (complete)
+
+Phase 6.5 replaces the organizational role hierarchy with exactly `IT_ADMIN`,
+`FINANCE_ECONOMIC_ADMIN`, and `USER`. The two administrator roles are parallel
+and receive implicit full access from server policy; `USER` receives no implicit
+access. Optional `job_title` is display metadata only. Ordinary access is stored
+as canonical, de-duplicated scope/module grant objects on each user. The old
+Official Admin, Factory Admin, Office Staff, Factory Staff, one-factory-admin
+rule, role permissions and user overrides are obsolete authorization concepts.
+
+The Add User endpoint and Persian modal now accept `system_role`, `job_title`,
+and a visual list of granular grants. Only either top-level administrator may
+create an account. Administrator editing, deactivation, promotion and reset UI
+remain Phase 7 work and were not started.
+
+`READ` and `WRITE` are independent capabilities. `DASHBOARD`, `DESK`, `PROFILE`
+and `GENERAL_PARAMETERS` are global based on their current routes;
+`FACTORY_PARAMETERS`, `PRODUCT`, and `COST_CALCULATION` operate on selected
+factory data and are factory-scoped. This classification is centralized in
+`utils.profile_authorization`; unknown values fail closed.
+
+Existing schema-v1 Profile files are migrated automatically on the first
+runtime read or mutation, including the first login attempt. The automatic path
+uses the same inter-process lock, backup, validation, and atomic replacement as
+the operator command, so Phase 6 credentials continue working after deployment.
+Operators may also migrate proactively before starting the application:
+
+```bash
+python -m scripts.migrate_profile_access_model
+```
+
+The command uses the central lock/backup/validated atomic replacement path.
+Clearly identified IT and Official administrators map to `IT_ADMIN` and
+`FINANCE_ECONOMIC_ADMIN`. Ambiguous ordinary legacy accounts are retained with
+no grants and their IDs are recorded in
+`metadata.access_model_migration.review_user_ids` for manual review.
+
+## Phase 6.5A — canonical factory registry (complete)
+
+Five operational factory identities were discovered and imported one-way into
+the canonical JSON registry. Existing operational keys are stable IDs/codes;
+manual canonical records are never overwritten. `ProfileDataStore` performs the
+locked, validated, backed-up atomic merge, exposes a safe active-only list, and
+server-side grant validation continues to reject inactive or unknown IDs.
+
+The Add User modal receives active factories only through the Profile view
+model, supports repeated rows for different factory/module permissions, displays
+name plus code, and shows a truthful Persian empty-registry message. No demo
+fallback or second runtime source was added. Phase 7 remains not started. Full
+source inventory and identity decisions are in
+`docs/factory-registry-discovery.md`.

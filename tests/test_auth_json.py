@@ -8,7 +8,7 @@ import app as app_module
 from utils.profile_store import ProfileDataStore
 
 
-ROLES = {"IT Admin": {"scope": "global", "permissions": {}}}
+ROLES = {}
 
 
 @pytest.fixture
@@ -18,24 +18,24 @@ def client(tmp_path):
     store.initialize(ROLES)
     store.create_user({
         "id": "usr_active", "username": "active user", "email": "user@example.com",
-        "full_name": "کاربر", "role": "IT Admin", "factory_id": None, "is_active": True,
+        "full_name": "کاربر", "system_role": "IT_ADMIN", "job_title": "", "access_grants": [], "is_active": True,
         "must_change_password": False, "password_hash": generate_password_hash("درست-Password-123"),
         "password_scheme": "werkzeug", "revision": 1,
     })
     store.create_user({
         "id": "usr_migrated", "username": "legacy@example.com", "email": "legacy@example.com",
-        "role": "IT Admin", "factory_id": None, "is_active": True, "must_change_password": True,
+        "system_role": "IT_ADMIN", "job_title": "", "access_grants": [], "is_active": True, "must_change_password": True,
         "password_hash": hashlib.sha256("Legacy-Password-123".encode("utf-8")).hexdigest(),
         "password_scheme": "legacy_sha256", "revision": 1,
     })
     store.create_user({
         "id": "usr_inactive", "username": "off@example.com", "email": "off@example.com",
-        "role": "IT Admin", "factory_id": None, "is_active": False, "must_change_password": False,
+        "system_role": "IT_ADMIN", "job_title": "", "access_grants": [], "is_active": False, "must_change_password": False,
         "password_hash": generate_password_hash("درست-Password-123"), "password_scheme": "werkzeug", "revision": 1,
     })
     store.create_user({
         "id": "usr_reset", "username": "reset@example.com", "email": "reset@example.com",
-        "role": "IT Admin", "factory_id": None, "is_active": True, "must_change_password": True,
+        "system_role": "IT_ADMIN", "job_title": "", "access_grants": [], "is_active": True, "must_change_password": True,
         "password_hash": generate_password_hash("Old-Password-123"), "password_scheme": "werkzeug", "revision": 1,
     })
     app_module.app.config.update(TESTING=True, APP_DATA_FILE=str(path), SECRET_KEY="test-secret")

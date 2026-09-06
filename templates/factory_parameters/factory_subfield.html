@@ -3,9 +3,9 @@
 {% block content %}
 
 <div class="page-container">
-    <button class="btn btn-secondary mb-3" onclick="history.back()">
+    <a class="btn btn-secondary mb-3" href="{{ url_for('factory_parameters.factory_details', factory_name=factory_name) }}">
         بازگشت
-    </button>
+    </a>
 
     <!-- Subfield Header -->
     <div class="header-section">
