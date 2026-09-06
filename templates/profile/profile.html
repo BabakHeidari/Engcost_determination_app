@@ -4,7 +4,7 @@
   <button class="btn btn-secondary mb-3" type="button" onclick="history.back()">بازگشت</button>
   <header class="profile-hero">
     <div><p class="profile-kicker">پروفایل کاربر</p><h2>{{ profile.current_user.full_name }}</h2></div>
-    <span class="role-badge">{{ profile.current_user.role_label }}</span>
+    <div class="hero-actions"><span class="role-badge">{{ profile.current_user.role_label }}</span>{% if profile.features.add_user %}<button class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#createUserModal">افزودن کاربر</button>{% endif %}</div>
   </header>
 
   <section class="profile-grid" aria-label="اطلاعات پروفایل">
@@ -54,8 +54,61 @@
   {% if not profile.features.add_user and not profile.features.edit_user and not profile.features.add_factory and not profile.features.edit_permissions %}
   <p class="readonly-notice">این صفحه در حال حاضر فقط برای مشاهده اطلاعات است.</p>
   {% endif %}
+
+  {% if profile.features.add_user %}
+  <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content" dir="rtl">
+      <form id="createUserForm" autocomplete="off">
+        <div class="modal-header"><h3 class="modal-title fs-5" id="createUserTitle">افزودن کاربر جدید</h3><button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="بستن"></button></div>
+        <div class="modal-body">
+          <div id="createUserMessage" class="alert d-none" role="alert"></div>
+          <label class="form-label" for="newUserFullName">نام و نام خانوادگی</label><input class="form-control mb-3" id="newUserFullName" name="full_name" maxlength="120" required>
+          <label class="form-label" for="newUserEmail">ایمیل</label><input class="form-control mb-3 technical-value" id="newUserEmail" name="email" type="email" maxlength="254" required>
+          <label class="form-label" for="newUserRole">نقش</label><select class="form-select mb-3" id="newUserRole" name="role" required><option value="">انتخاب کنید</option>{% for role in profile.create_user.roles %}<option value="{{ role.value }}" data-requires-factory="{{ 'true' if role.requires_factory else 'false' }}">{{ role.label }}</option>{% endfor %}</select>
+          <div id="factoryField"><label class="form-label" for="newUserFactory">کارخانه</label><select class="form-select mb-3" id="newUserFactory" name="factory_id"><option value="">انتخاب کنید</option>{% for factory in profile.factories %}<option value="{{ factory.id }}">{{ factory.name }}</option>{% endfor %}</select></div>
+          <label class="form-label" for="newUserInitialPassword">گذرواژه اولیه</label><input class="form-control mb-3" type="password" autocomplete="new-password" id="newUserInitialPassword" name="initial_password" minlength="12" maxlength="256" required>
+          <label class="form-label" for="newUserInitialPasswordConfirmation">تکرار گذرواژه اولیه</label><input class="form-control" type="password" autocomplete="new-password" id="newUserInitialPasswordConfirmation" name="initial_password_confirmation" minlength="12" maxlength="256" required>
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" type="button" data-bs-dismiss="modal">انصراف</button><button class="btn btn-primary" id="createUserSubmit" type="submit">ذخیره کاربر</button></div>
+      </form>
+    </div></div>
+  </div>
+  <script>
+  (() => {
+    const modal = document.getElementById('createUserModal');
+    const form = document.getElementById('createUserForm');
+    const message = document.getElementById('createUserMessage');
+    const role = document.getElementById('newUserRole');
+    const factory = document.getElementById('newUserFactory');
+    const factoryField = document.getElementById('factoryField');
+    const passwordFields = [document.getElementById('newUserInitialPassword'), document.getElementById('newUserInitialPasswordConfirmation')];
+    const clearPasswords = () => passwordFields.forEach(field => { field.value = ''; });
+    modal.addEventListener('hidden.bs.modal', clearPasswords);
+    role.addEventListener('change', () => {
+      const required = role.selectedOptions[0]?.dataset.requiresFactory === 'true';
+      factory.required = required;
+      factoryField.hidden = !required;
+      if (!required) factory.value = '';
+    });
+    role.dispatchEvent(new Event('change'));
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      message.className = 'alert d-none';
+      if (passwordFields[0].value !== passwordFields[1].value) {
+        message.textContent = 'گذرواژه و تکرار آن یکسان نیستند.'; message.className = 'alert alert-danger'; return;
+      }
+      const payload = Object.fromEntries(new FormData(form).entries());
+      const response = await fetch('{{ url_for("profile.create_user") }}', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+      const result = await response.json();
+      if (!response.ok) { message.textContent = result.message || 'ذخیره کاربر ناموفق بود.'; message.className = 'alert alert-danger'; return; }
+      clearPasswords();
+      window.location.reload();
+    });
+  })();
+  </script>
+  {% endif %}
 </main>
 <style>
-  .profile-page{max-width:1200px;margin:0 auto;color:#172b3f}.profile-hero{background:linear-gradient(105deg,#0b1e33,#1a3350);color:#fff;border-radius:24px;padding:1.5rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}.profile-kicker{color:#b9d4ef;margin:0 0 .35rem}.profile-hero h2{margin:0}.role-badge{background:#ffd966;color:#0b1e33;padding:.45rem 1rem;border-radius:999px;font-weight:700}.profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}.profile-card{background:#fff;border:1px solid #e5eaf0;border-radius:20px;padding:1.4rem;box-shadow:0 8px 24px rgba(15,35,55,.05)}.profile-card h3{font-size:1.1rem;margin:0 0 1rem}.section-card{margin-top:1rem}.details-list{margin:0}.details-list div{display:flex;justify-content:space-between;gap:1rem;padding:.65rem 0;border-bottom:1px solid #edf0f4}.details-list div:last-child{border:0}.details-list dd{margin:0}.technical-value{direction:ltr;unicode-bidi:isolate}.permission-list,.factory-list,.history-list{list-style:none;padding:0;margin:0;display:grid;gap:.65rem}.permission-list li,.factory-list li,.history-list li{background:#f6f8fb;border-radius:12px;padding:.75rem 1rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}.factory-list small{width:100%;color:#657587}.empty-state{background:#f7f9fb;border:1px dashed #cfd8e3;border-radius:12px;color:#66788a;padding:1rem;text-align:center}.table-responsive{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:right}th,td{padding:.75rem;border-bottom:1px solid #e9edf2}.readonly-notice{text-align:center;color:#536779;margin:1rem 0}.btn{border:1px solid #d0d7e5;padding:.55rem 1.1rem;border-radius:20px;background:#f4f7fd;color:#1e3a5f}@media(max-width:760px){.profile-grid{grid-template-columns:1fr}.profile-hero{align-items:flex-start;flex-direction:column}}
+  .profile-page{max-width:1200px;margin:0 auto;color:#172b3f}.profile-hero{background:linear-gradient(105deg,#0b1e33,#1a3350);color:#fff;border-radius:24px;padding:1.5rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}.hero-actions{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}.profile-kicker{color:#b9d4ef;margin:0 0 .35rem}.profile-hero h2{margin:0}.role-badge{background:#ffd966;color:#0b1e33;padding:.45rem 1rem;border-radius:999px;font-weight:700}.profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}.profile-card{background:#fff;border:1px solid #e5eaf0;border-radius:20px;padding:1.4rem;box-shadow:0 8px 24px rgba(15,35,55,.05)}.profile-card h3{font-size:1.1rem;margin:0 0 1rem}.section-card{margin-top:1rem}.details-list{margin:0}.details-list div{display:flex;justify-content:space-between;gap:1rem;padding:.65rem 0;border-bottom:1px solid #edf0f4}.details-list div:last-child{border:0}.details-list dd{margin:0}.technical-value{direction:ltr;unicode-bidi:isolate}.permission-list,.factory-list,.history-list{list-style:none;padding:0;margin:0;display:grid;gap:.65rem}.permission-list li,.factory-list li,.history-list li{background:#f6f8fb;border-radius:12px;padding:.75rem 1rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}.factory-list small{width:100%;color:#657587}.empty-state{background:#f7f9fb;border:1px dashed #cfd8e3;border-radius:12px;color:#66788a;padding:1rem;text-align:center}.table-responsive{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:right}th,td{padding:.75rem;border-bottom:1px solid #e9edf2}.readonly-notice{text-align:center;color:#536779;margin:1rem 0}.btn{border:1px solid #d0d7e5;padding:.55rem 1.1rem;border-radius:20px;background:#f4f7fd;color:#1e3a5f}@media(max-width:760px){.profile-grid{grid-template-columns:1fr}.profile-hero{align-items:flex-start;flex-direction:column}}
 </style>
 {% endblock %}

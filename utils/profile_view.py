@@ -97,6 +97,11 @@ def build_profile_view_model(store, authenticated_user):
     ]
     audit_events.sort(key=lambda event: event.get("occurred_at") or "", reverse=True)
 
+    creatable_roles = {
+        "IT Admin": list(data["role_permissions"]),
+        "Official Admin": ["Official Admin", "Factory Admin", "Office Staff", "Factory Staff"],
+        "Factory Admin": ["Factory Staff"],
+    }.get(current["role"], [])
     return {
         "current_user": _public_user(current, factory_names),
         "effective_permissions": _effective_permissions(data, current),
@@ -112,9 +117,14 @@ def build_profile_view_model(store, authenticated_user):
         ],
         "audit_events": audit_events,
         "features": {
-            "add_user": False,
+            "add_user": bool(creatable_roles),
             "edit_user": False,
             "add_factory": False,
             "edit_permissions": False,
         },
+        "create_user": {"roles": [
+            {"value": role, "label": ROLE_LABELS.get(role, role),
+             "requires_factory": data["role_permissions"][role].get("scope") == "factory"}
+            for role in creatable_roles if role in data["role_permissions"]
+        ]},
     }

@@ -484,6 +484,54 @@ class ProfileDataStore:
             return public_user(candidate)
         return self._mutate(change)
 
+    def create_user_as_actor(self, actor_user_id, values):
+        """Create a user and audit it in one authorization-aware transaction."""
+        candidate = copy.deepcopy(values)
+
+        def change(data):
+            actor = next((u for u in data["users"] if u["id"] == actor_user_id), None)
+            if actor is None or not actor.get("is_active", False):
+                raise ProfileDataValidationError("کاربر ایجادکننده معتبر نیست.")
+            actor_role, target_role = actor.get("role"), candidate.get("role")
+            assignments = {
+                "IT Admin": set(data["role_permissions"]),
+                "Official Admin": {"Official Admin", "Factory Admin", "Office Staff", "Factory Staff"},
+                "Factory Admin": {"Factory Staff"},
+            }
+            if target_role not in data["role_permissions"] or target_role not in assignments.get(actor_role, set()):
+                raise ProfileDataValidationError("شما مجاز به اختصاص این نقش نیستید.")
+            role_scope = data["role_permissions"][target_role].get("scope")
+            factory_id = candidate.get("factory_id")
+            factory = next((f for f in data["factories"] if f["id"] == factory_id and f.get("is_active", True)), None)
+            if role_scope == "factory" and factory is None:
+                raise ProfileDataValidationError("برای این نقش، کارخانه معتبر الزامی است.")
+            if role_scope != "factory" and factory_id is not None:
+                raise ProfileDataValidationError("این نقش نباید به کارخانه تخصیص یابد.")
+            if actor_role == "Factory Admin" and factory_id != actor.get("factory_id"):
+                raise ProfileDataValidationError("ایجاد کاربر برای کارخانه دیگر مجاز نیست.")
+            email = normalize_email(candidate.get("email"))
+            if any(normalize_email(u["email"]) == email for u in data["users"]):
+                raise ProfileDataConflictError("ایمیل قبلاً ثبت شده است.")
+            now = _utc_now()
+            new_user = {
+                "id": f"usr_{uuid.uuid4().hex}", "username": email, "email": email,
+                "full_name": candidate["full_name"], "role": target_role, "factory_id": factory_id,
+                "is_active": True, "must_change_password": True,
+                "password_hash": candidate["password_hash"], "password_scheme": "werkzeug",
+                "created_at": now, "updated_at": now, "created_by_id": actor_user_id,
+                "last_login_at": None, "password_changed_at": None, "revision": 1,
+            }
+            data["users"].append(new_user)
+            data["audit_events"].append({
+                "id": f"aud_{uuid.uuid4().hex}", "occurred_at": now,
+                "actor_user_id": actor_user_id, "action": "user.created",
+                "target_type": "user", "target_id": new_user["id"], "factory_id": factory_id,
+                "details": {"role": target_role},
+            })
+            return public_user(new_user)
+
+        return self._mutate(change)
+
     def update_user(self, user_id, changes, expected_revision=None):
         updates = copy.deepcopy(changes)
         for immutable in ("id",):

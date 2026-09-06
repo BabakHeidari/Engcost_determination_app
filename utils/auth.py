@@ -33,6 +33,8 @@ def get_profile_store() -> ProfileDataStore:
 def validate_password(password: str) -> None:
     if not isinstance(password, str):
         raise ValueError("گذرواژه نامعتبر است.")
+    if not password.strip():
+        raise ValueError("گذرواژه نمی‌تواند خالی یا فقط شامل فاصله باشد.")
     if len(password) < MIN_PASSWORD_LENGTH:
         raise ValueError(f"گذرواژه باید حداقل {MIN_PASSWORD_LENGTH} نویسه داشته باشد.")
     if len(password) > MAX_PASSWORD_LENGTH:

@@ -16,6 +16,8 @@ Runtime code must use the repository methods rather than opening `app_data.json`
 - `get_role_permissions` and `get_user_permission_overrides`;
 - `append_audit_event`.
 
+Phase 6 additionally uses `create_user_as_actor` for the web create-user flow. Unlike the lower-level bootstrap/migration method, it reloads and authorizes the session actor, validates role and factory scope, allocates the ID, enforces email uniqueness, inserts the user, and appends its safe audit event under one exclusive lock and one atomic replacement.
+
 User lookup/list methods return public copies with password and password-hash fields recursively removed. Only a future authentication service may deliberately request the secret-bearing record with `include_secret=True`; such a value must never cross a template, API, log, audit, or JavaScript boundary.
 
 ## Validation and failure behavior
