@@ -84,7 +84,9 @@
     const form = document.getElementById('editUserForm'); const message = document.getElementById('editUserMessage');
     document.querySelectorAll('.edit-user').forEach(button => button.addEventListener('click', () => {
       const user = JSON.parse(button.dataset.user); form.reset(); message.className = 'alert d-none';
-      for (const key of ['user_id','expected_revision','full_name','email','job_title','system_role']) form.elements[key].value = key === 'user_id' ? user.id : user[key];
+      form.elements.user_id.value = user.id;
+      form.elements.expected_revision.value = user.revision;
+      for (const key of ['full_name','email','job_title','system_role']) form.elements[key].value = user[key];
       form.elements.is_active.checked = user.is_active; window.profileAccessManager.load('editAccessManager', user.access_state || {global:{},factories:{}}); window.profileAccessManager.toggleRole('editAccessManager', user.system_role);
       form.elements.reset_password.value = ''; form.elements.reset_confirmation.value = '';
     }));

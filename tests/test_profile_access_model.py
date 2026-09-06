@@ -96,6 +96,8 @@ def test_profile_template_uses_visual_selector_not_raw_json():
     assert 'name="access_grants"' not in template
     assert "grant-row" not in template
     assert "profile-access-manager.js" in template
+    assert "form.elements.expected_revision.value = user.revision" in template
+    assert "user['expected_revision']" not in template
 
 
 @pytest.mark.parametrize("grant", [
