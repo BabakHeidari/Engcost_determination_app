@@ -11,3 +11,7 @@ The only roles with security meaning are `IT_ADMIN`,
 explicit grant. The Add User operation is implemented; broader editing,
 activation, administrator reset and permission-edit operations remain disabled
 until Phase 7.
+
+An existing schema-v1 canonical file is upgraded automatically on its first
+read/login using the locked, backed-up, atomic migration. The standalone
+migration command remains available for proactive operational cutovers.

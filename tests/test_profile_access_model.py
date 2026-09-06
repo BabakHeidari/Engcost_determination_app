@@ -80,6 +80,35 @@ def test_migration_backs_up_and_does_not_overgrant(tmp_path):
     assert "password_hash" in data["users"][0]
 
 
+def test_existing_schema_v1_credentials_trigger_safe_runtime_migration(tmp_path):
+    path = tmp_path / "app_data.json"
+    legacy = legacy_document()
+    legacy["users"] = [{
+        "id": "usr_existing", "username": "mohsen1224",
+        "email": "heidari.babak@gmail.com", "full_name": "Mohsen Valizadeh",
+        "role": "IT Admin", "factory_id": None, "is_active": True,
+        "must_change_password": False, "password_hash": "existing-scrypt-hash",
+        "password_scheme": "werkzeug", "revision": 3,
+        "last_login_at": "2026-09-06T08:45:02Z",
+    }]
+    path.write_text(json.dumps(legacy), encoding="utf-8")
+
+    authenticated = ProfileDataStore(path).authenticate_user(
+        "mohsen1224", "existing-password",
+        lambda user, password: user["password_hash"] == "existing-scrypt-hash"
+        and password == "existing-password",
+    )
+
+    assert authenticated["id"] == "usr_existing"
+    assert authenticated["system_role"] == "IT_ADMIN"
+    assert "password_hash" not in authenticated
+    migrated = json.loads(path.read_text(encoding="utf-8"))
+    assert migrated["schema_version"] == 2
+    assert migrated["users"][0]["password_hash"] == "existing-scrypt-hash"
+    assert migrated["users"][0]["must_change_password"] is False
+    assert list((tmp_path / "backups").glob("*.json"))
+
+
 def test_failed_migration_preserves_source_and_backup(tmp_path):
     path = tmp_path / "app_data.json"
     path.write_text(json.dumps(legacy_document()), encoding="utf-8")

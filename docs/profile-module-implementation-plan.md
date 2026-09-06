@@ -107,7 +107,11 @@ and `GENERAL_PARAMETERS` are global based on their current routes;
 factory data and are factory-scoped. This classification is centralized in
 `utils.profile_authorization`; unknown values fail closed.
 
-Before running the application against an existing schema-v1 Profile file, run:
+Existing schema-v1 Profile files are migrated automatically on the first
+runtime read or mutation, including the first login attempt. The automatic path
+uses the same inter-process lock, backup, validation, and atomic replacement as
+the operator command, so Phase 6 credentials continue working after deployment.
+Operators may also migrate proactively before starting the application:
 
 ```bash
 python -m scripts.migrate_profile_access_model

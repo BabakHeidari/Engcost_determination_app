@@ -337,7 +337,10 @@ No item below is implemented in Phase 2.
 
 Existing costing modules, `utils.cost_determiners.py`, BOM/material files, and factory cost files are explicitly outside this plan.
 
-## 18. Historical Phase 2 open decisions (superseded where resolved by Phase 6.5)
+## 18. Open product decisions
+
+The following are historical Phase 2 questions and are superseded where Phase
+6.5 has resolved them.
 
 1. Is login retained as username-based, changed to normalized email, or allowed by either unique identifier?
 2. What are the approved stable role keys, hierarchy, module/action matrix, and meanings of `Write` versus `Modify`?
@@ -378,8 +381,12 @@ non-empty, and are never authorization inputs. Official Admin, Factory Admin,
 Office Staff, Factory Staff, role-derived ordinary access, hierarchical roles,
 and the one-Factory-Admin rule are obsolete.
 
-Schema-v1 migration is explicit and locked. It validates the complete v2
-candidate before creating a backup and atomically replacing the canonical file.
+Schema-v1 migration is automatic on the first runtime read or mutation and may
+also be run proactively with the operator command. Both paths are locked and
+idempotent. They validate the complete v2 candidate before creating a backup
+and atomically replacing the canonical file. This preserves existing Phase 6
+login behavior across deployment rather than presenting valid credentials as a
+temporarily unavailable login service.
 It preserves identity, email, password hash, active state, timestamps and
 revisions. Ambiguous ordinary access is not guessed: accounts receive no grants
 and are listed for administrator review in migration metadata. Excel remains a

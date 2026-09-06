@@ -292,19 +292,45 @@ class ProfileDataStore:
         finally:
             os.close(descriptor)
 
-    def _load_unlocked(self):
+    def _load_raw_unlocked(self):
         try:
             with self.path.open("r", encoding="utf-8") as stream:
-                data = json.load(stream)
+                return json.load(stream)
         except FileNotFoundError as exc:
             raise ProfileStoreNotInitializedError(
                 f"Profile data is not initialized: {self.path}. Run the explicit bootstrap process."
             ) from exc
         except (OSError, json.JSONDecodeError) as exc:
             raise ProfileStoreError(f"Unable to read valid profile data from {self.path}") from exc
-        return validate_data(data)
+
+    def _load_unlocked(self):
+        return validate_data(self._load_raw_unlocked())
+
+    def ensure_current_schema(self):
+        """Upgrade the prior canonical schema before any runtime operation.
+
+        Phase 6 installations already have a schema-v1 file. Requiring an
+        operator to migrate it before the first request makes valid credentials
+        appear broken, so the same locked, backed-up migration is performed
+        automatically. Unknown versions still fail closed.
+        """
+        descriptor = self._lock(False)
+        try:
+            data = self._load_raw_unlocked()
+            version = data.get("schema_version") if isinstance(data, dict) else None
+            if version == SUPPORTED_SCHEMA_VERSION:
+                validate_data(data)
+                return {"migrated": False, "review_user_ids": []}
+            if version != 1:
+                validate_data(data)
+        finally:
+            self._unlock(descriptor)
+        # migrate_access_model obtains an exclusive lock and checks the version
+        # again, making concurrent first requests safe and idempotent.
+        return self.migrate_access_model()
 
     def load_data(self):
+        self.ensure_current_schema()
         descriptor = self._lock(False)
         try:
             return copy.deepcopy(self._load_unlocked())
@@ -343,8 +369,7 @@ class ProfileDataStore:
         """
         descriptor = self._lock(True)
         try:
-            with self.path.open("r", encoding="utf-8") as stream:
-                data = json.load(stream)
+            data = self._load_raw_unlocked()
             if data.get("schema_version") == SUPPORTED_SCHEMA_VERSION:
                 validate_data(data)
                 return {"migrated": False, "review_user_ids": []}
@@ -425,6 +450,7 @@ class ProfileDataStore:
                 os.unlink(temporary_name)
 
     def _mutate(self, callback: Callable[[dict], object]):
+        self.ensure_current_schema()
         descriptor = self._lock(True)
         try:
             data = self._load_unlocked()
@@ -482,6 +508,7 @@ class ProfileDataStore:
         return self._mutate_conditionally(change)
 
     def _mutate_conditionally(self, callback):
+        self.ensure_current_schema()
         descriptor = self._lock(True)
         try:
             data = self._load_unlocked()
