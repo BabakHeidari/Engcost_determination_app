@@ -4,8 +4,9 @@
   <button class="btn btn-secondary mb-3" type="button" onclick="history.back()">بازگشت</button>
   <header class="profile-hero">
     <div><p class="profile-kicker">پروفایل کاربر</p><h2>{{ profile.current_user.full_name }}</h2></div>
-    <div class="hero-actions"><span class="role-badge">{{ profile.current_user.system_role_label }}</span>{% if profile.features.add_user %}<button class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#createUserModal">افزودن کاربر</button>{% endif %}</div>
+    <div class="hero-actions"><span class="role-badge">{{ profile.current_user.system_role_label }}</span>{% if profile.features.add_user %}<button class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#createUserModal">افزودن کاربر</button>{% endif %}{% if profile.features.add_factory %}<button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#createFactoryModal">افزودن کارخانه جدید</button>{% endif %}</div>
   </header>
+  <div id="profileNotification" class="alert d-none mt-3" role="status" aria-live="polite"></div>
 
   <section class="profile-grid" aria-label="اطلاعات پروفایل">
     <article class="profile-card">
@@ -43,8 +44,8 @@
 
   <section class="profile-card section-card">
     <h3>کارخانه‌های قابل مشاهده</h3>
-    {% if profile.factories %}<ul class="factory-list">{% for factory in profile.factories %}<li><strong>{{ factory.name }}</strong><span class="technical-value">{{ factory.code }}</span>{% if factory.location %}<small>{{ factory.location }}</small>{% endif %}</li>{% endfor %}</ul>
-    {% else %}<p class="empty-state">کارخانه‌ای در محدوده دسترسی شما ثبت نشده است.</p>{% endif %}
+    <ul class="factory-list" id="factoryList">{% for factory in profile.factories %}<li data-factory-id="{{ factory.id }}"><strong>{{ factory.name }}</strong><span class="technical-value">{{ factory.code }}</span>{% if factory.location %}<small>{{ factory.location }}</small>{% endif %}</li>{% endfor %}</ul>
+    <p class="empty-state{% if profile.factories %} d-none{% endif %}" id="factoryEmptyState">کارخانه‌ای در محدوده دسترسی شما ثبت نشده است.</p>
   </section>
 
   <section class="profile-card section-card">
@@ -69,7 +70,7 @@
           <label class="form-label" for="newUserRole">نقش سامانه</label><select class="form-select mb-3" id="newUserRole" name="system_role" required><option value="">انتخاب کنید</option>{% for role in profile.create_user.roles %}<option value="{{ role.value }}" data-is-admin="{{ 'true' if role.is_admin else 'false' }}">{{ role.label }}</option>{% endfor %}</select>
           <label class="form-label" for="newUserJobTitle">عنوان شغلی</label><input class="form-control mb-3" id="newUserJobTitle" name="job_title" maxlength="160">
           <p id="fullAccessHelp" class="alert alert-info" hidden>این نقش به‌صورت خودکار دسترسی کامل دارد و نیازی به ثبت دسترسی جزئی نیست.</p>
-          <div id="grantEditor"><div class="d-flex justify-content-between align-items-center mb-2"><strong>دسترسی‌های صریح</strong><button class="btn btn-sm btn-secondary" id="addGrant" type="button">افزودن دسترسی</button></div>{% if not profile.factories %}<p class="empty-state">هیچ کارخانه‌ای در داده‌های سیستم ثبت نشده است.</p>{% endif %}<div id="grantRows"></div><template id="grantTemplate"><div class="grant-row"><select class="form-select grant-module" aria-label="ماژول"><option value="">ماژول</option>{% for module in profile.create_user.modules %}<option value="{{ module.value }}" data-scope="{{ module.scope }}">{{ module.label }}</option>{% endfor %}</select><select class="form-select grant-factory" aria-label="کارخانه"><option value="">کارخانه</option>{% for factory in profile.factories %}<option value="{{ factory.id }}">{{ factory.name }} ({{ factory.code }})</option>{% endfor %}</select><label><input type="checkbox" value="READ"> مشاهده</label><label><input type="checkbox" value="WRITE"> ثبت و تغییر</label><button class="btn btn-sm btn-danger remove-grant" type="button">حذف</button></div></template></div>
+          <div id="grantEditor"><div class="d-flex justify-content-between align-items-center mb-2"><strong>دسترسی‌های صریح</strong><button class="btn btn-sm btn-secondary" id="addGrant" type="button">افزودن دسترسی</button></div><p class="empty-state{% if profile.factories %} d-none{% endif %}" id="grantFactoryEmptyState">هیچ کارخانه‌ای در داده‌های سیستم ثبت نشده است.</p><div id="grantRows"></div><template id="grantTemplate"><div class="grant-row"><select class="form-select grant-module" aria-label="ماژول"><option value="">ماژول</option>{% for module in profile.create_user.modules %}<option value="{{ module.value }}" data-scope="{{ module.scope }}">{{ module.label }}</option>{% endfor %}</select><select class="form-select grant-factory" aria-label="کارخانه"><option value="">کارخانه</option>{% for factory in profile.factories %}<option value="{{ factory.id }}">{{ factory.name }} ({{ factory.code }})</option>{% endfor %}</select><label><input type="checkbox" value="READ"> مشاهده</label><label><input type="checkbox" value="WRITE"> ثبت و تغییر</label><button class="btn btn-sm btn-danger remove-grant" type="button">حذف</button></div></template></div>
           <label class="form-label" for="newUserInitialPassword">گذرواژه اولیه</label><input class="form-control mb-3" type="password" autocomplete="new-password" id="newUserInitialPassword" name="initial_password" minlength="12" maxlength="256" required>
           <label class="form-label" for="newUserInitialPasswordConfirmation">تکرار گذرواژه اولیه</label><input class="form-control" type="password" autocomplete="new-password" id="newUserInitialPasswordConfirmation" name="initial_password_confirmation" minlength="12" maxlength="256" required>
         </div>
@@ -116,6 +117,68 @@
       clearPasswords();
       window.location.reload();
     });
+  })();
+  </script>
+  {% endif %}
+
+  {% if profile.features.add_factory %}
+  <div class="modal fade" id="createFactoryModal" tabindex="-1" aria-labelledby="createFactoryTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content" dir="rtl">
+      <form id="createFactoryForm" autocomplete="off">
+        <div class="modal-header"><h3 class="modal-title fs-5" id="createFactoryTitle">افزودن کارخانه جدید</h3><button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="بستن"></button></div>
+        <div class="modal-body">
+          <div id="createFactoryMessage" class="alert d-none" role="alert"></div>
+          <label class="form-label" for="newFactoryCode">کد کارخانه</label><input class="form-control mb-3 technical-value" id="newFactoryCode" name="code" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,63}" placeholder="برای نمونه F4" required>
+          <label class="form-label" for="newFactoryName">نام کارخانه</label><input class="form-control mb-3" id="newFactoryName" name="name" maxlength="160" placeholder="برای نمونه کارخانه تهران" required>
+          <label class="form-label" for="newFactoryLocation">موقعیت</label><input class="form-control" id="newFactoryLocation" name="location" maxlength="240" placeholder="برای نمونه تهران">
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" type="button" data-bs-dismiss="modal">انصراف</button><button class="btn btn-primary" id="createFactorySubmit" type="submit">ذخیره کارخانه</button></div>
+      </form>
+    </div></div>
+  </div>
+  <script>
+  (() => {
+    const modal = document.getElementById('createFactoryModal');
+    const form = document.getElementById('createFactoryForm');
+    const message = document.getElementById('createFactoryMessage');
+    const notification = document.getElementById('profileNotification');
+    const addFactoryOption = factory => {
+      const option = document.createElement('option');
+      option.value = factory.id;
+      option.textContent = `${factory.name} (${factory.code})`;
+      document.querySelectorAll('.grant-factory').forEach(select => select.appendChild(option.cloneNode(true)));
+      const templateSelect = document.getElementById('grantTemplate')?.content.querySelector('.grant-factory');
+      if (templateSelect) templateSelect.appendChild(option.cloneNode(true));
+    };
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      message.className = 'alert d-none';
+      const submit = document.getElementById('createFactorySubmit');
+      submit.disabled = true;
+      try {
+        const response = await fetch('{{ url_for("profile.create_factory") }}', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form).entries()))});
+        const result = await response.json();
+        if (!response.ok) { message.textContent = result.message || 'ذخیره کارخانه ناموفق بود.'; message.className = 'alert alert-danger'; return; }
+        const factory = result.factory;
+        const item = document.createElement('li');
+        item.dataset.factoryId = factory.id;
+        const title = document.createElement('strong'); title.textContent = factory.name;
+        const code = document.createElement('span'); code.className = 'technical-value'; code.textContent = factory.code;
+        item.append(title, code);
+        if (factory.location) { const location = document.createElement('small'); location.textContent = factory.location; item.appendChild(location); }
+        document.getElementById('factoryList').appendChild(item);
+        document.getElementById('factoryEmptyState').classList.add('d-none');
+        document.getElementById('grantFactoryEmptyState')?.classList.add('d-none');
+        addFactoryOption(factory);
+        form.reset();
+        bootstrap.Modal.getOrCreateInstance(modal).hide();
+        notification.textContent = 'کارخانه با موفقیت ایجاد شد و اکنون برای تخصیص دسترسی در دسترس است.';
+        notification.className = 'alert alert-success mt-3';
+      } catch (_error) {
+        message.textContent = 'ارتباط با سرور برقرار نشد.'; message.className = 'alert alert-danger';
+      } finally { submit.disabled = false; }
+    });
+    modal.addEventListener('hidden.bs.modal', () => { form.reset(); message.className = 'alert d-none'; message.textContent = ''; });
   })();
   </script>
   {% endif %}

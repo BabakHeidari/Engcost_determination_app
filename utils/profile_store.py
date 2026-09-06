@@ -10,6 +10,7 @@ import copy
 import errno
 import json
 import os
+import re
 import tempfile
 import time
 import unicodedata
@@ -123,6 +124,12 @@ def normalize_username(value: str) -> str:
     return "".join(normalized.split())
 
 
+def normalize_factory_name(value: str) -> str:
+    if not isinstance(value, str):
+        raise ProfileDataValidationError("Factory name must be a string")
+    return " ".join(unicodedata.normalize("NFKC", value).strip().casefold().split())
+
+
 def _required_string(record: dict, field: str, label: str) -> str:
     value = record.get(field)
     if not isinstance(value, str) or not value.strip():
@@ -164,19 +171,24 @@ def validate_data(data: dict) -> dict:
     if data["role_permissions"] or data["user_permission_overrides"]:
         raise ProfileDataValidationError("Legacy role permissions and overrides must be empty")
 
-    factory_ids, factory_codes = set(), set()
+    factory_ids, factory_codes, factory_names = set(), set(), set()
     for factory in data["factories"]:
         if not isinstance(factory, dict):
             raise ProfileDataValidationError("Factory records must be objects")
         factory_id = _required_string(factory, "id", "Factory")
         code = _required_string(factory, "code", "Factory").strip().casefold()
         _required_string(factory, "name", "Factory")
+        display_name = factory.get("display_name") or factory["name"]
+        name = normalize_factory_name(display_name)
         if factory_id in factory_ids:
             raise ProfileDataValidationError(f"Duplicate factory id: {factory_id}")
         if code in factory_codes:
             raise ProfileDataValidationError(f"Duplicate normalized factory code: {factory.get('code')}")
+        if name in factory_names:
+            raise ProfileDataValidationError(f"Duplicate normalized factory name: {factory.get('name')}")
         factory_ids.add(factory_id)
         factory_codes.add(code)
+        factory_names.add(name)
 
     user_ids, user_emails, usernames = set(), set(), set()
     for user in data["users"]:
@@ -695,6 +707,65 @@ class ProfileDataStore:
                 raise ProfileDataConflictError("Factory code already exists")
             data["factories"].append(candidate)
             return copy.deepcopy(candidate)
+        return self._mutate(change)
+
+    def create_factory_as_actor(self, actor_user_id, values):
+        """Create and audit a factory under one authorized atomic mutation."""
+        candidate = copy.deepcopy(values)
+
+        def change(data):
+            actor = next((u for u in data["users"] if u["id"] == actor_user_id), None)
+            if actor is None or not actor.get("is_active", False):
+                raise ProfileDataValidationError("کاربر ایجادکننده معتبر نیست.")
+            if not is_top_level_admin(actor):
+                raise ProfileDataValidationError("فقط مدیر سطح بالا مجاز به ایجاد کارخانه است.")
+
+            code_value = candidate.get("code")
+            if not isinstance(code_value, str) or not code_value.strip():
+                raise ProfileDataValidationError("کد کارخانه الزامی است.")
+            code = code_value.strip()
+            if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", code):
+                raise ProfileDataValidationError("کد کارخانه باید ۱ تا ۶۴ نویسه لاتین، عدد، خط تیره، زیرخط یا نقطه باشد.")
+            name_value = candidate.get("name")
+            if not isinstance(name_value, str) or not name_value.strip():
+                raise ProfileDataValidationError("نام کارخانه الزامی است.")
+            name = " ".join(name_value.split())
+            if len(name) > 160:
+                raise ProfileDataValidationError("نام کارخانه نباید بیش از ۱۶۰ نویسه باشد.")
+            normalized_name = normalize_factory_name(name)
+            normalized_code = code.casefold()
+            if any(f["id"].casefold() == normalized_code for f in data["factories"]):
+                raise ProfileDataConflictError("شناسه کارخانه قبلاً ثبت شده است.")
+            if any(f["code"].strip().casefold() == normalized_code for f in data["factories"]):
+                raise ProfileDataConflictError("کد کارخانه قبلاً ثبت شده است.")
+            if any(normalize_factory_name(f.get("display_name") or f["name"]) == normalized_name for f in data["factories"]):
+                raise ProfileDataConflictError("نام کارخانه قبلاً ثبت شده است.")
+
+            location = candidate.get("location")
+            if location is not None:
+                if not isinstance(location, str):
+                    raise ProfileDataValidationError("موقعیت کارخانه نامعتبر است.")
+                location = " ".join(location.split()) or None
+                if location and len(location) > 240:
+                    raise ProfileDataValidationError("موقعیت کارخانه نباید بیش از ۲۴۰ نویسه باشد.")
+            now = _utc_now()
+            factory = {
+                "id": code, "code": code, "name": name, "display_name": name,
+                "location": location, "is_active": True,
+                "created_at": now, "updated_at": now,
+                "created_by_id": actor_user_id, "updated_by_id": actor_user_id,
+                "revision": 1,
+            }
+            data["factories"].append(factory)
+            data["audit_events"].append({
+                "id": f"aud_{uuid.uuid4().hex}", "occurred_at": now,
+                "actor_user_id": actor_user_id, "action": "FACTORY_CREATED",
+                "target_type": "factory", "target_id": factory["id"],
+                "factory_id": factory["id"],
+                "details": {"code": code, "name": name},
+            })
+            return {key: copy.deepcopy(factory.get(key)) for key in ("id", "code", "name", "location", "is_active")}
+
         return self._mutate(change)
 
     def get_role_permissions(self, role):
