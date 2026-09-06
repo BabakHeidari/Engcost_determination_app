@@ -36,8 +36,8 @@
   <section class="profile-card section-card">
     <h3>کاربران قابل مشاهده</h3>
     {% if profile.users %}
-    <div class="table-responsive"><table><thead><tr><th>نام</th><th>نقش سامانه</th><th>عنوان شغلی</th></tr></thead><tbody>
-      {% for item in profile.users %}<tr><td>{{ item.full_name }}</td><td>{{ item.system_role_label }}</td><td>{{ item.job_title or 'ثبت نشده' }}</td></tr>{% endfor %}
+    <div class="table-responsive"><table><thead><tr><th>نام</th><th>نقش سامانه</th><th>عنوان شغلی</th>{% if profile.features.edit_user %}<th>عملیات</th>{% endif %}</tr></thead><tbody>
+      {% for item in profile.users %}<tr><td>{{ item.full_name }}</td><td>{{ item.system_role_label }}</td><td>{{ item.job_title or 'ثبت نشده' }}</td>{% if profile.features.edit_user %}<td><button type="button" class="btn btn-sm edit-user" data-user='{{ item|tojson }}' data-bs-toggle="modal" data-bs-target="#editUserModal">مدیریت</button></td>{% endif %}</tr>{% endfor %}
     </tbody></table></div>
     {% else %}<p class="empty-state">کاربر قابل مشاهده‌ای وجود ندارد.</p>{% endif %}
   </section>
@@ -56,6 +56,46 @@
 
   {% if not profile.features.add_user and not profile.features.edit_user and not profile.features.add_factory and not profile.features.edit_permissions %}
   <p class="readonly-notice">این صفحه در حال حاضر فقط برای مشاهده اطلاعات است.</p>
+  {% endif %}
+
+  {% if profile.features.edit_user %}
+  <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content" dir="rtl">
+      <form id="editUserForm" autocomplete="off">
+        <div class="modal-header"><h3 class="modal-title fs-5" id="editUserTitle">مدیریت حساب کاربر</h3><button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="بستن"></button></div>
+        <div class="modal-body"><div id="editUserMessage" class="alert d-none"></div>
+          <input type="hidden" name="user_id"><input type="hidden" name="expected_revision">
+          <label class="form-label">نام و نام خانوادگی</label><input class="form-control mb-3" name="full_name" maxlength="120" required>
+          <label class="form-label">ایمیل / شناسه ورود</label><input class="form-control mb-3 technical-value" name="email" type="email" required>
+          <label class="form-label">عنوان شغلی (بدون اثر دسترسی)</label><input class="form-control mb-3" name="job_title" maxlength="160">
+          <label class="form-label">نقش سامانه</label><select class="form-select mb-3" name="system_role">{% for role in profile.create_user.roles %}<option value="{{ role.value }}">{{ role.label }}</option>{% endfor %}</select>
+          <label class="form-check mb-3"><input class="form-check-input" type="checkbox" name="is_active"> حساب فعال باشد</label>
+          <label class="form-label">دسترسی‌های صریح کاربر عادی (JSON)</label><textarea class="form-control technical-value" name="access_grants" rows="7" aria-describedby="grantHelp"></textarea><small id="grantHelp">شناسه‌ها از رجیستری مشترک کارخانه و تعریف‌های ماژول/مجوز اعتبارسنجی می‌شوند.</small>
+          <hr><h4 class="fs-6">بازنشانی جداگانه گذرواژه</h4><input class="form-control mb-2" type="password" name="reset_password" autocomplete="new-password" minlength="12" placeholder="گذرواژه جدید"><input class="form-control" type="password" name="reset_confirmation" autocomplete="new-password" minlength="12" placeholder="تکرار گذرواژه جدید">
+        </div>
+        <div class="modal-footer"><button class="btn btn-danger" id="resetPasswordSubmit" type="button">بازنشانی گذرواژه</button><button class="btn btn-primary" type="submit">ذخیره تغییرات</button></div>
+      </form>
+    </div></div>
+  </div>
+  <script>
+  (() => {
+    const form = document.getElementById('editUserForm'); const message = document.getElementById('editUserMessage');
+    document.querySelectorAll('.edit-user').forEach(button => button.addEventListener('click', () => {
+      const user = JSON.parse(button.dataset.user); form.reset(); message.className = 'alert d-none';
+      for (const key of ['user_id','expected_revision','full_name','email','job_title','system_role']) form.elements[key].value = key === 'user_id' ? user.id : user[key];
+      form.elements.is_active.checked = user.is_active; form.elements.access_grants.value = JSON.stringify(user.access_grants || [], null, 2);
+      form.elements.reset_password.value = ''; form.elements.reset_confirmation.value = '';
+    }));
+    const show = (text, ok=false) => { message.textContent=text; message.className=`alert alert-${ok?'success':'danger'}`; };
+    form.addEventListener('submit', async event => { event.preventDefault(); let grants; try { grants=JSON.parse(form.elements.access_grants.value || '[]'); } catch (_) { show('ساختار JSON دسترسی‌ها نامعتبر است.'); return; }
+      const id=form.elements.user_id.value; const payload={expected_revision:Number(form.elements.expected_revision.value), full_name:form.elements.full_name.value, email:form.elements.email.value, job_title:form.elements.job_title.value, system_role:form.elements.system_role.value, is_active:form.elements.is_active.checked, access_grants:grants};
+      const response=await fetch(`/api/profile/users/${encodeURIComponent(id)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const result=await response.json(); if(!response.ok){show(result.message||'ویرایش ناموفق بود.');return;} window.location.reload();
+    });
+    document.getElementById('resetPasswordSubmit').addEventListener('click', async () => { const password=form.elements.reset_password.value; if(password !== form.elements.reset_confirmation.value){show('گذرواژه و تکرار آن یکسان نیستند.');return;} const id=form.elements.user_id.value;
+      const response=await fetch(`/api/profile/users/${encodeURIComponent(id)}/password-reset`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password,password_confirmation:form.elements.reset_confirmation.value,expected_revision:Number(form.elements.expected_revision.value)})}); const result=await response.json(); if(!response.ok){show(result.message||'بازنشانی ناموفق بود.');return;} show('گذرواژه بازنشانی شد. کاربر در ورود بعدی باید آن را تغییر دهد.',true); form.elements.expected_revision.value=result.user.revision; form.elements.reset_password.value=''; form.elements.reset_confirmation.value='';
+    });
+  })();
+  </script>
   {% endif %}
 
   {% if profile.features.add_user %}
