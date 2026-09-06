@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, g, render_template, request, jsonify
 import json
 from pathlib import Path
-from utils.auth import login_required
+from utils.auth import get_profile_store, login_required
+from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.paths import product_path
 from utils.localization import DISPLAY_MAPPINGS
 from utils.cost_determiners import cost_aggregator
@@ -20,6 +21,11 @@ def cost_cal():
     product_catalog_path = Path((product_path + ".json").replace("\\", "/"))
     with open(product_catalog_path, "r", encoding="utf-8") as product_file:
         products = json.load(product_file)
+    service = FactoryService(get_profile_store())
+    allowed = {service.operational_key(factory) for factory in service.get_accessible_factories(g.current_user, "COST_CALCULATION")}
+    if isinstance(products, dict) and isinstance(products.get("Factory"), dict):
+        indexes = [key for key, value in products["Factory"].items() if value in allowed]
+        products = {column: {str(i): values[key] for i, key in enumerate(indexes)} for column, values in products.items()}
     return render_template(
         "cost/calculation.html",
         table_json=products,
@@ -46,9 +52,15 @@ def get_cost():
     if not data:
         return jsonify({"error": "No JSON payload"}), 400
 
+    try:
+        factory = FactoryService(get_profile_store()).require_access(data.get("Factory", ""), g.current_user, "COST_CALCULATION")
+    except FactoryNotFoundError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
+        return jsonify({"error": str(exc)}), 403
     cost = cost_aggregator(
         product=data.get("Product_Name", ""),
-        fac=data.get("Factory", ""),
+        fac=FactoryService(get_profile_store()).operational_key(factory),
         cat=data.get("Category", ""),
         subc=data.get("Subcategory", "")
     )
@@ -72,9 +84,15 @@ def get_costs_bulk():
     result = {}
     for prod in products:
         name = prod.get("Product_Name", "")
+        try:
+            factory = FactoryService(get_profile_store()).require_access(prod.get("Factory", ""), g.current_user, "COST_CALCULATION")
+        except FactoryNotFoundError as exc:
+            return jsonify({"error": str(exc)}), 404
+        except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
+            return jsonify({"error": str(exc)}), 403
         cost = cost_aggregator(
             product=name,
-            fac=prod.get("Factory", ""),
+            fac=FactoryService(get_profile_store()).operational_key(factory),
             cat=prod.get("Category", ""),
             subc=prod.get("Subcategory", "")
         )

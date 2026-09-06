@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
-from utils.auth import login_required
-from utils.paths import factories_path, parent_path, product_path
+from flask import Blueprint, g, jsonify, redirect, render_template, request, session, url_for
+from utils.auth import get_profile_store, login_required
+from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
+from utils.paths import parent_path, product_path
 from utils.load_data import load_category_weights_of_costs, load_json, load_factory_summery, load_factory_subfield
 from utils.updaters import json_to_excel_converter, modify_summery
 from utils.xlsxTojson import to_json
@@ -13,9 +14,12 @@ factory_parameters_bp = Blueprint("factory_parameters", __name__)
 @factory_parameters_bp.route("/factory_parameters/", methods=["POST", "GET"])
 @login_required
 def factory_parameters():
-    facs_path = factories_path + ".json"
-    session["facs_path"] = facs_path
-    data = load_json(facs_path)
+    factories = FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "FACTORY_PARAMETERS")
+    data = {"_order": ["factory_id", "factory name", "city"], "data": {
+        "factory_id": [factory["id"] for factory in factories],
+        "factory name": [factory["name"] for factory in factories],
+        "city": [factory.get("location") or "" for factory in factories],
+    }}
     return render_template("factory_parameters/factories.html", 
                            table_json = data)
 
@@ -71,20 +75,41 @@ def factory_details(factory_name):
             url_for("factory_parameters.factory_details", factory_name=factory_name),
             code=303,
         )
-    factory = factory_name
+    try:
+        factory_record = FactoryService(get_profile_store()).require_access(factory_name, g.current_user, "FACTORY_PARAMETERS")
+    except FactoryNotFoundError as exc:
+        return render_template("factory_parameters/unavailable.html", message=str(exc)), 404
+    except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
+        return render_template("factory_parameters/unavailable.html", message=str(exc)), 403
+    factory = FactoryService(get_profile_store()).operational_key(factory_record)
+    session["factory_id"] = factory_record["id"]
     session["factory_name"] = factory
-    factory_json, fac_path = load_factory_summery(factory)
+    try:
+        factory_json, fac_path = load_factory_summery(factory)
+        category_table = load_category_weights_of_costs(factory)
+        predicted_production = product_lister(factory)
+        unconfigured = False
+    except (FileNotFoundError, KeyError, ValueError):
+        factory_json = {"_order": ["Subfield", "Cost", "PercentageOfAll"], "data": {"Subfield": [], "Cost": [], "PercentageOfAll": []}}
+        category_table = {"_order": ["category", "selling_share_of_category"], "data": {"category": [], "selling_share_of_category": []}}
+        predicted_production = {"_order": ["Product Name", "Predicted Production"], "data": {"Product Name": [], "Predicted Production": []}}
+        fac_path = str(parent_path / "Factories" / factory / "Factory_Data.json")
+        unconfigured = True
     session["fac_path"] = fac_path.replace(".json", "")
-    category_table = load_category_weights_of_costs(factory)
-    predicted_production = product_lister(factory)
     return render_template("/factory_parameters/factory_details.html", 
                            table_json = factory_json, 
                            factory_name = factory, 
+                           factory_display_name = factory_record["name"],
+                           unconfigured = unconfigured,
                            category_table = category_table,
                            preditcionOfProductionPerCapitaData = predicted_production)
 
 @factory_parameters_bp.route('/save_factories', methods=['POST'])
+@login_required
 def save_factories():
+    error = _validate_session_factory("WRITE")
+    if error:
+        return error
     data = request.get_json()
     factory_name = session.get("factory_name")
     file_path = f'{parent_path}\\Factories\\{factory_name}\\Factory_Data.json'
@@ -92,7 +117,11 @@ def save_factories():
     return jsonify({"status": "success"})
 
 @factory_parameters_bp.route('/save_category_table', methods=['POST'])
+@login_required
 def save_category_table():
+    error = _validate_session_factory("WRITE")
+    if error:
+        return error
     data = request.get_json()
     factory_name = session.get("factory_name")
     file_path = f'{parent_path}\\Factories\\{factory_name}\\category_weights.json'
@@ -100,7 +129,11 @@ def save_category_table():
     return jsonify({"status": "success"})
 
 @factory_parameters_bp.route('/save_factory_subfields', methods=['POST'])
+@login_required
 def save_factory_subfields():
+    error = _validate_session_factory("WRITE")
+    if error:
+        return error
     data = request.get_json()
     factory_name = session.get("factory_name")
     subfield = session.get("subfield")
@@ -125,8 +158,19 @@ def subfield(factory_name, Subfield):
             ),
             code=303,
         )
-    session["factory_name"] = factory_name
-    subfield_json, sub_path = load_factory_subfield(factory_name, Subfield)
+    try:
+        factory_record = FactoryService(get_profile_store()).require_access(factory_name, g.current_user, "FACTORY_PARAMETERS")
+    except FactoryNotFoundError as exc:
+        return render_template("factory_parameters/unavailable.html", message=str(exc)), 404
+    except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
+        return render_template("factory_parameters/unavailable.html", message=str(exc)), 403
+    operational_key = FactoryService(get_profile_store()).operational_key(factory_record)
+    session["factory_id"] = factory_record["id"]
+    session["factory_name"] = operational_key
+    try:
+        subfield_json, sub_path = load_factory_subfield(operational_key, Subfield)
+    except FileNotFoundError:
+        return render_template("factory_parameters/unavailable.html", message="پارامترهای این کارخانه هنوز پیکربندی نشده است."), 409
     session["sub_path"], session["subfield"] = sub_path.replace(".json", ""), Subfield
     # print(subfield_json)
     return render_template("/factory_parameters/factory_subfield.html", 
@@ -136,11 +180,27 @@ def subfield(factory_name, Subfield):
 @factory_parameters_bp.route("/save_prediction_production_per_capita", methods=["POST"])
 @login_required
 def save_prediction_production_per_capita():
+    error = _validate_session_factory("WRITE")
+    if error:
+        return error
     factory_name = session.get("factory_name")
     data = request.get_json()
     file_path = f'{parent_path}\\Factories\\{factory_name}\\ProductionPrediction.json'
     to_json(file_path, data)
     return jsonify({"status": "success"})
+
+
+def _validate_session_factory(permission):
+    factory_id = session.get("factory_id")
+    try:
+        factory = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "FACTORY_PARAMETERS", permission)
+    except FactoryNotFoundError as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 404
+    except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 403
+    if session.get("factory_name") != FactoryService(get_profile_store()).operational_key(factory):
+        return jsonify({"status": "error", "message": "زمینه کارخانه معتبر نیست."}), 400
+    return None
 
 def product_lister(factory_name):
     try:

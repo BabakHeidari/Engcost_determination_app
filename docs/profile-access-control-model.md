@@ -33,3 +33,12 @@ import یک‌طرفه و اتمیک به همان JSON است. view model فق�
 مفاهیم Official Admin، Factory Admin، Office Staff، Factory Staff و مجوز مشتق
 از عنوان شغلی منسوخ‌اند. ایجاد کارخانه در Phase 6.7 کامل شده است؛ ویرایش،
 غیرفعال‌سازی و حذف کارخانه و ویرایش عمومی کاربران همچنان کار آینده است.
+
+## انتشار سراسری رجیستری (Phase 6.8)
+
+`FactoryService` مرز مشترک همه ماژول‌های کارخانه‌محور است. مدیران هم‌رتبه همه
+کارخانه‌های فعال را به‌صورت ضمنی می‌بینند؛ USER تنها گزینه‌ای را دریافت می‌کند
+که grant همان factory/module/action را دارد. همین تصمیم در backend هر read و
+mutation دوباره کنترل می‌شود و شناسه URL، payload یا session ناشناخته/غیرفعال/
+غیرمجاز هرگز به کارخانه نخست یا F1 برنمی‌گردد. جزئیات سطح‌ها و initialization
+در `docs/factory-integration-inventory.md` ثبت شده است.

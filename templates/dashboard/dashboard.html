@@ -228,8 +228,15 @@ const APP_FONT_FAMILY = getComputedStyle(document.documentElement).getPropertyVa
 function populateInitialFilters() {
     // Factories
     filterOptions.factories.forEach(f => {
-        factorySelect.innerHTML += `<option value="${f}">${f}</option>`;
+        const option = document.createElement('option');
+        option.value = f.id;
+        option.textContent = `${f.name} (${f.code})`;
+        factorySelect.appendChild(option);
     });
+    if (filterOptions.factories.length === 0) {
+        factorySelect.innerHTML = '<option value="">هیچ کارخانه‌ای تعریف نشده است.</option>';
+        factorySelect.disabled = true;
+    }
     // Categories (multi-select, all options)
     filterOptions.categories.forEach(c => {
         categorySelect.innerHTML += `<option value="${c}">${c}</option>`;

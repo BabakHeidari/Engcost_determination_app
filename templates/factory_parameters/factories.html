@@ -55,6 +55,7 @@
 
     const COLUMN_DISPLAY_LABELS = {
         'factory name': 'نام کارخانه',
+        'factory_id': 'شناسه کارخانه',
         'manager': 'مدیر',
         'city': 'شهر',
         'address': 'نشانی'
@@ -180,6 +181,17 @@
     function renderTable() {
         tbody.innerHTML = "";
 
+        if (rows.length === 0) {
+            const tr = document.createElement("tr");
+            const td = document.createElement("td");
+            td.colSpan = headers.length + 1;
+            td.textContent = "هیچ کارخانه‌ای تعریف نشده است.";
+            td.className = "text-center text-muted";
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+            return;
+        }
+
         rows.forEach((row, index) => {
             const tr = document.createElement("tr");
             tr.className = 'data-row';
@@ -213,7 +225,7 @@
             const view = document.createElement("td");
             
             // Get factory name (first column) and manager name (second column)
-            const factoryName = row[headers[0]]; // First column - factory name
+            const factoryName = row['factory_id'];
             const managerName = row[headers[1]]; // Second column - manager
             
             const factoryUrl = `/factory_parameters/${encodeURIComponent(factoryName)}`;
