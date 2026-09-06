@@ -9,7 +9,7 @@ from utils.profile_authorization import (
     get_effective_access,
     is_top_level_admin,
 )
-from utils.factory_registry import populate_factory_registry
+from utils.factory_service import FactoryService
 from utils.profile_store import ProfileStoreError
 
 ROLE_LABELS = {
@@ -55,9 +55,6 @@ def _group_grants(user, factory_names):
 
 
 def build_profile_view_model(store, authenticated_user):
-    # One-way discovery import: after this merge, the Profile UI reads only the
-    # canonical JSON registry returned below.
-    populate_factory_registry(store)
     data = store.load_data()
     current = next((u for u in data["users"] if u["id"] == authenticated_user["id"]), None)
     if current is None or not current.get("is_active", False):
@@ -65,9 +62,14 @@ def build_profile_view_model(store, authenticated_user):
     admin = is_top_level_admin(current)
     factory_names = {f["id"]: f.get("display_name") or f.get("name") or f["code"] for f in data["factories"]}
     visible_users = [u for u in data["users"] if u.get("is_active") and (admin or u["id"] == current["id"])]
-    visible_factories = [f for f in data["factories"] if f.get("is_active", True) and (admin or any(
-        g["scope_type"] == "FACTORY" and g["factory_id"] == f["id"] for g in current["access_grants"]
-    ))]
+    # Profile access management may show any factory granted in any business
+    # module.  Administrators implicitly receive every active registry entry.
+    visible_factories = [FactoryService._public(f) for f in data["factories"] if f.get("is_active", True)] if admin else [
+        FactoryService._public(f)
+        for f in data["factories"] if f.get("is_active", True) and any(
+            g["scope_type"] == "FACTORY" and g["factory_id"] == f["id"] for g in current["access_grants"]
+        )
+    ]
     visible_ids = {u["id"] for u in visible_users}
     audit_events = [{"id": e["id"], "occurred_at": e.get("occurred_at"), "action": e.get("action", ""), "outcome": e.get("outcome")}
                     for e in data["audit_events"] if e.get("actor_user_id") == current["id"] or e.get("target_id") == current["id"] or (admin and e.get("target_id") in visible_ids)]
@@ -76,12 +78,19 @@ def build_profile_view_model(store, authenticated_user):
         "current_user": _public_user(current), "full_access": admin,
         "effective_grants": _group_grants(current, factory_names),
         "users": [_public_user(u) for u in visible_users],
-        "factories": [{"id": f["id"], "code": f["code"], "name": factory_names[f["id"]], "location": f.get("location")} for f in visible_factories],
+        "factories": visible_factories,
         "audit_events": audit_events,
         "features": {"add_user": can_manage_users(current), "edit_user": False, "add_factory": can_manage_factories(current), "edit_permissions": False},
         "create_user": {
             "roles": [{"value": key, "label": ROLE_LABELS[key], "is_admin": key in TOP_LEVEL_ROLES} for key in ("IT_ADMIN", "FINANCE_ECONOMIC_ADMIN", "USER")],
-            "modules": [{"value": key, "label": MODULE_LABELS[key], "scope": next(iter(scopes))} for key, scopes in MODULE_SCOPES.items()],
+            "modules": [
+                {
+                    "value": key,
+                    "label": MODULE_LABELS[key] + (" (کارخانه)" if len(scopes) > 1 and scope == "FACTORY" else ""),
+                    "scope": scope,
+                }
+                for key, scopes in MODULE_SCOPES.items() for scope in sorted(scopes)
+            ],
             "permissions": [{"value": key, "label": PERMISSION_LABELS[key]} for key in sorted(PERMISSIONS)],
         },
     }

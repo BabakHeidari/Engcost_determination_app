@@ -332,12 +332,15 @@ function populateDropdown(id, options) {
     
     select.innerHTML = '<option value="">انتخاب کنید</option>';
     if (!options || options.length === 0) {
+        select.innerHTML = '<option value="">هیچ کارخانه‌ای تعریف نشده است.</option>';
+        select.disabled = true;
         return;
     }
+    select.disabled = false;
     options.forEach(opt => {
         const el = document.createElement("option");
-        el.value = opt;
-        el.textContent = displayDataValue(opt);
+        el.value = typeof opt === "object" ? opt.id : opt;
+        el.textContent = typeof opt === "object" ? `${opt.name} (${opt.code})` : displayDataValue(opt);
         select.appendChild(el);
     });
 }

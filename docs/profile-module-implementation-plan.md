@@ -157,3 +157,27 @@ ordinary users. No data migration was required. Factory edit/deactivate/delete
 strategy is deferred: preserve stable IDs and historical references and prefer
 deactivation over deletion. General user editing and all Phase 7 work were not
 started.
+
+## Phase 6.8 — global factory integration (complete)
+
+The shared `FactoryService` now supplies active, authorized canonical factory
+options to Profile, Factory Parameters, Product Configuration, Cost Calculation
+and Dashboard/report surfaces. Stable IDs cross UI/HTTP boundaries; legacy
+`operational_key` values are resolved only after backend validation. Empty,
+unknown, inactive and unauthorized contexts fail closed without first-factory
+or F1 fallback. Global General Parameters, authentication and Desk remain global.
+See `docs/factory-integration-inventory.md` for the complete classification.
+
+### Later-phase handoff
+
+- **Phase 7:** Edit User must consume this existing provider and dynamic registry
+  for grant selectors. It must not implement factory discovery, creation, or a
+  duplicate list.
+- **Phase 8:** extend route/action authorization using the existing provider and
+  server-side checks; do not rebuild selector/provider integration.
+- **Phase 12:** regression coverage must create factories as each peer admin and
+  verify propagation, empty/unconfigured handling, USER grant isolation,
+  inactive/unknown rejection and unchanged costing fixtures across every
+  inventory row.
+
+Phase 7 was not started by Phase 6.8.

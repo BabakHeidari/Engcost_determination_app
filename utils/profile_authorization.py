@@ -22,7 +22,8 @@ PERMISSIONS = frozenset({"READ", "WRITE"})
 # global. READ and WRITE are independent capabilities (WRITE does not imply READ).
 MODULE_SCOPES = {
     "DESK": frozenset({"GLOBAL"}),
-    "DASHBOARD": frozenset({"GLOBAL"}),
+    # Dashboard shell is global; its optional factory filter is factory scoped.
+    "DASHBOARD": frozenset({"GLOBAL", "FACTORY"}),
     "PROFILE": frozenset({"GLOBAL"}),
     "GENERAL_PARAMETERS": frozenset({"GLOBAL"}),
     "FACTORY_PARAMETERS": frozenset({"FACTORY"}),

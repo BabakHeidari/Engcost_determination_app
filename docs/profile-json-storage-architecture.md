@@ -429,3 +429,15 @@ are NFKC-normalized, whitespace-collapsed, case-folded, and unique; comparison
 uses `display_name` for discovered records and `name` otherwise. Location is
 descriptive only. New records are active and no operational factory directory,
 ordinary-user grant, or administrator grant is created.
+
+## Phase 6.8 canonical factory provider
+
+`utils.factory_service.FactoryService` is the application-wide identity and
+selection boundary. It reads `factories[]` only through `ProfileDataStore`,
+returns allow-listed selector fields, resolves `operational_key` only inside the
+backend, and applies active/existence/effective-grant checks before a
+factory-scoped caller reaches legacy operational input. There is no cache or
+second registry, so a Phase 6.7 creation is visible on the next request.
+Discovery remains an explicit Phase 6.5A import and no longer runs during
+Profile rendering. Existing locked validation, backup and atomic-write behavior
+is unchanged because registry mutations still occur only in the store.

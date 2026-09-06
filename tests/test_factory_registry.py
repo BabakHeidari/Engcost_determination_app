@@ -77,9 +77,8 @@ def test_profile_view_exposes_only_safe_active_canonical_factories(tmp_path):
         "full_name": "مدیر", "system_role": "IT_ADMIN", "job_title": "",
         "access_grants": [], "is_active": True, "password_hash": "hash",
     })
-    with mock.patch("utils.profile_view.populate_factory_registry"):
-        model = build_profile_view_model(store, admin)
-    assert model["factories"] == [{"id": "active", "code": "ACT", "name": "کارخانه فعال", "location": None}]
+    model = build_profile_view_model(store, admin)
+    assert model["factories"] == [{"id": "active", "code": "ACT", "name": "کارخانه فعال"}]
     assert "source" not in model["factories"][0]
 
 
