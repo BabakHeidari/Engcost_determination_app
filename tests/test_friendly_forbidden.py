@@ -58,7 +58,7 @@ def authenticated_client(app_store, user_id, grants=(), role="USER"):
     return client
 
 
-@pytest.mark.parametrize("module", sorted(MODULE_PATHS))
+@pytest.mark.parametrize("module", sorted(set(MODULE_PATHS) - {"desk"}))
 def test_all_grantable_module_pages_use_friendly_rtl_403(app_store, module):
     client = authenticated_client(app_store, f"usr_{module}")
     response = client.get(MODULE_PATHS[module])
@@ -92,12 +92,12 @@ def test_api_403_stays_json_and_hides_authorization_internals(app_store):
 def test_authentication_redirect_and_authorization_403_remain_distinct(app_store):
     anonymous = app_module.app.test_client().get("/workdesk")
     authorized_client = authenticated_client(app_store, "usr_denied")
-    denied = authorized_client.get("/workdesk")
+    allowed = authorized_client.get("/workdesk")
 
     assert anonymous.status_code == 302
     assert anonymous.headers["Location"].endswith("/login")
-    assert denied.status_code == 403
-    assert not denied.is_json
+    assert allowed.status_code == 200
+    assert not allowed.is_json
 
 
 @pytest.mark.parametrize(
@@ -105,7 +105,7 @@ def test_authentication_redirect_and_authorization_403_remain_distinct(app_store
     [
         ([grant("desk")], "/workdesk", "رفتن به میز کار"),
         ([grant("profile")], "/profile/profile", "رفتن به بخش در دسترس"),
-        ([], "/logout", "خروج امن"),
+        ([], "/workdesk", "رفتن به میز کار"),
     ],
 )
 def test_safe_fallback_uses_effective_access(app_store, grants, expected_href, expected_label):
@@ -154,7 +154,7 @@ def test_factory_scoped_denial_is_friendly_and_does_not_leak_factory(app_store):
 
 def test_json_accept_header_gets_machine_readable_403(app_store):
     client = authenticated_client(app_store, "usr_accept")
-    response = client.get("/workdesk", headers={"Accept": "application/json"})
+    response = client.get("/dashboard", headers={"Accept": "application/json"})
 
     assert response.status_code == 403
     assert response.is_json

@@ -45,7 +45,7 @@ def test_access_manager_add_edit_metadata_comes_from_registry():
     assert all(item["value"] != "auth" for group in ("global_modules", "factory_modules") for item in model["access_manager"][group])
 
 
-def test_all_modules_round_trip_and_missing_grants_remain_none():
+def test_all_modules_round_trip_and_only_mandatory_desk_has_baseline_read():
     state = {"global": {}, "factories": {"fac_a": {}}}
     for item in MODULE_REGISTRY:
         target = state["global"] if "GLOBAL" in item["scopes"] else state["factories"]["fac_a"]
@@ -54,7 +54,15 @@ def test_all_modules_round_trip_and_missing_grants_remain_none():
     canonical = canonicalize_access_grants(grants, {"fac_a"})
     assert grants_to_access_state(canonical) == state
     ordinary = {"system_role": "USER", "access_grants": []}
-    assert all(get_effective_level(ordinary, item["id"], "fac_a" if "FACTORY" in item["scopes"] and "GLOBAL" not in item["scopes"] else None) == "NONE" for item in MODULE_REGISTRY)
+    levels = {
+        item["id"]: get_effective_level(
+            ordinary, item["id"],
+            "fac_a" if "FACTORY" in item["scopes"] and "GLOBAL" not in item["scopes"] else None,
+        )
+        for item in MODULE_REGISTRY
+    }
+    assert levels.pop("desk") == "READ"
+    assert set(levels.values()) == {"NONE"}
 
 
 @pytest.mark.parametrize("module", sorted(EXPECTED))
@@ -71,7 +79,18 @@ def test_hierarchy_for_every_grantable_module(module, level, expected):
     permissions = {"READ": ["READ"], "WRITE": ["READ", "WRITE"], "MODIFY": ["READ", "WRITE", "MODIFY"]}.get(level)
     grants = [] if permissions is None else [{"scope_type": scope, "factory_id": factory_id, "module": module, "permissions": permissions}]
     user = {"system_role": "USER", "access_grants": grants}
+    if module == "desk" and level is None:
+        expected = (True, False, False)
     assert tuple(has_access(user, module, needed, factory_id, scope_type=scope) for needed in ("READ", "WRITE", "MODIFY")) == expected
+
+
+def test_desk_registry_and_visual_manager_expose_read_only_mandatory_policy():
+    desk = next(item for item in MODULE_REGISTRY if item["id"] == "desk")
+    assert desk["mandatory_access"] is True
+    assert desk["minimum_level"] == "READ"
+    script = Path("static/js/profile-access-manager.js").read_text(encoding="utf-8")
+    assert "m.mandatory_access ? mandatoryAccessRow(m)" in script
+    assert "دسترسی به میز کار برای همه کاربران سامانه فعال است." in script
 
 
 def test_visual_manager_has_one_select_and_no_raw_permission_controls():

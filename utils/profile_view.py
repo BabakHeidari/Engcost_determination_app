@@ -81,7 +81,11 @@ def build_profile_view_model(store, authenticated_user):
         "features": {"add_user": can_manage_users(current), "edit_user": can_manage_users(current), "add_factory": can_manage_factories(current), "edit_permissions": can_manage_users(current)},
         "access_manager": {
             "factories": [dict(FactoryService._public(f), is_active=bool(f.get("is_active", True))) for f in data["factories"]],
-            "global_modules": [{"value": item["id"], "label": item["label"]} for item in MODULE_REGISTRY if "GLOBAL" in item["scopes"]],
+            "global_modules": [{
+                "value": item["id"], "label": item["label"],
+                "mandatory_access": bool(item.get("mandatory_access")),
+                "minimum_level": item.get("minimum_level"),
+            } for item in MODULE_REGISTRY if "GLOBAL" in item["scopes"]],
             "factory_modules": [{"value": item["id"], "label": item["label"]} for item in MODULE_REGISTRY if "FACTORY" in item["scopes"]],
             "levels": [{"value": value, "label": label} for value, label in (
                 ("NONE", "بدون دسترسی"), ("READ", "فقط مشاهده"),
