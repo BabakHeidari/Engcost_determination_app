@@ -8,7 +8,7 @@ general_parameters_bp = Blueprint("general_parameters", __name__)
 
 @general_parameters_bp.route("/general_parameters/")
 @login_required
-@require_access("GENERAL_PARAMETERS", "READ")
+@require_access("general_parameters", "READ")
 def general_parameters():
     with open(material_path+".json", "r") as f:
         data = json.load(f)
@@ -18,7 +18,7 @@ def general_parameters():
 
 @general_parameters_bp.route("/save_materials", methods=["POST"])
 @login_required
-@require_access("GENERAL_PARAMETERS", "MODIFY")
+@require_access("general_parameters", "MODIFY")
 def save_materials():
     payload = request.get_json(force=True)
 

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import copy
 
+from utils.module_registry import MODULE_SCOPES
+
 
 IT_ADMIN = "IT_ADMIN"
 FINANCE_ECONOMIC_ADMIN = "FINANCE_ECONOMIC_ADMIN"
@@ -25,19 +27,6 @@ PERMISSION_LEVELS = {
 }
 LEVEL_RANK = {"NONE": 0, "READ": 1, "WRITE": 2, "MODIFY": 3}
 
-# Scope follows the actual routes: pages/actions operating on a selected factory
-# are factory scoped; the shell, shared material table and aggregate dashboard are
-# global. Permission levels are hierarchical: MODIFY includes WRITE and READ.
-MODULE_SCOPES = {
-    "DESK": frozenset({"GLOBAL"}),
-    # Dashboard shell is global; its optional factory filter is factory scoped.
-    "DASHBOARD": frozenset({"GLOBAL", "FACTORY"}),
-    "PROFILE": frozenset({"GLOBAL"}),
-    "GENERAL_PARAMETERS": frozenset({"GLOBAL"}),
-    "FACTORY_PARAMETERS": frozenset({"FACTORY"}),
-    "PRODUCT": frozenset({"FACTORY"}),
-    "COST_CALCULATION": frozenset({"FACTORY"}),
-}
 FULL_ACCESS = {"full_access": True}
 AUDIT_EVENTS = frozenset({
     "SYSTEM_ROLE_CHANGED", "JOB_TITLE_CHANGED", "ACCESS_GRANTS_CHANGED",
@@ -68,6 +57,9 @@ def canonicalize_access_grants(grants: object, factory_ids) -> list[dict]:
             raise ValueError("کارخانه دسترسی ناشناخته است.")
         if not isinstance(permissions, list) or not permissions or any(p not in PERMISSIONS for p in permissions):
             raise ValueError("مجوز دسترسی ناشناخته است.")
+        permission_values = tuple(permissions)
+        if permission_values not in tuple(PERMISSION_LEVELS[level] for level in PERMISSION_ORDER):
+            raise ValueError("مجوزها باید سلسله‌مراتبی و canonical باشند.")
         combined.setdefault((scope, factory_id, module), set()).update(permissions)
     return [
         {"scope_type": scope, "factory_id": factory_id, "module": module,
@@ -153,3 +145,32 @@ def would_leave_active_admin(data: dict, target_id: str, new_role: str, is_activ
         for u in data.get("users", [])
         if u.get("id") != target_id
     ) and (new_role not in TOP_LEVEL_ROLES or not is_active)
+
+LANDING_ENDPOINTS = {
+    "desk": "desk.workdesk",
+    "dashboard": "dashboard.dashboard",
+    "general_parameters": "general_parameters.general_parameters",
+    "factory_parameters": "factory_parameters.factory_parameters",
+    "product": "product.production_selection",
+    "cost_calculation": "cost_calculation.cost_cal",
+    "profile": "profile.profile",
+}
+
+
+def first_accessible_endpoint(user: object) -> str | None:
+    """Choose a safe post-login destination without making desk a prerequisite."""
+    if is_top_level_admin(user):
+        return LANDING_ENDPOINTS["desk"]
+    if not isinstance(user, dict) or user.get("system_role") != USER:
+        return None
+    grants = user.get("access_grants", [])
+    for module, endpoint in LANDING_ENDPOINTS.items():
+        if any(
+            isinstance(grant, dict)
+            and grant.get("module") == module
+            and grant.get("scope_type") in MODULE_SCOPES[module]
+            and any(permission in PERMISSIONS for permission in grant.get("permissions", []))
+            for grant in grants
+        ):
+            return endpoint
+    return None

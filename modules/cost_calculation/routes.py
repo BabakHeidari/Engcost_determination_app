@@ -19,7 +19,7 @@ cost_calculation_bp = Blueprint("cost_calculation", __name__)
 def cost_cal():
     """Render the main product catalogue page with the cost‑calculation section."""
     service = FactoryService(get_profile_store())
-    factories = service.get_accessible_factories(g.current_user, "COST_CALCULATION")
+    factories = service.get_accessible_factories(g.current_user, "cost_calculation")
     if not factories:
         abort(403)
     product_catalog_path = Path((product_path + ".json").replace("\\", "/"))
@@ -56,7 +56,7 @@ def get_cost():
         return jsonify({"error": "No JSON payload"}), 400
 
     try:
-        factory = FactoryService(get_profile_store()).require_access(data.get("Factory", ""), g.current_user, "COST_CALCULATION")
+        factory = FactoryService(get_profile_store()).require_access(data.get("Factory", ""), g.current_user, "cost_calculation")
     except FactoryNotFoundError as exc:
         return jsonify({"error": str(exc)}), 404
     except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
@@ -91,7 +91,7 @@ def get_costs_bulk():
         if not isinstance(prod, dict):
             return jsonify({"error": "Invalid product entry"}), 400
         try:
-            factory = FactoryService(get_profile_store()).require_access(prod.get("Factory", ""), g.current_user, "COST_CALCULATION")
+            factory = FactoryService(get_profile_store()).require_access(prod.get("Factory", ""), g.current_user, "cost_calculation")
         except FactoryNotFoundError as exc:
             return jsonify({"error": str(exc)}), 404
         except (FactoryAccessDeniedError, FactoryInactiveError) as exc:

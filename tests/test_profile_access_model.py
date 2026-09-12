@@ -21,8 +21,8 @@ def test_parallel_admins_have_dynamic_identical_full_access():
         user = account(role)
         assert is_top_level_admin(user)
         assert get_effective_access(user) == {"full_access": True}
-        assert can_access_module(user, "COST_CALCULATION", "future_factory", "WRITE")
-        assert can_access_module(user, "DASHBOARD", permission="READ")
+        assert can_access_module(user, "cost_calculation", "future_factory", "WRITE")
+        assert can_access_module(user, "dashboard", permission="READ")
 
 
 @pytest.mark.parametrize("role", ["IT_ADMIN", "FINANCE_ECONOMIC_ADMIN"])
@@ -52,21 +52,21 @@ def test_user_is_deny_by_default_and_job_title_is_inert():
         user = account(title=title)
         assert not is_top_level_admin(user)
         assert not can_manage_user(user, account("IT_ADMIN"))
-        assert not can_access_module(user, "DASHBOARD")
+        assert not can_access_module(user, "dashboard")
 
 
 def test_grants_are_paired_deduplicated_and_scoped():
     grants = canonicalize_access_grants([
-        {"scope_type": "FACTORY", "factory_id": "F1", "module": "PRODUCT", "permissions": ["READ"]},
-        {"scope_type": "FACTORY", "factory_id": "F1", "module": "PRODUCT", "permissions": ["WRITE", "READ"]},
-        {"scope_type": "FACTORY", "factory_id": "F2", "module": "COST_CALCULATION", "permissions": ["READ"]},
-        {"scope_type": "GLOBAL", "factory_id": None, "module": "GENERAL_PARAMETERS", "permissions": ["READ"]},
+        {"scope_type": "FACTORY", "factory_id": "F1", "module": "product", "permissions": ["READ"]},
+        {"scope_type": "FACTORY", "factory_id": "F1", "module": "product", "permissions": ["WRITE", "READ"]},
+        {"scope_type": "FACTORY", "factory_id": "F2", "module": "cost_calculation", "permissions": ["READ"]},
+        {"scope_type": "GLOBAL", "factory_id": None, "module": "general_parameters", "permissions": ["READ"]},
     ], {"F1", "F2"})
     user = account(grants=grants)
     assert len(grants) == 3
-    assert can_access_module(user, "PRODUCT", "F1", "WRITE")
-    assert not can_access_module(user, "PRODUCT", "F2", "WRITE")
-    assert can_access_module(user, "GENERAL_PARAMETERS")
+    assert can_access_module(user, "product", "F1", "WRITE")
+    assert not can_access_module(user, "product", "F2", "WRITE")
+    assert can_access_module(user, "general_parameters")
 
 
 @pytest.mark.parametrize(("level", "permissions"), [
@@ -74,20 +74,20 @@ def test_grants_are_paired_deduplicated_and_scoped():
     ("MODIFY", ["READ", "WRITE", "MODIFY"]),
 ])
 def test_visual_levels_serialize_to_hierarchical_permissions(level, permissions):
-    grants = access_state_to_grants({"global": {"PROFILE": level}, "factories": {}})
+    grants = access_state_to_grants({"global": {"profile": level}, "factories": {}})
     assert (grants[0]["permissions"] if grants else None) == permissions
 
 
 def test_visual_access_round_trip_multiple_scopes_and_normalizes_duplicates():
     canonical = canonicalize_access_grants([
-        {"scope_type": "GLOBAL", "factory_id": None, "module": "PROFILE", "permissions": ["WRITE"]},
-        {"scope_type": "GLOBAL", "factory_id": None, "module": "PROFILE", "permissions": ["READ"]},
-        {"scope_type": "FACTORY", "factory_id": "F1", "module": "PRODUCT", "permissions": ["MODIFY"]},
-        {"scope_type": "FACTORY", "factory_id": "F2", "module": "PRODUCT", "permissions": ["READ"]},
+        {"scope_type": "GLOBAL", "factory_id": None, "module": "profile", "permissions": ["WRITE"]},
+        {"scope_type": "GLOBAL", "factory_id": None, "module": "profile", "permissions": ["READ"]},
+        {"scope_type": "FACTORY", "factory_id": "F1", "module": "product", "permissions": ["MODIFY"]},
+        {"scope_type": "FACTORY", "factory_id": "F2", "module": "product", "permissions": ["READ"]},
     ], {"F1", "F2"})
     state = grants_to_access_state(canonical)
-    assert state == {"global": {"PROFILE": "WRITE"}, "factories": {
-        "F1": {"PRODUCT": "MODIFY"}, "F2": {"PRODUCT": "READ"}}}
+    assert state == {"global": {"profile": "WRITE"}, "factories": {
+        "F1": {"product": "MODIFY"}, "F2": {"product": "READ"}}}
     assert grants_to_access_state(access_state_to_grants(state)) == state
 
 
@@ -101,10 +101,10 @@ def test_profile_template_uses_visual_selector_not_raw_json():
 
 
 @pytest.mark.parametrize("grant", [
-    {"scope_type": "OTHER", "factory_id": None, "module": "DASHBOARD", "permissions": ["READ"]},
-    {"scope_type": "FACTORY", "factory_id": "missing", "module": "PRODUCT", "permissions": ["READ"]},
+    {"scope_type": "OTHER", "factory_id": None, "module": "dashboard", "permissions": ["READ"]},
+    {"scope_type": "FACTORY", "factory_id": "missing", "module": "product", "permissions": ["READ"]},
     {"scope_type": "GLOBAL", "factory_id": None, "module": "UNKNOWN", "permissions": ["READ"]},
-    {"scope_type": "GLOBAL", "factory_id": None, "module": "DASHBOARD", "permissions": ["DELETE"]},
+    {"scope_type": "GLOBAL", "factory_id": None, "module": "dashboard", "permissions": ["DELETE"]},
 ])
 def test_unknown_grant_values_fail_closed(grant):
     with pytest.raises(ValueError):

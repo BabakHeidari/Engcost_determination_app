@@ -102,9 +102,9 @@ and a visual list of granular grants. Only either top-level administrator may
 create an account. Administrator editing, deactivation, promotion and reset UI
 remain Phase 7 work and were not started.
 
-`READ < WRITE < MODIFY` are hierarchical capabilities. `DASHBOARD`, `DESK`, `PROFILE`
-and `GENERAL_PARAMETERS` are global based on their current routes;
-`FACTORY_PARAMETERS`, `PRODUCT`, and `COST_CALCULATION` operate on selected
+`READ < WRITE < MODIFY` are hierarchical capabilities. `dashboard`, `desk`, `profile`
+and `general_parameters` are global based on their current routes;
+`factory_parameters`, `product`, and `cost_calculation` operate on selected
 factory data and are factory-scoped. This classification is centralized in
 `utils.profile_authorization`; unknown values fail closed.
 
@@ -193,3 +193,11 @@ normalizes effective levels and serializes canonical grants deterministically.
 Top-level peers retain implicit full access and see no granular editor.
 
 Phase 8 application-wide enforcement was not started by this phase.
+
+## الزام فازهای آینده پس از Phase 8.3
+
+Phase 9 تا 12 باید metadata را از رجیستری canonical بگیرند: هفت ID دقیق
+`cost_calculation`، `dashboard`، `desk`، `factory_parameters`،
+`general_parameters`، `product` و `profile`. `auth` داخلی و خارج از grant و
+export است. Phase 9 در این تغییر آغاز نشده است. جزئیات در
+`docs/module-registry.md` آمده است.

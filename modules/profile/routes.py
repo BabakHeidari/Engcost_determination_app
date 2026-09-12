@@ -12,7 +12,7 @@ profile_bp = Blueprint("profile", __name__)
 
 @profile_bp.route("/profile/profile")
 @login_required
-@require_access("PROFILE", "READ")
+@require_access("profile", "READ")
 def profile():
     try:
         profile_view = build_profile_view_model(get_profile_store(), g.current_user)

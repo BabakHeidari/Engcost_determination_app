@@ -4,36 +4,19 @@
 </div>
 <h5 class="sidebar-title">سامانه بهایاب</h5>
 <ul class="nav flex-column">
-<li class="nav-item mb-2"><a class="nav-link text-white" href="/workdesk">میز کار</a></li>
-
-<li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('general_parameters.general_parameters') }}">
-    <i class="bi bi-gear" aria-hidden="true"></i> پارامترهای عمومی
-  </a>
-</li>
-
-<li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('factory_parameters.factory_parameters') }}">
-    <i class="bi bi-gear" aria-hidden="true"></i> پارامترهای کارخانه
-  </a>
-</li>
-
-<li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('product.production_selection') }}">
-    <i class="bi bi-gear" aria-hidden="true"></i> پیکربندی محصول
-  </a>
-</li>
-
-<li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('cost_calculation.cost_cal') }}">
-    <i class="bi bi-gear" aria-hidden="true"></i> محاسبه هزینه
-  </a>
-</li>
-
-<li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('dashboard.dashboard') }}">
-    <i class="bi bi-gear" aria-hidden="true"></i> داشبورد
-  </a>
-</li>
-
-<li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for('profile.profile') }}">
-    <i class="bi bi-gear" aria-hidden="true"></i> پروفایل کاربر
-  </a>
-</li>
+{% set navigation = [
+  ('desk', 'desk.workdesk', 'میز کار'),
+  ('general_parameters', 'general_parameters.general_parameters', 'پارامترهای عمومی'),
+  ('factory_parameters', 'factory_parameters.factory_parameters', 'پارامترهای کارخانه'),
+  ('product', 'product.production_selection', 'پیکربندی محصول'),
+  ('cost_calculation', 'cost_calculation.cost_cal', 'محاسبه هزینه'),
+  ('dashboard', 'dashboard.dashboard', 'داشبورد'),
+  ('profile', 'profile.profile', 'پروفایل کاربر')
+] %}
+{% for module_id, endpoint, label in navigation if module_navigation.get(module_id) %}
+<li class="nav-item mb-2"><a class="nav-link text-white" href="{{ url_for(endpoint) }}">
+  {% if module_id != 'desk' %}<i class="bi bi-gear" aria-hidden="true"></i>{% endif %} {{ label }}
+</a></li>
+{% endfor %}
 </ul>
 </div>

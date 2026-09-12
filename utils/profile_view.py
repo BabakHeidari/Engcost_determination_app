@@ -1,7 +1,6 @@
 """Safe presentation model for the canonical Profile access model."""
 
 from utils.profile_authorization import (
-    MODULE_SCOPES,
     PERMISSIONS,
     TOP_LEVEL_ROLES,
     can_manage_users,
@@ -12,16 +11,12 @@ from utils.profile_authorization import (
 from utils.factory_service import FactoryService
 from utils.profile_store import ProfileStoreError
 from utils.profile_access_manager import grants_to_access_state
+from utils.module_registry import MODULE_LABELS, MODULE_REGISTRY, MODULE_SCOPES
 
 ROLE_LABELS = {
     "IT_ADMIN": "مدیر IT",
     "FINANCE_ECONOMIC_ADMIN": "مدیر مالی و اقتصادی",
     "USER": "کاربر",
-}
-MODULE_LABELS = {
-    "DESK": "میز کار", "DASHBOARD": "داشبورد", "PROFILE": "پروفایل",
-    "GENERAL_PARAMETERS": "پارامترهای عمومی", "FACTORY_PARAMETERS": "پارامترهای کارخانه",
-    "PRODUCT": "محصول", "COST_CALCULATION": "محاسبه بهای تمام‌شده",
 }
 PERMISSION_LABELS = {"READ": "فقط مشاهده", "WRITE": "ثبت اطلاعات", "MODIFY": "ویرایش کامل"}
 
@@ -86,8 +81,8 @@ def build_profile_view_model(store, authenticated_user):
         "features": {"add_user": can_manage_users(current), "edit_user": can_manage_users(current), "add_factory": can_manage_factories(current), "edit_permissions": can_manage_users(current)},
         "access_manager": {
             "factories": [dict(FactoryService._public(f), is_active=bool(f.get("is_active", True))) for f in data["factories"]],
-            "global_modules": [{"value": key, "label": MODULE_LABELS[key]} for key, scopes in MODULE_SCOPES.items() if "GLOBAL" in scopes],
-            "factory_modules": [{"value": key, "label": MODULE_LABELS[key]} for key, scopes in MODULE_SCOPES.items() if "FACTORY" in scopes],
+            "global_modules": [{"value": item["id"], "label": item["label"]} for item in MODULE_REGISTRY if "GLOBAL" in item["scopes"]],
+            "factory_modules": [{"value": item["id"], "label": item["label"]} for item in MODULE_REGISTRY if "FACTORY" in item["scopes"]],
             "levels": [{"value": value, "label": label} for value, label in (
                 ("NONE", "بدون دسترسی"), ("READ", "فقط مشاهده"),
                 ("WRITE", "ثبت اطلاعات"), ("MODIFY", "ویرایش کامل"))],
@@ -100,7 +95,9 @@ def build_profile_view_model(store, authenticated_user):
                     "label": MODULE_LABELS[key] + (" (کارخانه)" if len(scopes) > 1 and scope == "FACTORY" else ""),
                     "scope": scope,
                 }
-                for key, scopes in MODULE_SCOPES.items() for scope in sorted(scopes)
+                for item in MODULE_REGISTRY
+                for key, scopes in ((item["id"], item["scopes"]),)
+                for scope in sorted(scopes)
             ],
             "permissions": [{"value": key, "label": PERMISSION_LABELS[key]} for key in sorted(PERMISSIONS)],
         },
