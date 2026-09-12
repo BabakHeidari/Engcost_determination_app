@@ -75,6 +75,7 @@ def test_all_grantable_module_pages_use_friendly_rtl_403(app_store, module):
 
 def test_api_403_stays_json_and_hides_authorization_internals(app_store):
     client = authenticated_client(app_store, "usr_api", [grant("profile")])
+    audit_count = len(app_store.load_data()["audit_events"])
     response = client.post("/api/profile/factories", json={"name": "کارخانه پنهان"})
 
     assert response.status_code == 403
@@ -87,6 +88,7 @@ def test_api_403_stays_json_and_hides_authorization_internals(app_store):
     }
     assert b"<!DOCTYPE html>" not in response.data
     assert b"MODIFY" not in response.data
+    assert len(app_store.load_data()["audit_events"]) == audit_count
 
 
 def test_authentication_redirect_and_authorization_403_remain_distinct(app_store):

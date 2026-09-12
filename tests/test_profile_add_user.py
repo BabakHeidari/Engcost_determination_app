@@ -64,7 +64,7 @@ def test_authorized_creation_stores_only_hash_and_safe_audit(add_user_app):
     assert check_password_hash(created["password_hash"], payload()["initial_password"])
     assert created["must_change_password"] is True and created["created_by_id"] == "usr_admin"
     event = data["audit_events"][-1]
-    assert event["action"] == "user.created"
+    assert event["action"] == "USER_CREATED"
     assert "password" not in json.dumps(event).casefold()
 
 
