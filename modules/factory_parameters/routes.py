@@ -14,7 +14,7 @@ factory_parameters_bp = Blueprint("factory_parameters", __name__)
 @factory_parameters_bp.route("/factory_parameters/", methods=["POST", "GET"])
 @login_required
 def factory_parameters():
-    factories = FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "FACTORY_PARAMETERS")
+    factories = FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "factory_parameters")
     if not factories:
         abort(403)
     data = {"_order": ["factory_id", "factory name", "city"], "data": {
@@ -78,7 +78,7 @@ def factory_details(factory_name):
             code=303,
         )
     try:
-        factory_record = FactoryService(get_profile_store()).require_access(factory_name, g.current_user, "FACTORY_PARAMETERS")
+        factory_record = FactoryService(get_profile_store()).require_access(factory_name, g.current_user, "factory_parameters")
     except FactoryNotFoundError as exc:
         return render_template("factory_parameters/unavailable.html", message=str(exc)), 404
     except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
@@ -161,7 +161,7 @@ def subfield(factory_name, Subfield):
             code=303,
         )
     try:
-        factory_record = FactoryService(get_profile_store()).require_access(factory_name, g.current_user, "FACTORY_PARAMETERS")
+        factory_record = FactoryService(get_profile_store()).require_access(factory_name, g.current_user, "factory_parameters")
     except FactoryNotFoundError as exc:
         return render_template("factory_parameters/unavailable.html", message=str(exc)), 404
     except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
@@ -195,7 +195,7 @@ def save_prediction_production_per_capita():
 def _validate_session_factory(permission):
     factory_id = session.get("factory_id")
     try:
-        factory = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "FACTORY_PARAMETERS", permission)
+        factory = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "factory_parameters", permission)
     except FactoryNotFoundError as exc:
         return jsonify({"status": "error", "message": str(exc)}), 404
     except (FactoryAccessDeniedError, FactoryInactiveError) as exc:

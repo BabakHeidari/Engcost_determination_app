@@ -137,9 +137,9 @@ def test_new_factory_is_implicit_for_admins_and_denied_to_user(factory_app):
     client_as(app, "usr_it").post("/api/profile/factories", json=payload())
     data = ProfileDataStore(path).load_data()
     users = {user["id"]: user for user in data["users"]}
-    assert can_access_module(users["usr_it"], "PRODUCT", "F4", "WRITE")
-    assert can_access_module(users["usr_finance"], "PRODUCT", "F4", "WRITE")
-    assert not can_access_module(users["usr_user"], "PRODUCT", "F4", "READ")
+    assert can_access_module(users["usr_it"], "product", "F4", "WRITE")
+    assert can_access_module(users["usr_finance"], "product", "F4", "WRITE")
+    assert not can_access_module(users["usr_user"], "product", "F4", "READ")
     assert all(user["access_grants"] == [] for user in users.values())
 
 

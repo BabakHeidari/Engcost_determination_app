@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash
 
 from utils.auth import authenticate, get_profile_store, load_current_user, validate_password
 from utils.localization import t
+from utils.profile_authorization import first_accessible_endpoint
 from utils.profile_store import ProfileStoreError, ProfileStoreNotInitializedError
 
 
@@ -29,7 +30,7 @@ def login():
             session["user_id"] = result.user["id"]
             if result.must_change_password:
                 return redirect(url_for("auth.change_password"))
-            return redirect(url_for("desk.workdesk"))
+            return redirect(url_for(first_accessible_endpoint(result.user) or "auth.login"))
         flash(t("auth.invalid_credentials"), "danger")
     return render_template("auth/login.html")
 
@@ -52,7 +53,7 @@ def change_password():
                 flash(str(exc), "danger")
             else:
                 get_profile_store().change_password(user["id"], generate_password_hash(password))
-                return redirect(url_for("desk.workdesk"))
+                return redirect(url_for(first_accessible_endpoint(user) or "auth.login"))
     return render_template("auth/change_password.html")
 
 

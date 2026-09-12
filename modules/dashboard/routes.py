@@ -1,15 +1,17 @@
-from flask import Blueprint, g, render_template, jsonify, request
-from utils.auth import get_profile_store, login_required, require_access
+from flask import Blueprint, abort, g, render_template, jsonify, request
+from utils.auth import get_profile_store, login_required
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.localization import display_value
+from utils.profile_authorization import has_access
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
 @dashboard_bp.route("/dashboard")
 @login_required
-@require_access("DASHBOARD", "READ", scope_type="GLOBAL")
 def dashboard():
-    factories = FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "DASHBOARD")
+    factories = FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "dashboard")
+    if not factories and not has_access(g.current_user, "dashboard", "READ", scope_type="GLOBAL"):
+        abort(403)
     filter_options = {
         "factories": factories,
         "categories": [display_value(v, "categories") for v in ["کاتد", "آند", "الکترولیت", "جداکننده", "بسته‌بندی"]]
@@ -25,15 +27,14 @@ def cost_analysis():
     factory_id = request.args.get("factory")
     if factory_id:
         try:
-            FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "DASHBOARD")
+            FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "dashboard")
         except FactoryNotFoundError as exc:
             return jsonify({"error": str(exc)}), 404
         except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
             return jsonify({"error": str(exc)}), 403
     else:
         # A report without a factory is the explicitly global DASHBOARD action.
-        from utils.profile_authorization import has_access
-        if not has_access(g.current_user, "DASHBOARD", "READ", scope_type="GLOBAL"):
+        if not has_access(g.current_user, "dashboard", "READ", scope_type="GLOBAL"):
             return jsonify({"error": "دسترسی به این گزارش مجاز نیست."}), 403
     return jsonify({
         "kpis": {"total_cost": 0, "avg_cost_per_product": 0, "product_count": 0, "top_cost_driver": "—"},

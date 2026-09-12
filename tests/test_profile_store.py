@@ -102,7 +102,7 @@ def test_duplicate_normalized_emails_fail():
 def test_invalid_factory_reference_fails():
     data = document()
     bad = user()
-    bad["access_grants"] = [{"scope_type": "FACTORY", "factory_id": "fac_missing", "module": "PRODUCT", "permissions": ["READ"]}]
+    bad["access_grants"] = [{"scope_type": "FACTORY", "factory_id": "fac_missing", "module": "product", "permissions": ["READ"]}]
     bad["system_role"] = "USER"
     data["users"] = [bad]
     with pytest.raises(ProfileDataValidationError, match="ناشناخته"):

@@ -13,7 +13,7 @@ def grant(module, permissions, factory_id=None):
     }
 
 
-def user(level=None, *, module="GENERAL_PARAMETERS", factory_id=None, role="USER"):
+def user(level=None, *, module="general_parameters", factory_id=None, role="USER"):
     permissions = {
         "READ": ["READ"],
         "WRITE": ["READ", "WRITE"],
@@ -36,24 +36,24 @@ def user(level=None, *, module="GENERAL_PARAMETERS", factory_id=None, role="USER
 )
 def test_canonical_hierarchy(level, allowed):
     actor = user(level)
-    assert tuple(has_access(actor, "GENERAL_PARAMETERS", required) for required in ("READ", "WRITE", "MODIFY")) == allowed
-    assert get_effective_level(actor, "GENERAL_PARAMETERS") == (level or "NONE")
+    assert tuple(has_access(actor, "general_parameters", required) for required in ("READ", "WRITE", "MODIFY")) == allowed
+    assert get_effective_level(actor, "general_parameters") == (level or "NONE")
 
 
 @pytest.mark.parametrize("role", ["IT_ADMIN", "FINANCE_ECONOMIC_ADMIN"])
 def test_peer_admins_have_identical_future_factory_access(role):
     actor = user(role=role)
-    assert get_effective_level(actor, "PRODUCT", "fac_future") == "MODIFY"
-    assert has_access(actor, "PROFILE", "MODIFY", scope_type="GLOBAL")
+    assert get_effective_level(actor, "product", "fac_future") == "MODIFY"
+    assert has_access(actor, "profile", "MODIFY", scope_type="GLOBAL")
 
 
 def test_module_factory_and_scope_must_match_exactly():
-    actor = user("MODIFY", module="PRODUCT", factory_id="fac_a")
-    assert has_access(actor, "PRODUCT", "MODIFY", "fac_a")
-    assert not has_access(actor, "PRODUCT", "READ", "fac_b")
-    assert not has_access(actor, "COST_CALCULATION", "READ", "fac_a")
-    assert not has_access(actor, "DASHBOARD", "READ", scope_type="GLOBAL")
-    assert not has_access(actor, "PRODUCT", "READ", scope_type="GLOBAL")
+    actor = user("MODIFY", module="product", factory_id="fac_a")
+    assert has_access(actor, "product", "MODIFY", "fac_a")
+    assert not has_access(actor, "product", "READ", "fac_b")
+    assert not has_access(actor, "cost_calculation", "READ", "fac_a")
+    assert not has_access(actor, "dashboard", "READ", scope_type="GLOBAL")
+    assert not has_access(actor, "product", "READ", scope_type="GLOBAL")
 
 
 @pytest.fixture
@@ -66,7 +66,7 @@ def ordinary_client(tmp_path):
     store.create_user({
         "id": "usr_user", "username": "ordinary", "email": "ordinary@example.com",
         "full_name": "کاربر", "system_role": "USER", "job_title": "مدیر سامانه",
-        "access_grants": [grant("GENERAL_PARAMETERS", ["READ"])], "is_active": True,
+        "access_grants": [grant("general_parameters", ["READ"])], "is_active": True,
         "must_change_password": False, "password_hash": "unused", "password_scheme": "werkzeug",
         "revision": 1,
     })

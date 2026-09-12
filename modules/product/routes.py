@@ -12,7 +12,7 @@ product_bp = Blueprint("product", __name__)
 @login_required
 def production_selection():
     service = FactoryService(get_profile_store())
-    factories = service.get_accessible_factories(g.current_user, "PRODUCT")
+    factories = service.get_accessible_factories(g.current_user, "product")
     if not factories:
         abort(403)
     create_product_metadata(parent_path, product_path,"Factories", ".json")
@@ -30,7 +30,7 @@ def production_selection():
 def product_options():
     """Return lists of distinct factories, categories and subcategories."""
     service = FactoryService(get_profile_store())
-    factories = service.get_accessible_factories(g.current_user, "PRODUCT")
+    factories = service.get_accessible_factories(g.current_user, "product")
     if not factories:
         abort(403)
     __meta_data = load_json(f"{parent_path}\\Factories\\__metadata.json")
@@ -68,7 +68,7 @@ def add_product():
         return jsonify({"status": "error", "message": "All fields are required."}), 400
 
     try:
-        factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "PRODUCT", "WRITE")
+        factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "product", "WRITE")
         factory = FactoryService(get_profile_store()).operational_key(factory_record)
         product_adder(product_name, factory, category, subcategory)
         capacity_writer(product_name, factory, category, subcategory, capacity)
@@ -96,7 +96,7 @@ def add_category():
         return jsonify({"status": "error", "message": "Factory and category name are required."}), 400
     
     try:
-        factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "PRODUCT", "WRITE")
+        factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "product", "WRITE")
         factory = FactoryService(get_profile_store()).operational_key(factory_record)
         category_adder(factory, category_name)
         directory_tracer(f"{parent_path}\\Factories")
@@ -125,7 +125,7 @@ def add_subcategory():
         return jsonify({"status": "error", "message": "Factory, category, and subcategory name are required."}), 400
     
     try:
-        factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "PRODUCT", "WRITE")
+        factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "product", "WRITE")
         factory = FactoryService(get_profile_store()).operational_key(factory_record)
         subcategory_adder(factory, category, subcategory_name)
         directory_tracer(f"{parent_path}\\Factories")
@@ -145,7 +145,7 @@ def add_subcategory():
 @product_bp.route("/product/configuration")
 @login_required
 def configuration():
-    if not FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "PRODUCT"):
+    if not FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "product"):
         abort(403)
     return render_template("product/configuration.html")
 
@@ -153,7 +153,7 @@ def configuration():
 @login_required
 def product_page(product_name):
     try:
-        factory_record = FactoryService(get_profile_store()).require_access(request.form["factory"], g.current_user, "PRODUCT")
+        factory_record = FactoryService(get_profile_store()).require_access(request.form["factory"], g.current_user, "product")
     except FactoryNotFoundError as exc:
         return jsonify({"status": "error", "message": str(exc)}), 404
     except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
@@ -179,7 +179,7 @@ def save_bom():
     if not isinstance(bom_path, str) or not isinstance(factory_id, str):
         return jsonify({"status": "error", "message": "زمینه کارخانه معتبر نیست."}), 400
     try:
-        FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "PRODUCT", "MODIFY")
+        FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "product", "MODIFY")
     except FactoryNotFoundError as exc:
         return jsonify({"status": "error", "message": str(exc)}), 404
     except (FactoryAccessDeniedError, FactoryInactiveError) as exc:

@@ -10,6 +10,8 @@ from modules.cost_calculation.routes import cost_calculation_bp
 from modules.profile.routes import profile_bp
 import secrets
 from utils.auth import load_current_user
+from utils.module_registry import MODULE_REGISTRY
+from utils.profile_authorization import get_effective_level, is_top_level_admin
 from utils.localization import DEFAULT_DIRECTION, DEFAULT_LANGUAGE, DEFAULT_LOCALE, display_value, format_jalali_date, format_jalali_datetime, format_persian_digits, parse_jalali_input, t
 from utils.demo_data import persian_demo_enabled
 
@@ -50,6 +52,26 @@ def inject_user():
         "format_jalali_datetime": format_jalali_datetime,
         "parse_jalali_input": parse_jalali_input,
         "persian_demo_enabled": persian_demo_enabled(),
+        "module_navigation": {
+            item["id"]: bool(
+                current_user
+                and (is_top_level_admin(current_user) or any(
+                    get_effective_level(
+                        current_user, item["id"],
+                        "__factory__" if scope == "FACTORY" else None,
+                        scope_type=scope,
+                    ) != "NONE"
+                    if scope == "GLOBAL" else any(
+                        grant.get("module") == item["id"]
+                        and grant.get("scope_type") == "FACTORY"
+                        and bool(grant.get("permissions"))
+                        for grant in current_user.get("access_grants", [])
+                    )
+                    for scope in item["scopes"]
+                ))
+            )
+            for item in MODULE_REGISTRY
+        },
     }
 
 @app.route("/")
