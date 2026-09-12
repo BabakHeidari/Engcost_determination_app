@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Callable
 
 from utils.profile_authorization import (
+    PERMISSION_LEVELS,
+    PERMISSION_ORDER,
     SYSTEM_ROLES,
     TOP_LEVEL_ROLES,
     USER,
@@ -27,6 +29,7 @@ from utils.profile_authorization import (
     is_top_level_admin,
     would_leave_active_admin,
 )
+from utils.module_registry import GRANTABLE_MODULES
 
 
 if os.name == "nt":
@@ -43,6 +46,20 @@ REQUIRED_COLLECTIONS = (
     "user_permission_overrides",
     "audit_events",
 )
+
+
+def _needs_module_id_normalization(data):
+    """Detect Phase 8 uppercase IDs without accepting arbitrary aliases."""
+    if not isinstance(data, dict):
+        return False
+    for user in data.get("users", []):
+        for grant in user.get("access_grants", []):
+            module = grant.get("module") if isinstance(grant, dict) else None
+            if isinstance(module, str) and module not in GRANTABLE_MODULES and module.casefold() in GRANTABLE_MODULES:
+                return True
+    return False
+
+
 ROOT_FIELDS = {"schema_version", "metadata", *REQUIRED_COLLECTIONS}
 PLAINTEXT_PASSWORD_FIELDS = {"password", "plain_password", "plaintext_password"}
 
@@ -328,20 +345,70 @@ class ProfileDataStore:
         appear broken, so the same locked, backed-up migration is performed
         automatically. Unknown versions still fail closed.
         """
+        normalize_module_ids = False
         descriptor = self._lock(False)
         try:
             data = self._load_raw_unlocked()
             version = data.get("schema_version") if isinstance(data, dict) else None
             if version == SUPPORTED_SCHEMA_VERSION:
-                validate_data(data)
-                return {"migrated": False, "review_user_ids": []}
+                normalize_module_ids = _needs_module_id_normalization(data)
+                if not normalize_module_ids:
+                    validate_data(data)
+                    return {"migrated": False, "review_user_ids": []}
             if version != 1:
-                validate_data(data)
+                if not normalize_module_ids:
+                    validate_data(data)
         finally:
             self._unlock(descriptor)
+        if normalize_module_ids:
+            return self.normalize_module_ids()
         # migrate_access_model obtains an exclusive lock and checks the version
         # again, making concurrent first requests safe and idempotent.
         return self.migrate_access_model()
+
+    def normalize_module_ids(self):
+        """Atomically upgrade prior canonical uppercase IDs to directory IDs.
+
+        Phase 8 stored uppercase spellings of the same seven module directory
+        names.  This compatibility migration preserves each grant's effective
+        level and scope, writes only canonical IDs, and never recognizes an
+        alias or unknown module.
+        """
+        descriptor = self._lock(True)
+        try:
+            data = self._load_raw_unlocked()
+            if data.get("schema_version") != SUPPORTED_SCHEMA_VERSION:
+                validate_data(data)
+                return {"migrated": False, "review_user_ids": []}
+            if not _needs_module_id_normalization(data):
+                validate_data(data)
+                return {"migrated": False, "review_user_ids": []}
+
+            factory_ids = {factory["id"] for factory in data.get("factories", [])}
+            for user in data.get("users", []):
+                grants = copy.deepcopy(user.get("access_grants", []))
+                for grant in grants:
+                    module = grant.get("module")
+                    if isinstance(module, str) and module.casefold() in GRANTABLE_MODULES:
+                        grant["module"] = module.casefold()
+                    permissions = grant.get("permissions", [])
+                    highest = max(
+                        (PERMISSION_ORDER.index(value) for value in permissions if value in PERMISSION_ORDER),
+                        default=-1,
+                    )
+                    if highest >= 0:
+                        grant["permissions"] = list(PERMISSION_LEVELS[PERMISSION_ORDER[highest]])
+                user["access_grants"] = canonicalize_access_grants(grants, factory_ids)
+
+            now = _utc_now()
+            data["metadata"]["module_registry_migration"] = {"completed_at": now}
+            data["metadata"]["revision"] = max(1, data["metadata"].get("revision", 1)) + 1
+            data["metadata"]["updated_at"] = now
+            validate_data(data)
+            self._atomic_write(data, create_backup=True)
+            return {"migrated": True, "review_user_ids": []}
+        finally:
+            self._unlock(descriptor)
 
     def load_data(self):
         self.ensure_current_schema()

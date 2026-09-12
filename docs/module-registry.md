@@ -43,6 +43,13 @@ auth
 `NONE` است؛ دو نقش `IT_ADMIN` و `FINANCE_ECONOMIC_ADMIN` بدون grant ذخیره‌شده
 `MODIFY` ضمنی دارند.
 
+فایل‌های schema v2 ساخته‌شده در Phase 8 ممکن است همین نام پوشه‌ها را با حروف
+بزرگ ذخیره کرده باشند. `ProfileDataStore` این spelling قدیمی را هنگام نخستین
+خواندن، زیر قفل انحصاری و همراه backup اتمیک، به ID lowercase همین رجیستری تبدیل
+می‌کند و سطح مؤثر و scope را حفظ می‌کند. این مسیر فقط تغییر حالت حروف یکی از هفت
+ID واقعی را می‌پذیرد؛ alias و ماژول ناشناخته همچنان رد می‌شوند. در نتیجه حساب‌های
+موجود پس از استقرار Phase 8.3 قادر به login می‌مانند و privilege جدیدی نمی‌گیرند.
+
 ## route-to-module inventory
 
 | Blueprint / route یا action | ID | Scope | حداقل سطح |

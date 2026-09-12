@@ -58,7 +58,7 @@ def test_user_is_deny_by_default_and_job_title_is_inert():
 def test_grants_are_paired_deduplicated_and_scoped():
     grants = canonicalize_access_grants([
         {"scope_type": "FACTORY", "factory_id": "F1", "module": "product", "permissions": ["READ"]},
-        {"scope_type": "FACTORY", "factory_id": "F1", "module": "product", "permissions": ["WRITE", "READ"]},
+        {"scope_type": "FACTORY", "factory_id": "F1", "module": "product", "permissions": ["READ", "WRITE"]},
         {"scope_type": "FACTORY", "factory_id": "F2", "module": "cost_calculation", "permissions": ["READ"]},
         {"scope_type": "GLOBAL", "factory_id": None, "module": "general_parameters", "permissions": ["READ"]},
     ], {"F1", "F2"})
@@ -80,9 +80,9 @@ def test_visual_levels_serialize_to_hierarchical_permissions(level, permissions)
 
 def test_visual_access_round_trip_multiple_scopes_and_normalizes_duplicates():
     canonical = canonicalize_access_grants([
-        {"scope_type": "GLOBAL", "factory_id": None, "module": "profile", "permissions": ["WRITE"]},
+        {"scope_type": "GLOBAL", "factory_id": None, "module": "profile", "permissions": ["READ", "WRITE"]},
         {"scope_type": "GLOBAL", "factory_id": None, "module": "profile", "permissions": ["READ"]},
-        {"scope_type": "FACTORY", "factory_id": "F1", "module": "product", "permissions": ["MODIFY"]},
+        {"scope_type": "FACTORY", "factory_id": "F1", "module": "product", "permissions": ["READ", "WRITE", "MODIFY"]},
         {"scope_type": "FACTORY", "factory_id": "F2", "module": "product", "permissions": ["READ"]},
     ], {"F1", "F2"})
     state = grants_to_access_state(canonical)

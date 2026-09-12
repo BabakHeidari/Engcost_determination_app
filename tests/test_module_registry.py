@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -6,6 +7,7 @@ from utils.module_registry import GRANTABLE_MODULES, INTERNAL_MODULES, MODULE_RE
 from utils.profile_access_manager import access_state_to_grants, grants_to_access_state
 from utils.profile_authorization import canonicalize_access_grants, get_effective_level, has_access
 from utils.profile_view import build_profile_view_model
+from utils.profile_store import ProfileDataStore
 
 
 EXPECTED = {
@@ -88,3 +90,34 @@ def test_non_hierarchical_permission_arrays_are_rejected(permissions):
             "scope_type": "GLOBAL", "factory_id": None,
             "module": "desk", "permissions": permissions,
         }], set())
+
+
+def test_existing_phase_8_uppercase_grants_are_atomically_normalized(tmp_path):
+    path = tmp_path / "app_data.json"
+    store = ProfileDataStore(path)
+    store.initialize({})
+    store.create_factory({
+        "id": "fac_a", "code": "A", "name": "کارخانه الف",
+        "is_active": True, "revision": 1,
+    })
+    store.create_user({
+        "id": "usr_old", "username": "old", "email": "old@example.com",
+        "full_name": "کاربر قدیمی", "system_role": "USER", "job_title": "",
+        "access_grants": [{
+            "scope_type": "FACTORY", "factory_id": "fac_a",
+            "module": "product", "permissions": ["READ", "WRITE"],
+        }],
+        "is_active": True, "password_hash": "hash", "revision": 1,
+    })
+    document = json.loads(path.read_text(encoding="utf-8"))
+    document["users"][0]["access_grants"][0]["module"] = "PRODUCT"
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    authenticated = store.authenticate_user("old", "password", lambda _user, _password: True)
+    loaded = store.load_data()
+
+    assert authenticated["id"] == "usr_old"
+    grant = loaded["users"][0]["access_grants"][0]
+    assert grant["module"] == "product"
+    assert grant["permissions"] == ["READ", "WRITE"]
+    assert list((tmp_path / "backups").glob("*.json"))
