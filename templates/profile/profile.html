@@ -5,7 +5,7 @@
   <button class="btn btn-secondary mb-3" id="profileBackButton" type="button">بازگشت</button>
   <header class="profile-hero">
     <div><p class="profile-kicker">پروفایل کاربر</p><h2>{{ profile.current_user.full_name }}</h2></div>
-    <div class="hero-actions"><span class="role-badge">{{ profile.current_user.system_role_label }}</span>{% if profile.features.add_user %}<button class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#createUserModal">افزودن کاربر</button>{% endif %}{% if profile.features.add_factory %}<button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#createFactoryModal">افزودن کارخانه جدید</button>{% endif %}</div>
+    <div class="hero-actions"><span class="role-badge">{{ profile.current_user.system_role_label }}</span>{% if profile.features.excel_export %}<a class="btn btn-success" href="{{ url_for('profile.export_profile_excel') }}">دریافت خروجی اکسل مدیریتی</a>{% endif %}{% if profile.features.add_user %}<button class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#createUserModal">افزودن کاربر</button>{% endif %}{% if profile.features.add_factory %}<button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#createFactoryModal">افزودن کارخانه جدید</button>{% endif %}</div>
   </header>
   <div id="profileNotification" class="alert d-none mt-3" role="status" aria-live="polite"></div>
 
