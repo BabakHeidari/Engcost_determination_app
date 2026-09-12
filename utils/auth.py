@@ -8,10 +8,11 @@ import os
 from dataclasses import dataclass
 from functools import wraps
 
-from flask import current_app, g, redirect, request, session, url_for
+from flask import abort, current_app, g, redirect, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from utils.profile_store import ProfileDataStore, ProfileStoreError
+from utils.profile_authorization import has_access, is_top_level_admin
 
 
 MIN_PASSWORD_LENGTH = 12
@@ -96,3 +97,25 @@ def login_required(view):
             return redirect(url_for("auth.change_password"))
         return view(*args, **kwargs)
     return decorated_function
+
+
+def require_access(module, required_level="READ", *, scope_type="GLOBAL"):
+    """Enforce a global route action after ``login_required`` loaded the user."""
+    def decorator(view):
+        @wraps(view)
+        def protected(*args, **kwargs):
+            if not has_access(g.current_user, module, required_level, scope_type=scope_type):
+                abort(403)
+            return view(*args, **kwargs)
+        return protected
+    return decorator
+
+
+def require_top_level_admin(view):
+    """Gate administrative actions independently of payloads and grants."""
+    @wraps(view)
+    def protected(*args, **kwargs):
+        if not is_top_level_admin(g.current_user):
+            abort(403)
+        return view(*args, **kwargs)
+    return protected

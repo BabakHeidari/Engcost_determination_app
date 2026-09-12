@@ -23,6 +23,7 @@ PERMISSION_LEVELS = {
     "WRITE": ("READ", "WRITE"),
     "MODIFY": PERMISSION_ORDER,
 }
+LEVEL_RANK = {"NONE": 0, "READ": 1, "WRITE": 2, "MODIFY": 3}
 
 # Scope follows the actual routes: pages/actions operating on a selected factory
 # are factory scoped; the shell, shared material table and aggregate dashboard are
@@ -86,25 +87,48 @@ def get_effective_access(user: object):
     return copy.deepcopy(grants) if isinstance(grants, list) else []
 
 
-def can_access_module(user, module, factory_id=None, permission="READ") -> bool:
-    if module not in MODULE_SCOPES or permission not in PERMISSIONS:
-        return False
+def get_effective_level(user, module, factory_id=None, *, scope_type=None) -> str:
+    """Resolve one canonical level without trusting grant array order.
+
+    ``scope_type`` is optional for compatibility; when omitted it is derived
+    from the presence of a factory ID.  Callers handling a MIXED module should
+    pass it explicitly so a global action can never inherit a factory grant.
+    """
+    expected_scope = scope_type or ("FACTORY" if factory_id is not None else "GLOBAL")
+    if (module not in MODULE_SCOPES or expected_scope not in SCOPE_TYPES
+            or expected_scope not in MODULE_SCOPES[module]):
+        return "NONE"
+    if expected_scope == "GLOBAL" and factory_id is not None:
+        return "NONE"
+    if expected_scope == "FACTORY" and (not isinstance(factory_id, str) or not factory_id):
+        return "NONE"
     if is_top_level_admin(user):
-        return True
+        return "MODIFY"
     if not isinstance(user, dict) or user.get("system_role") != USER:
-        return False
-    expected_scope = "FACTORY" if factory_id is not None else "GLOBAL"
-    if expected_scope not in MODULE_SCOPES[module]:
-        return False
+        return "NONE"
+    effective_rank = 0
     for grant in user.get("access_grants", []):
         if not isinstance(grant, dict):
             continue
         if (grant.get("scope_type") == expected_scope and grant.get("factory_id") == factory_id
                 and grant.get("module") == module):
-            granted = max((PERMISSION_ORDER.index(value) for value in grant.get("permissions", [])
-                           if value in PERMISSIONS), default=-1)
-            return granted >= PERMISSION_ORDER.index(permission)
-    return False
+            effective_rank = max(
+                effective_rank,
+                max((LEVEL_RANK.get(value, 0) for value in grant.get("permissions", [])), default=0),
+            )
+    return next(level for level, rank in LEVEL_RANK.items() if rank == effective_rank)
+
+
+def has_access(user, module, required_level="READ", factory_id=None, *, scope_type=None) -> bool:
+    if required_level not in PERMISSIONS:
+        return False
+    effective = get_effective_level(user, module, factory_id, scope_type=scope_type)
+    return LEVEL_RANK[effective] >= LEVEL_RANK[required_level]
+
+
+def can_access_module(user, module, factory_id=None, permission="READ") -> bool:
+    """Backward-compatible name for the canonical hierarchical resolver."""
+    return has_access(user, module, permission, factory_id)
 
 
 def can_manage_users(user) -> bool:

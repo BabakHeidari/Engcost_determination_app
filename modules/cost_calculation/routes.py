@@ -1,4 +1,4 @@
-from flask import Blueprint, g, render_template, request, jsonify
+from flask import Blueprint, abort, g, render_template, request, jsonify
 import json
 from pathlib import Path
 from utils.auth import get_profile_store, login_required
@@ -18,11 +18,14 @@ cost_calculation_bp = Blueprint("cost_calculation", __name__)
 @login_required
 def cost_cal():
     """Render the main product catalogue page with the cost‑calculation section."""
+    service = FactoryService(get_profile_store())
+    factories = service.get_accessible_factories(g.current_user, "COST_CALCULATION")
+    if not factories:
+        abort(403)
     product_catalog_path = Path((product_path + ".json").replace("\\", "/"))
     with open(product_catalog_path, "r", encoding="utf-8") as product_file:
         products = json.load(product_file)
-    service = FactoryService(get_profile_store())
-    allowed = {service.operational_key(factory) for factory in service.get_accessible_factories(g.current_user, "COST_CALCULATION")}
+    allowed = {service.operational_key(factory) for factory in factories}
     if isinstance(products, dict) and isinstance(products.get("Factory"), dict):
         indexes = [key for key, value in products["Factory"].items() if value in allowed]
         products = {column: {str(i): values[key] for i, key in enumerate(indexes)} for column, values in products.items()}
@@ -81,18 +84,26 @@ def get_costs_bulk():
     if not isinstance(products, list):
         return jsonify({"error": "Expected a list of products"}), 400
 
-    result = {}
+    # Validate the complete batch before loading/calculating any protected
+    # factory data, so a later tampered item cannot produce a partial read.
+    authorized_products = []
     for prod in products:
-        name = prod.get("Product_Name", "")
+        if not isinstance(prod, dict):
+            return jsonify({"error": "Invalid product entry"}), 400
         try:
             factory = FactoryService(get_profile_store()).require_access(prod.get("Factory", ""), g.current_user, "COST_CALCULATION")
         except FactoryNotFoundError as exc:
             return jsonify({"error": str(exc)}), 404
         except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
             return jsonify({"error": str(exc)}), 403
+        authorized_products.append((prod, FactoryService(get_profile_store()).operational_key(factory)))
+
+    result = {}
+    for prod, operational_key in authorized_products:
+        name = prod.get("Product_Name", "")
         cost = cost_aggregator(
             product=name,
-            fac=FactoryService(get_profile_store()).operational_key(factory),
+            fac=operational_key,
             cat=prod.get("Category", ""),
             subc=prod.get("Subcategory", "")
         )

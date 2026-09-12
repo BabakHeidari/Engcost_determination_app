@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, jsonify, request, session
-from utils.auth import login_required
+from utils.auth import login_required, require_access
 from utils.paths import material_path
 import json
 from utils.updaters import material_data_updater
@@ -8,6 +8,7 @@ general_parameters_bp = Blueprint("general_parameters", __name__)
 
 @general_parameters_bp.route("/general_parameters/")
 @login_required
+@require_access("GENERAL_PARAMETERS", "READ")
 def general_parameters():
     with open(material_path+".json", "r") as f:
         data = json.load(f)
@@ -16,6 +17,8 @@ def general_parameters():
 
 
 @general_parameters_bp.route("/save_materials", methods=["POST"])
+@login_required
+@require_access("GENERAL_PARAMETERS", "MODIFY")
 def save_materials():
     payload = request.get_json(force=True)
 

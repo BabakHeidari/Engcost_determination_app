@@ -1,4 +1,4 @@
-from flask import Blueprint, g, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, g, jsonify, redirect, render_template, request, session, url_for
 from utils.auth import get_profile_store, login_required
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.paths import parent_path, product_path
@@ -15,6 +15,8 @@ factory_parameters_bp = Blueprint("factory_parameters", __name__)
 @login_required
 def factory_parameters():
     factories = FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "FACTORY_PARAMETERS")
+    if not factories:
+        abort(403)
     data = {"_order": ["factory_id", "factory name", "city"], "data": {
         "factory_id": [factory["id"] for factory in factories],
         "factory name": [factory["name"] for factory in factories],
@@ -107,7 +109,7 @@ def factory_details(factory_name):
 @factory_parameters_bp.route('/save_factories', methods=['POST'])
 @login_required
 def save_factories():
-    error = _validate_session_factory("WRITE")
+    error = _validate_session_factory("MODIFY")
     if error:
         return error
     data = request.get_json()
@@ -119,7 +121,7 @@ def save_factories():
 @factory_parameters_bp.route('/save_category_table', methods=['POST'])
 @login_required
 def save_category_table():
-    error = _validate_session_factory("WRITE")
+    error = _validate_session_factory("MODIFY")
     if error:
         return error
     data = request.get_json()
@@ -131,7 +133,7 @@ def save_category_table():
 @factory_parameters_bp.route('/save_factory_subfields', methods=['POST'])
 @login_required
 def save_factory_subfields():
-    error = _validate_session_factory("WRITE")
+    error = _validate_session_factory("MODIFY")
     if error:
         return error
     data = request.get_json()
@@ -180,7 +182,7 @@ def subfield(factory_name, Subfield):
 @factory_parameters_bp.route("/save_prediction_production_per_capita", methods=["POST"])
 @login_required
 def save_prediction_production_per_capita():
-    error = _validate_session_factory("WRITE")
+    error = _validate_session_factory("MODIFY")
     if error:
         return error
     factory_name = session.get("factory_name")
