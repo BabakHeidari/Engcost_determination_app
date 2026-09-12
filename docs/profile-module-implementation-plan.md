@@ -13,7 +13,8 @@ This plan was created during Phase 2 because no existing profile implementation-
 | Phase 5 — read-only Profile | Complete | Safe JSON-backed rendering, scoped visibility, effective permissions, and real audit history. |
 | Phase 6 — add user with initial password | **Complete** | Authorization-aware user creation, initial password hashing, atomic audit, Persian modal, and focused tests. General editing remains disabled. |
 | Phase 6.7 — factory creation | **Complete** | Equal top-level-admin creation, canonical locked/atomic persistence and audit, and dynamic Add User registry integration. |
-| Phase 7 and later | **Not started** | General user editing and other Profile mutations remain separately scoped. |
+| Phase 8.4 — friendly access denied | **Complete** | Central Persian RTL HTML 403, machine-readable API 403, permission-aware recovery links, and non-disclosure tests. |
+| Phase 9 and later | **Not started** | Audit history and later-phase work remain separately scoped. |
 
 ## Phase 2 decision update
 
@@ -201,3 +202,15 @@ Phase 9 تا 12 باید metadata را از رجیستری canonical بگیرن�
 `general_parameters`، `product` و `profile`. `auth` داخلی و خارج از grant و
 export است. Phase 9 در این تغییر آغاز نشده است. جزئیات در
 `docs/module-registry.md` آمده است.
+
+## Phase 8.4 — 403 / Access Denied UX (complete)
+
+یک handler سراسری بدون تغییر resolverها و decoratorهای authorization اضافه شد.
+درخواست صفحه پاسخ 403 با template فارسی RTL می‌گیرد؛ مسیر API، JSON، XHR یا
+درخواست صریح `application/json` پاسخ JSON و همان status را می‌گیرد. مقصد بازیابی
+با `first_accessible_endpoint` از دسترسی مؤثر انتخاب می‌شود و در نبود مقصد، خروج
+امن عرضه می‌شود. متن عمومی هیچ نام کارخانه یا جزئیات سیاست دسترسی را افشا
+نمی‌کند و رفتار login و mandatory password change دست‌نخورده است.
+
+این handler business audit event ایجاد نمی‌کند. Phase 9 آغاز نشده است. جزئیات
+قرارداد frontend و آزمون‌های مورد انتظار در `docs/access-denied-ux.md` است.
