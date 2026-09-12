@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import copy
 
-from utils.module_registry import MODULE_SCOPES
+from utils.module_registry import MODULE_BY_ID, MODULE_SCOPES
 
 
 IT_ADMIN = "IT_ADMIN"
@@ -98,7 +98,17 @@ def get_effective_level(user, module, factory_id=None, *, scope_type=None) -> st
         return "MODIFY"
     if not isinstance(user, dict) or user.get("system_role") != USER:
         return "NONE"
-    effective_rank = 0
+    # Explicit deactivation remains authoritative. Runtime callers receive an
+    # active user reloaded by authentication; omitted flags remain compatible
+    # with sanitized actor dictionaries used by policy callers.
+    if user.get("is_active") is False:
+        return "NONE"
+    metadata = MODULE_BY_ID[module]
+    effective_rank = (
+        LEVEL_RANK[metadata["minimum_level"]]
+        if metadata.get("mandatory_access") and expected_scope == "GLOBAL"
+        else 0
+    )
     for grant in user.get("access_grants", []):
         if not isinstance(grant, dict):
             continue
@@ -158,8 +168,8 @@ LANDING_ENDPOINTS = {
 
 
 def first_accessible_endpoint(user: object) -> str | None:
-    """Choose a safe post-login destination without making desk a prerequisite."""
-    if is_top_level_admin(user):
+    """Choose a safe post-login destination from centralized effective access."""
+    if get_effective_level(user, "desk", scope_type="GLOBAL") != "NONE":
         return LANDING_ENDPOINTS["desk"]
     if not isinstance(user, dict) or user.get("system_role") != USER:
         return None

@@ -18,6 +18,14 @@
     row.append(title, select); return row;
   }
 
+  function mandatoryAccessRow(module) {
+    const row=document.createElement('div'); row.className='module-row mandatory-access-row';
+    const title=document.createElement('div'); title.innerHTML=`<strong>${module.label}</strong><div class="access-summary">دسترسی پایه همگانی</div>`;
+    const detail=document.createElement('div'); detail.className='mandatory-access-detail';
+    detail.innerHTML='<span class="badge text-bg-info">فقط مشاهده</span><small>حداقل سطح دسترسی: فقط مشاهده</small><small>دسترسی به میز کار برای همه کاربران سامانه فعال است.</small>';
+    row.append(title,detail); return row;
+  }
+
   function summaryFor(modules) {
     const counts={READ:0,WRITE:0,MODIFY:0}; Object.values(modules || {}).forEach(level => {if(counts[level] !== undefined) counts[level]++;});
     return `${counts.READ} فقط مشاهده، ${counts.WRITE} ثبت اطلاعات، ${counts.MODIFY} ویرایش کامل`;
@@ -32,7 +40,7 @@
   function render(containerId) {
     const root=document.getElementById(containerId), state=states.get(containerId); root.replaceChildren();
     const granular=document.createElement('div'); granular.className='granular-access';
-    if(config.global_modules.length) { const section=document.createElement('section'); section.className='access-section'; section.innerHTML='<h4 class="fs-6">دسترسی سراسری</h4>'; config.global_modules.forEach(m => section.append(selector(containerId,'GLOBAL',null,m.value,m.label))); granular.append(section); }
+    if(config.global_modules.length) { const section=document.createElement('section'); section.className='access-section'; section.innerHTML='<h4 class="fs-6">دسترسی سراسری</h4>'; config.global_modules.forEach(m => section.append(m.mandatory_access ? mandatoryAccessRow(m) : selector(containerId,'GLOBAL',null,m.value,m.label))); granular.append(section); }
     const cards=document.createElement('div'); cards.className='factory-access-cards';
     Object.keys(state.factories).sort().forEach(factoryId => { const factory=config.factories.find(item=>item.id===factoryId); const card=document.createElement('details'); card.className='factory-access-card'; card.open=true;
       const header=document.createElement('summary'); header.className='factory-card-header'; const inactive=factory && !factory.is_active ? ' — غیرفعال' : ''; header.innerHTML=`<strong>${factory?.name || 'کارخانه تاریخی'}${inactive}</strong><span class="access-summary" data-access-summary="${factoryId}"></span>`; card.append(header);

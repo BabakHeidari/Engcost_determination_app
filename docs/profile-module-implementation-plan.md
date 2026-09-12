@@ -214,3 +214,17 @@ export است. Phase 9 در این تغییر آغاز نشده است. جزئی
 
 این handler business audit event ایجاد نمی‌کند. Phase 9 آغاز نشده است. جزئیات
 قرارداد frontend و آزمون‌های مورد انتظار در `docs/access-denied-ux.md` است.
+
+## Phase 8.6 — mandatory Desk baseline
+
+Phase 8.6 complete: registry metadata and the centralized effective-level resolver
+make `desk` READ an implicit minimum for every active authenticated USER; top-level
+roles retain implicit MODIFY. No migration, redundant user grant, or baseline audit
+event is created. The current Desk has no write/modify operations and loads no
+business-module data, so Add/Edit User show an informational Persian READ-only row,
+while serialization omits a new baseline and preserves existing explicit grants.
+Authenticated navigation always includes Desk, its shortcut cards are filtered by
+the source module's effective access, and login resolves to Desk. Other modules
+remain deny-by-default. Future phases must preserve this special floor, distinguish
+implicit policy from explicit changes, and must not permit imports/exports or UI
+cleanup to reintroduce effective `desk = NONE`. Phase 9 was not started.

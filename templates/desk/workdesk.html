@@ -88,6 +88,7 @@
     <!-- Cards Grid -->
     <div class="row g-4">
         
+        {% if module_navigation.get('general_parameters') %}
         <!-- پارامترهای عمومی -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
@@ -102,6 +103,8 @@
             </div>
         </div>
         
+        {% endif %}
+        {% if module_navigation.get('factory_parameters') %}
         <!-- پارامترهای کارخانه -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
@@ -116,6 +119,8 @@
             </div>
         </div>
         
+        {% endif %}
+        {% if module_navigation.get('product') %}
         <!-- پیکربندی محصول -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
@@ -130,6 +135,8 @@
             </div>
         </div>
         
+        {% endif %}
+        {% if module_navigation.get('cost_calculation') %}
         <!-- محاسبه بهای تمام‌شده -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
@@ -144,6 +151,8 @@
             </div>
         </div>
         
+        {% endif %}
+        {% if module_navigation.get('dashboard') %}
         <!-- داشبورد مدیریتی -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
@@ -158,6 +167,8 @@
             </div>
         </div>
         
+        {% endif %}
+        {% if module_navigation.get('profile') %}
         <!-- پروفایل کاربر -->
         <div class="col-md-4">
             <div class="card dashboard-card shadow-sm p-4 text-center">
@@ -171,7 +182,8 @@
                 </a>
             </div>
         </div>
-    </div>
+{% endif %}
+            </div>
 
 </div>
 {% endblock %}

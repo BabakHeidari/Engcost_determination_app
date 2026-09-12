@@ -5,7 +5,8 @@ from __future__ import annotations
 MODULE_REGISTRY = (
     {"id": "cost_calculation", "label": "محاسبه هزینه", "scopes": ("FACTORY",)},
     {"id": "dashboard", "label": "داشبورد", "scopes": ("GLOBAL", "FACTORY")},
-    {"id": "desk", "label": "میز کار", "scopes": ("GLOBAL",)},
+    {"id": "desk", "label": "میز کار", "scopes": ("GLOBAL",),
+     "mandatory_access": True, "minimum_level": "READ"},
     {"id": "factory_parameters", "label": "پارامترهای کارخانه", "scopes": ("FACTORY",)},
     {"id": "general_parameters", "label": "پارامترهای عمومی", "scopes": ("GLOBAL",)},
     {"id": "product", "label": "پیکربندی محصول", "scopes": ("FACTORY",)},
