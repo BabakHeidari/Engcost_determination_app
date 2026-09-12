@@ -1,4 +1,4 @@
-from flask import Blueprint, g, render_template, jsonify, request, session
+from flask import Blueprint, abort, g, render_template, jsonify, request, session
 from utils.auth import get_profile_store, login_required
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.paths import product_path, material_path, parent_path
@@ -11,10 +11,13 @@ product_bp = Blueprint("product", __name__)
 @product_bp.route("/product/production_selection")
 @login_required
 def production_selection():
+    service = FactoryService(get_profile_store())
+    factories = service.get_accessible_factories(g.current_user, "PRODUCT")
+    if not factories:
+        abort(403)
     create_product_metadata(parent_path, product_path,"Factories", ".json")
     product_data = load_json(product_path+".json")
-    service = FactoryService(get_profile_store())
-    allowed = {service.operational_key(factory) for factory in service.get_accessible_factories(g.current_user, "PRODUCT")}
+    allowed = {service.operational_key(factory) for factory in factories}
     if isinstance(product_data, dict) and isinstance(product_data.get("Factory"), dict):
         indexes = [key for key, value in product_data["Factory"].items() if value in allowed]
         product_data = {column: {str(i): values[key] for i, key in enumerate(indexes)} for column, values in product_data.items()}
@@ -26,9 +29,11 @@ def production_selection():
 @login_required
 def product_options():
     """Return lists of distinct factories, categories and subcategories."""
-    __meta_data = load_json(f"{parent_path}\\Factories\\__metadata.json")
     service = FactoryService(get_profile_store())
     factories = service.get_accessible_factories(g.current_user, "PRODUCT")
+    if not factories:
+        abort(403)
+    __meta_data = load_json(f"{parent_path}\\Factories\\__metadata.json")
     raw_hierarchy = __meta_data["product_hierarchy"]
     product_hierarchy = {}
     categories = set()
@@ -140,6 +145,8 @@ def add_subcategory():
 @product_bp.route("/product/configuration")
 @login_required
 def configuration():
+    if not FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "PRODUCT"):
+        abort(403)
     return render_template("product/configuration.html")
 
 @product_bp.route("/product/<product_name>", methods=["POST"])
@@ -172,7 +179,7 @@ def save_bom():
     if not isinstance(bom_path, str) or not isinstance(factory_id, str):
         return jsonify({"status": "error", "message": "زمینه کارخانه معتبر نیست."}), 400
     try:
-        FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "PRODUCT", "WRITE")
+        FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "PRODUCT", "MODIFY")
     except FactoryNotFoundError as exc:
         return jsonify({"status": "error", "message": str(exc)}), 404
     except (FactoryAccessDeniedError, FactoryInactiveError) as exc:

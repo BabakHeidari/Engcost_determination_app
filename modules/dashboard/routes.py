@@ -1,5 +1,5 @@
 from flask import Blueprint, g, render_template, jsonify, request
-from utils.auth import get_profile_store, login_required
+from utils.auth import get_profile_store, login_required, require_access
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.localization import display_value
 
@@ -7,6 +7,7 @@ dashboard_bp = Blueprint("dashboard", __name__)
 
 @dashboard_bp.route("/dashboard")
 @login_required
+@require_access("DASHBOARD", "READ", scope_type="GLOBAL")
 def dashboard():
     factories = FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "DASHBOARD")
     filter_options = {
@@ -29,6 +30,11 @@ def cost_analysis():
             return jsonify({"error": str(exc)}), 404
         except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
             return jsonify({"error": str(exc)}), 403
+    else:
+        # A report without a factory is the explicitly global DASHBOARD action.
+        from utils.profile_authorization import has_access
+        if not has_access(g.current_user, "DASHBOARD", "READ", scope_type="GLOBAL"):
+            return jsonify({"error": "دسترسی به این گزارش مجاز نیست."}), 403
     return jsonify({
         "kpis": {"total_cost": 0, "avg_cost_per_product": 0, "product_count": 0, "top_cost_driver": "—"},
         "breakdown_by_category": [],

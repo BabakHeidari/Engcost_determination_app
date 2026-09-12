@@ -61,3 +61,24 @@ parser قطعی grantهای canonical را به یک سطح مؤثر برای ه
 موجود برمی‌گرداند. مدیران هم‌رتبه به‌جای selector پنل «دسترسی کامل سامانه»
 می‌بینند و grant زائد برای آنها تولید نمی‌شود. پاک‌سازی frontend در فازهای بعد
 باید الگوی «کارت کارخانه ← ردیف ماژول ← دقیقاً یک selector» را حفظ کند.
+
+## اعمال سراسری مجوز در backend (Phase 8)
+
+`utils.profile_authorization` مرجع یگانه مقایسه سطح‌ها است. تابع
+`get_effective_level` برای یک user/module/scope یک مقدار از `NONE`، `READ`،
+`WRITE` یا `MODIFY` می‌دهد و `has_access` رتبه سطح مؤثر را با سطح لازم مقایسه
+می‌کند. آرایه permission فقط ورودی canonical است و ترتیب یا checkbox سمت مرورگر
+authority نیست. مقدار ناشناخته module، scope، level یا factory context به `NONE`
+می‌رسد. دو مدیر سطح بالا بدون grant ذخیره‌شده همیشه `MODIFY` مؤثر دارند و USER
+فقط از grant دقیق همان module و scope استفاده می‌کند؛ `job_title` نادیده است.
+
+routeهای GLOBAL از decorator مشترک `utils.auth` (با resolver مرکزی) و routeهای FACTORY پس از اعتبارسنجی ID در
+`FactoryService.require_access` استفاده می‌کنند. در ماژول MIXED، action سراسری
+و کارخانه‌ای صریحاً جدا هستند و grant یکی دیگری را باز نمی‌کند. کنترل دسترسی
+پیش از loader یا mutation عملیاتی انجام می‌شود. endpointهای مدیریت حساب و ایجاد
+کارخانه، مستقل از هر grant، فقط برای دو نقش سطح بالا باز هستند و قواعد هم‌رتبگی
+و آخرین مدیر در storage/service موجود نیز حفظ می‌شود.
+
+Visual Access Manager فاز 7.1 بدون تغییر مانده است: همان «کارت کارخانه ← ردیف
+ماژول ← یک selector» صرفاً grant canonical را ویرایش می‌کند و مرز امنیتی نیست.
+ماتریس کامل route/action در `docs/authorization-matrix.md` ثبت شده است.
