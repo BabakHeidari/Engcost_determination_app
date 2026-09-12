@@ -16,7 +16,7 @@ def add_user(store, user_id, role, factory_id=None, full_name=None):
         "email": f"{user_id}@example.com",
         "full_name": full_name or user_id,
         "system_role": role, "job_title": full_name or "",
-        "access_grants": ([{"scope_type": "FACTORY", "factory_id": factory_id, "module": "PRODUCT", "permissions": ["READ"]}] if factory_id else []),
+        "access_grants": ([{"scope_type": "FACTORY", "factory_id": factory_id, "module": "product", "permissions": ["READ"]}] if factory_id else []),
         "is_active": True,
         "must_change_password": False,
         "password_hash": f"scrypt:secret-{user_id}",

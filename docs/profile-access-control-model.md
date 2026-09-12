@@ -82,3 +82,11 @@ routeهای GLOBAL از decorator مشترک `utils.auth` (با resolver مرک�
 Visual Access Manager فاز 7.1 بدون تغییر مانده است: همان «کارت کارخانه ← ردیف
 ماژول ← یک selector» صرفاً grant canonical را ویرایش می‌کند و مرز امنیتی نیست.
 ماتریس کامل route/action در `docs/authorization-matrix.md` ثبت شده است.
+
+## تکمیل پوشش ماژول‌ها (Phase 8.3)
+
+شناسه‌های فنی grantable دقیقاً `cost_calculation`، `dashboard`، `desk`،
+`factory_parameters`، `general_parameters`، `product` و `profile` هستند و از
+رجیستری صریح `utils/module_registry.py` می‌آیند. `auth` داخلی است و grantable
+نیست. جزئیات scope، label و routeها در `docs/module-registry.md` ثبت شده است.
+grant غایب USER همچنان `NONE` است و هیچ migration افزایش دسترسی انجام نمی‌دهد.

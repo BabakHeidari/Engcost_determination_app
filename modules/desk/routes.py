@@ -5,6 +5,6 @@ desk_bp = Blueprint("desk", __name__)
 
 @desk_bp.route("/workdesk")
 @login_required
-@require_access("DESK", "READ")
+@require_access("desk", "READ")
 def workdesk():
     return render_template("desk/workdesk.html")

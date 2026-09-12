@@ -51,13 +51,13 @@ def test_peer_roles_equally_edit_ordinary_user_and_job_title_has_no_authority(ma
     response = client_as(app, actor).patch("/api/profile/users/usr_user", json={
         "expected_revision": revision(path, "usr_user"), "job_title": "مدیر کل IT",
         "access_grants": [{"scope_type": "FACTORY", "factory_id": "fac_active",
-                           "module": "PRODUCT", "permissions": ["WRITE", "READ", "READ"]}],
+                           "module": "product", "permissions": ["WRITE", "READ", "READ"]}],
     })
     assert response.status_code == 200
     user = ProfileDataStore(path).get_user_by_id("usr_user")
     assert user["job_title"] == "مدیر کل IT"
     assert user["access_grants"][0]["permissions"] == ["READ", "WRITE"]
-    assert can_access_module(user, "PROFILE") is False
+    assert can_access_module(user, "profile") is False
 
 
 def test_user_cannot_edit_and_unknown_or_inactive_grants_fail_closed(managed_app):
@@ -69,7 +69,7 @@ def test_user_cannot_edit_and_unknown_or_inactive_grants_fail_closed(managed_app
         response = admin.patch("/api/profile/users/usr_user", json={
             "expected_revision": revision(path, "usr_user"),
             "access_grants": [{"scope_type": "FACTORY", "factory_id": factory_id,
-                               "module": "PRODUCT", "permissions": ["READ"]}],
+                               "module": "product", "permissions": ["READ"]}],
         })
         assert response.status_code == 400
 

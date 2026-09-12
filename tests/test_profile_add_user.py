@@ -73,7 +73,7 @@ def test_authorized_creation_stores_only_hash_and_safe_audit(add_user_app):
     ("usr_admin", {"initial_password_confirmation": "different"}, 400),
     ("usr_admin", {"initial_password": "   ", "initial_password_confirmation": "   "}, 400),
     ("usr_admin", {"system_role": "Unknown"}, 400),
-    ("usr_admin", {"access_grants": [{"scope_type": "FACTORY", "factory_id": "missing", "module": "PRODUCT", "permissions": ["READ"]}]}, 400),
+    ("usr_admin", {"access_grants": [{"scope_type": "FACTORY", "factory_id": "missing", "module": "product", "permissions": ["READ"]}]}, 400),
     ("usr_factory", {}, 400),
 ])
 def test_authorization_and_validation_failures(add_user_app, user_id, changes, status):

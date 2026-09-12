@@ -7,22 +7,22 @@
 
 | Route / action | Module | Scope / factory context | Level / rule |
 |---|---|---|---|
-| `GET /workdesk` | `DESK` | GLOBAL | READ |
-| `GET /dashboard` | `DASHBOARD` | GLOBAL؛ فهرست factory جداگانه فیلتر می‌شود | READ |
-| `GET /api/cost_analysis` بدون factory | `DASHBOARD` | GLOBAL | READ |
-| `GET /api/cost_analysis?factory=<id>` | `DASHBOARD` | FACTORY از query | READ |
-| `GET /general_parameters/` | `GENERAL_PARAMETERS` | GLOBAL | READ |
-| `POST /save_materials` | `GENERAL_PARAMETERS` | GLOBAL | MODIFY؛ جدول موجود را ویرایش می‌کند |
-| `GET /factory_parameters/` | `FACTORY_PARAMETERS` | FACTORY؛ فقط subset مجاز | READ حداقل در یک کارخانه |
-| detail/subfield کارخانه | `FACTORY_PARAMETERS` | FACTORY از path canonical | READ |
-| چهار endpoint `save_*` پارامتر کارخانه | `FACTORY_PARAMETERS` | FACTORY از session معتبر متصل به ID و operational key | MODIFY |
-| production selection، configuration و product options | `PRODUCT` | FACTORY؛ فقط subset مجاز | READ حداقل در یک کارخانه |
-| `POST /product/<product>` | `PRODUCT` | FACTORY از form | READ |
-| افزودن product/category/subcategory | `PRODUCT` | FACTORY از JSON body | WRITE (ایجاد رکورد) |
-| `POST /save_bom` | `PRODUCT` | FACTORY از session معتبر recipe | MODIFY (ویرایش BOM موجود) |
-| صفحه محاسبه هزینه | `COST_CALCULATION` | FACTORY؛ catalog فقط subset مجاز | READ حداقل در یک کارخانه |
-| `POST /cost/get_cost` و `get_costs_bulk` | `COST_CALCULATION` | FACTORY از هر payload item | READ؛ محاسبه/گزارش mutation نیست |
-| `GET /profile/profile` | `PROFILE` | GLOBAL | READ؛ USER فقط view model امن خودش را می‌بیند |
+| `GET /workdesk` | `desk` | GLOBAL | READ |
+| `GET /dashboard` | `dashboard` | GLOBAL؛ فهرست factory جداگانه فیلتر می‌شود | READ |
+| `GET /api/cost_analysis` بدون factory | `dashboard` | GLOBAL | READ |
+| `GET /api/cost_analysis?factory=<id>` | `dashboard` | FACTORY از query | READ |
+| `GET /general_parameters/` | `general_parameters` | GLOBAL | READ |
+| `POST /save_materials` | `general_parameters` | GLOBAL | MODIFY؛ جدول موجود را ویرایش می‌کند |
+| `GET /factory_parameters/` | `factory_parameters` | FACTORY؛ فقط subset مجاز | READ حداقل در یک کارخانه |
+| detail/subfield کارخانه | `factory_parameters` | FACTORY از path canonical | READ |
+| چهار endpoint `save_*` پارامتر کارخانه | `factory_parameters` | FACTORY از session معتبر متصل به ID و operational key | MODIFY |
+| production selection، configuration و product options | `product` | FACTORY؛ فقط subset مجاز | READ حداقل در یک کارخانه |
+| `POST /product/<product>` | `product` | FACTORY از form | READ |
+| افزودن product/category/subcategory | `product` | FACTORY از JSON body | WRITE (ایجاد رکورد) |
+| `POST /save_bom` | `product` | FACTORY از session معتبر recipe | MODIFY (ویرایش BOM موجود) |
+| صفحه محاسبه هزینه | `cost_calculation` | FACTORY؛ catalog فقط subset مجاز | READ حداقل در یک کارخانه |
+| `POST /cost/get_cost` و `get_costs_bulk` | `cost_calculation` | FACTORY از هر payload item | READ؛ محاسبه/گزارش mutation نیست |
+| `GET /profile/profile` | `profile` | GLOBAL | READ؛ USER فقط view model امن خودش را می‌بیند |
 | create/edit/reset user | administrative | GLOBAL | فقط نقش سطح بالا؛ grant بی‌اثر است |
 | create factory | administrative | GLOBAL | فقط نقش سطح بالا؛ grant بی‌اثر است |
 | login/change-password/logout | authentication | GLOBAL | قواعد session/password؛ module grant ندارد |
