@@ -30,6 +30,7 @@ from utils.profile_authorization import (
     would_leave_active_admin,
 )
 from utils.module_registry import GRANTABLE_MODULES
+from utils.audit import new_event, summarize_grant_changes, validate_safe_event
 
 
 if os.name == "nt":
@@ -46,6 +47,12 @@ REQUIRED_COLLECTIONS = (
     "user_permission_overrides",
     "audit_events",
 )
+LEGACY_AUDIT_ACTIONS = {
+    "user.created": "USER_CREATED",
+    "user.updated": "USER_UPDATED",
+    "user.password_changed": "PASSWORD_CHANGED",
+    "user.password_reset": "PASSWORD_RESET_BY_ADMIN",
+}
 
 
 def _needs_module_id_normalization(data):
@@ -254,8 +261,10 @@ def validate_data(data: dict) -> dict:
             raise ProfileDataValidationError(f"Duplicate audit event id: {event_id}")
         if event.get("factory_id") is not None and event["factory_id"] not in factory_ids:
             raise ProfileDataValidationError(f"Audit event {event_id} references an unknown factory")
-        if "password_hash" in json.dumps(event, ensure_ascii=False).casefold():
-            raise ProfileDataValidationError(f"Audit event {event_id} contains forbidden secret material")
+        try:
+            validate_safe_event(event)
+        except ValueError as exc:
+            raise ProfileDataValidationError(f"Audit event {event_id}: {exc}") from None
         audit_ids.add(event_id)
     return data
 
@@ -276,12 +285,13 @@ def public_user(user: dict) -> dict:
 
 
 class ProfileDataStore:
-    def __init__(self, path, backup_limit=5, lock_timeout=10.0):
+    def __init__(self, path, backup_limit=5, lock_timeout=10.0, audit_event_limit=1000):
         self.path = Path(path).expanduser().resolve()
         self.lock_path = self.path.with_name(self.path.name + ".lock")
         self.backup_dir = self.path.parent / "backups"
         self.backup_limit = max(0, int(backup_limit))
         self.lock_timeout = float(lock_timeout)
+        self.audit_event_limit = max(1, int(audit_event_limit))
 
     @classmethod
     def from_environment(cls, instance_path, environ=None):
@@ -294,6 +304,7 @@ class ProfileDataStore:
             path,
             backup_limit=int(environ.get("APP_DATA_BACKUP_LIMIT", "5")),
             lock_timeout=float(environ.get("APP_DATA_LOCK_TIMEOUT", "10")),
+            audit_event_limit=int(environ.get("APP_AUDIT_EVENT_LIMIT", "1000")),
         )
 
     def _lock(self, exclusive):
@@ -346,13 +357,18 @@ class ProfileDataStore:
         automatically. Unknown versions still fail closed.
         """
         normalize_module_ids = False
+        normalize_audit = False
         descriptor = self._lock(False)
         try:
             data = self._load_raw_unlocked()
             version = data.get("schema_version") if isinstance(data, dict) else None
             if version == SUPPORTED_SCHEMA_VERSION:
                 normalize_module_ids = _needs_module_id_normalization(data)
-                if not normalize_module_ids:
+                normalize_audit = any(
+                    event.get("action") in LEGACY_AUDIT_ACTIONS or "details" in event
+                    for event in data.get("audit_events", []) if isinstance(event, dict)
+                )
+                if not normalize_module_ids and not normalize_audit:
                     validate_data(data)
                     return {"migrated": False, "review_user_ids": []}
             if version != 1:
@@ -361,10 +377,39 @@ class ProfileDataStore:
         finally:
             self._unlock(descriptor)
         if normalize_module_ids:
-            return self.normalize_module_ids()
+            self.normalize_module_ids()
+        if normalize_audit:
+            return self.normalize_audit_events()
         # migrate_access_model obtains an exclusive lock and checks the version
         # again, making concurrent first requests safe and idempotent.
         return self.migrate_access_model()
+
+    def normalize_audit_events(self):
+        """Normalize known events emitted by earlier phases without inventing history."""
+        descriptor = self._lock(True)
+        try:
+            data = self._load_raw_unlocked()
+            changed = False
+            for event in data.get("audit_events", []):
+                action = LEGACY_AUDIT_ACTIONS.get(event.get("action"))
+                if action:
+                    event["action"] = action
+                    changed = True
+                if "details" in event:
+                    event["changes"] = event.pop("details")
+                    changed = True
+            if not changed:
+                validate_data(data)
+                return {"migrated": False, "review_user_ids": []}
+            self._apply_audit_retention(data)
+            data["metadata"]["revision"] += 1
+            data["metadata"]["updated_at"] = _utc_now()
+            data["metadata"]["audit_normalization"] = {"completed_at": _utc_now()}
+            validate_data(data)
+            self._atomic_write(data)
+            return {"migrated": True, "review_user_ids": []}
+        finally:
+            self._unlock(descriptor)
 
     def normalize_module_ids(self):
         """Atomically upgrade prior canonical uppercase IDs to directory IDs.
@@ -530,12 +575,24 @@ class ProfileDataStore:
             if os.path.exists(temporary_name):
                 os.unlink(temporary_name)
 
+    def _apply_audit_retention(self, data):
+        """Keep the documented bounded live window in the canonical document."""
+        overflow = len(data["audit_events"]) - self.audit_event_limit
+        if overflow <= 0:
+            return
+        del data["audit_events"][:overflow]
+        retention = data["metadata"].setdefault("audit_retention", {})
+        retention["live_limit"] = self.audit_event_limit
+        retention["discarded_count"] = retention.get("discarded_count", 0) + overflow
+        retention["last_pruned_at"] = _utc_now()
+
     def _mutate(self, callback: Callable[[dict], object]):
         self.ensure_current_schema()
         descriptor = self._lock(True)
         try:
             data = self._load_unlocked()
             result = callback(data)
+            self._apply_audit_retention(data)
             data["metadata"]["revision"] += 1
             data["metadata"]["updated_at"] = _utc_now()
             validate_data(data)
@@ -595,6 +652,7 @@ class ProfileDataStore:
             data = self._load_unlocked()
             result, changed = callback(data)
             if changed:
+                self._apply_audit_retention(data)
                 data["metadata"]["revision"] += 1
                 data["metadata"]["updated_at"] = _utc_now()
                 validate_data(data)
@@ -619,14 +677,9 @@ class ProfileDataStore:
                 "updated_at": now,
                 "revision": user.get("revision", 1) + 1,
             })
-            data["audit_events"].append({
-                "id": f"aud_{uuid.uuid4().hex}",
-                "occurred_at": now,
-                "actor_user_id": user_id,
-                "action": "user.password_changed",
-                "target_type": "user",
-                "target_id": user_id,
-            })
+            data["audit_events"].append(new_event(
+                user_id, "PASSWORD_CHANGED", "user", user_id, occurred_at=now
+            ))
             return public_user(user), True
         return self._mutate_conditionally(change)
 
@@ -691,12 +744,16 @@ class ProfileDataStore:
                 "last_login_at": None, "password_changed_at": None, "revision": 1,
             }
             data["users"].append(new_user)
-            data["audit_events"].append({
-                "id": f"aud_{uuid.uuid4().hex}", "occurred_at": now,
-                "actor_user_id": actor_user_id, "action": "user.created",
-                "target_type": "user", "target_id": new_user["id"],
-                "details": {"system_role": target_role},
-            })
+            data["audit_events"].append(new_event(
+                actor_user_id, "USER_CREATED", "user", new_user["id"],
+                changes={"system_role": target_role}, occurred_at=now,
+            ))
+            initial_grants = summarize_grant_changes([], grants)
+            if initial_grants:
+                data["audit_events"].append(new_event(
+                    actor_user_id, "ACCESS_GRANTS_CHANGED", "user", new_user["id"],
+                    changes={"grants": initial_grants}, occurred_at=now,
+                ))
             return public_user(new_user)
 
         return self._mutate(change)
@@ -761,7 +818,11 @@ class ProfileDataStore:
             if new_role in TOP_LEVEL_ROLES:
                 grants = []
             now = _utc_now()
-            before = {"system_role": target["system_role"], "is_active": target.get("is_active", False)}
+            before = {
+                "system_role": target["system_role"], "job_title": target.get("job_title", ""),
+                "is_active": target.get("is_active", False),
+                "access_grants": copy.deepcopy(target.get("access_grants", [])),
+            }
             target.update(updates)
             target.update({"email": email, "email_normalized": email,
                            "system_role": new_role, "access_grants": grants,
@@ -769,17 +830,24 @@ class ProfileDataStore:
                            "revision": target.get("revision", 1) + 1})
             if "email" in updates:
                 target["username"] = email
-            changed_fields = sorted(key for key in updates if key != "access_grants")
-            if grants != raw_grants or "access_grants" in updates:
-                changed_fields.append("access_grants")
-            details = {"changed_fields": sorted(set(changed_fields))}
-            if "system_role" in updates:
-                details["system_role"] = {"before": before["system_role"], "after": new_role}
-            if "is_active" in updates:
-                details["is_active"] = {"before": before["is_active"], "after": new_active}
-            data["audit_events"].append({"id": f"aud_{uuid.uuid4().hex}", "occurred_at": now,
-                "actor_user_id": actor_user_id, "action": "user.updated", "target_type": "user",
-                "target_id": user_id, "details": details})
+            changed_fields = sorted(key for key in updates if key not in {"access_grants", "system_role", "job_title", "is_active"})
+            data["audit_events"].append(new_event(
+                actor_user_id, "USER_UPDATED", "user", user_id,
+                changes={"changed_fields": changed_fields}, occurred_at=now,
+            ))
+            if before["system_role"] != new_role:
+                data["audit_events"].append(new_event(actor_user_id, "SYSTEM_ROLE_CHANGED", "user", user_id,
+                    changes={"before": before["system_role"], "after": new_role}, occurred_at=now))
+            if before["job_title"] != target.get("job_title", ""):
+                data["audit_events"].append(new_event(actor_user_id, "JOB_TITLE_CHANGED", "user", user_id,
+                    changes={"before": before["job_title"], "after": target.get("job_title", "")}, occurred_at=now))
+            grant_changes = summarize_grant_changes(before["access_grants"], grants)
+            if grant_changes:
+                data["audit_events"].append(new_event(actor_user_id, "ACCESS_GRANTS_CHANGED", "user", user_id,
+                    changes={"grants": grant_changes}, occurred_at=now))
+            if before["is_active"] != new_active:
+                action = "USER_ACTIVATED" if new_active else "USER_DEACTIVATED"
+                data["audit_events"].append(new_event(actor_user_id, action, "user", user_id, occurred_at=now))
             return public_user(target)
         return self._mutate(change)
 
@@ -802,10 +870,9 @@ class ProfileDataStore:
             target.update({"password_hash": password_hash, "password_scheme": "werkzeug",
                 "must_change_password": True, "password_changed_at": now, "updated_at": now,
                 "updated_by_id": actor_user_id, "revision": target.get("revision", 1) + 1})
-            data["audit_events"].append({"id": f"aud_{uuid.uuid4().hex}", "occurred_at": now,
-                "actor_user_id": actor_user_id, "action": "user.password_reset",
-                "target_type": "user", "target_id": user_id,
-                "details": {"must_change_password": True}})
+            data["audit_events"].append(new_event(
+                actor_user_id, "PASSWORD_RESET_BY_ADMIN", "user", user_id, occurred_at=now
+            ))
             return public_user(target)
         return self._mutate(change)
 
@@ -911,13 +978,10 @@ class ProfileDataStore:
                 "revision": 1,
             }
             data["factories"].append(factory)
-            data["audit_events"].append({
-                "id": f"aud_{uuid.uuid4().hex}", "occurred_at": now,
-                "actor_user_id": actor_user_id, "action": "FACTORY_CREATED",
-                "target_type": "factory", "target_id": factory["id"],
-                "factory_id": factory["id"],
-                "details": {"code": code, "name": name},
-            })
+            data["audit_events"].append(new_event(
+                actor_user_id, "FACTORY_CREATED", "factory", factory["id"],
+                factory_id=factory["id"], changes={"code": code, "name": name}, occurred_at=now,
+            ))
             return {key: copy.deepcopy(factory.get(key)) for key in ("id", "code", "name", "location", "is_active")}
 
         return self._mutate(change)
@@ -934,8 +998,10 @@ class ProfileDataStore:
             event.setdefault("id", f"aud_{uuid.uuid4().hex}")
             event.setdefault("occurred_at", _utc_now())
             _reject_plaintext_passwords(event, "audit_event")
-            if "password_hash" in json.dumps(event, ensure_ascii=False).casefold():
-                raise ProfileDataValidationError("Audit events must not contain password hashes")
+            try:
+                validate_safe_event(event)
+            except ValueError as exc:
+                raise ProfileDataValidationError(str(exc)) from None
             if any(item["id"] == event["id"] for item in data["audit_events"]):
                 raise ProfileDataConflictError("Audit event id already exists")
             data["audit_events"].append(event)

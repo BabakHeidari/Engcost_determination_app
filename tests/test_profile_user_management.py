@@ -108,7 +108,7 @@ def test_password_reset_is_separate_safe_and_stale_edits_conflict(managed_app):
     assert not check_password_hash(raw["password_hash"], PASSWORD)
     assert raw["must_change_password"] is True and raw["password_changed_at"]
     event = ProfileDataStore(path).load_data()["audit_events"][-1]
-    assert event["action"] == "user.password_reset" and "password_hash" not in json.dumps(event)
+    assert event["action"] == "PASSWORD_RESET_BY_ADMIN" and "password_hash" not in json.dumps(event)
     stale = client_as(app, "usr_it").patch("/api/profile/users/usr_user", json={
         "expected_revision": old_revision, "full_name": "از دست رفته",
     })

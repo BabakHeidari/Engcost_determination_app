@@ -7,7 +7,9 @@ from utils.profile_authorization import (
     can_manage_factories,
     get_effective_access,
     is_top_level_admin,
+    has_access,
 )
+from utils.audit import AUDIT_ACTION_LABELS
 from utils.factory_service import FactoryService
 from utils.profile_store import ProfileStoreError
 from utils.profile_access_manager import grants_to_access_state
@@ -19,6 +21,34 @@ ROLE_LABELS = {
     "USER": "کاربر",
 }
 PERMISSION_LABELS = {"READ": "فقط مشاهده", "WRITE": "ثبت اطلاعات", "MODIFY": "ویرایش کامل"}
+LEVEL_LABELS = {"NONE": "بدون دسترسی", **PERMISSION_LABELS}
+AUDIT_PAGE_LIMIT = 100
+
+
+def _can_view_event(user, event, admin):
+    if admin:
+        return True
+    if event.get("actor_user_id") != user["id"] and event.get("target_id") != user["id"]:
+        return False
+    module_id, factory_id = event.get("module_id"), event.get("factory_id")
+    if module_id:
+        return has_access(user, module_id, "READ", factory_id,
+                          scope_type="FACTORY" if factory_id else "GLOBAL")
+    # A personal user-lifecycle event is safe; a factory event without a
+    # canonical module cannot be authorized for an ordinary user.
+    return event.get("target_type") == "user" and factory_id is None
+
+
+def _audit_summary(event, factory_names):
+    grants = event.get("changes", {}).get("grants", []) if isinstance(event.get("changes"), dict) else []
+    lines = []
+    for item in grants:
+        module_id = item.get("module_id")
+        if module_id not in MODULE_LABELS:
+            continue
+        scope = "سراسری" if item.get("scope_type") == "GLOBAL" else factory_names.get(item.get("factory_id"), "کارخانه مجاز")
+        lines.append(f'{scope} / {MODULE_LABELS[module_id]}: {LEVEL_LABELS.get(item.get("before"), "نامشخص")} ← {LEVEL_LABELS.get(item.get("after"), "نامشخص")}')
+    return lines
 
 
 def _public_user(user):
@@ -68,10 +98,18 @@ def build_profile_view_model(store, authenticated_user):
             g["scope_type"] == "FACTORY" and g["factory_id"] == f["id"] for g in current["access_grants"]
         )
     ]
-    visible_ids = {u["id"] for u in visible_users}
-    audit_events = [{"id": e["id"], "occurred_at": e.get("occurred_at"), "action": e.get("action", ""), "outcome": e.get("outcome")}
-                    for e in data["audit_events"] if e.get("actor_user_id") == current["id"] or e.get("target_id") == current["id"] or (admin and e.get("target_id") in visible_ids)]
+    user_names = {u["id"]: u.get("full_name") or u.get("username") or "کاربر" for u in data["users"]}
+    audit_events = [{
+        "id": e["id"], "occurred_at": e.get("occurred_at"), "action": e.get("action", ""),
+        "action_label": AUDIT_ACTION_LABELS.get(e.get("action"), e.get("action", "رویداد ثبت‌شده")),
+        "actor_label": user_names.get(e.get("actor_user_id"), "کاربر سامانه"),
+        "target_label": (user_names.get(e.get("target_id"), "کاربر") if e.get("target_type") == "user"
+                         else factory_names.get(e.get("target_id"), "کارخانه")),
+        "module_label": MODULE_LABELS.get(e.get("module_id")),
+        "summary_lines": _audit_summary(e, factory_names),
+    } for e in data["audit_events"] if _can_view_event(current, e, admin)]
     audit_events.sort(key=lambda e: e.get("occurred_at") or "", reverse=True)
+    audit_events = audit_events[:AUDIT_PAGE_LIMIT]
     return {
         "current_user": _public_user(current), "full_access": admin,
         "effective_grants": _group_grants(current, factory_names),
