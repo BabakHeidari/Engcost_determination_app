@@ -90,3 +90,13 @@ Visual Access Manager فاز 7.1 بدون تغییر مانده است: همان
 رجیستری صریح `utils/module_registry.py` می‌آیند. `auth` داخلی است و grantable
 نیست. جزئیات scope، label و routeها در `docs/module-registry.md` ثبت شده است.
 grant غایب USER همچنان `NONE` است و هیچ migration افزایش دسترسی انجام نمی‌دهد.
+
+## تجربه دسترسی محدود (Phase 8.4)
+
+handler سراسری 403 قواعد بالا را تغییر نمی‌دهد: صفحه‌های مرورگر پاسخ فارسی RTL
+با status واقعی 403 می‌گیرند و API/JSON/XHR پاسخ machine-readable JSON می‌گیرند.
+صفحه هیچ نام کارخانه، جزئیات grant، سطح لازم یا متن exception را نشان نمی‌دهد و
+مقصد بازیابی را فقط از نخستین endpoint دارای دسترسی مؤثر انتخاب می‌کند؛ در نبود
+grant، خروج امن مقصد نهایی است. کاربر بدون احراز هویت همچنان به login هدایت
+می‌شود و هیچ denied request به business audit event تبدیل نمی‌شود. قرارداد کامل
+در `docs/access-denied-ux.md` ثبت شده است.

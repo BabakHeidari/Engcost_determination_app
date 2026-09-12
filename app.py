@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 # from functools import wraps
 from modules.auth.routes import auth_bp
 from modules.desk.routes import desk_bp
@@ -11,7 +11,7 @@ from modules.profile.routes import profile_bp
 import secrets
 from utils.auth import load_current_user
 from utils.module_registry import MODULE_REGISTRY
-from utils.profile_authorization import get_effective_level, is_top_level_admin
+from utils.profile_authorization import first_accessible_endpoint, get_effective_level, is_top_level_admin
 from utils.localization import DEFAULT_DIRECTION, DEFAULT_LANGUAGE, DEFAULT_LOCALE, display_value, format_jalali_date, format_jalali_datetime, format_persian_digits, parse_jalali_input, t
 from utils.demo_data import persian_demo_enabled
 
@@ -30,6 +30,41 @@ app.register_blueprint(general_parameters_bp)
 app.register_blueprint(factory_parameters_bp)
 app.register_blueprint(cost_calculation_bp, url_prefix="/cost")
 app.register_blueprint(profile_bp)
+
+
+def _expects_json_error():
+    """Keep API, JSON, and XHR failures machine-readable."""
+    return (
+        request.path.startswith("/api/")
+        or request.is_json
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or request.accept_mimetypes.best == "application/json"
+    )
+
+
+@app.errorhandler(403)
+def forbidden(_error):
+    """Present authorization failures without changing their HTTP semantics."""
+    if _expects_json_error():
+        return jsonify({
+            "success": False,
+            "error": "forbidden",
+            "message": "سطح دسترسی فعلی حساب شما برای انجام این عملیات کافی نیست.",
+        }), 403
+
+    current_user = load_current_user()
+    fallback_endpoint = first_accessible_endpoint(current_user)
+    if fallback_endpoint:
+        fallback_url = url_for(fallback_endpoint)
+        fallback_label = "رفتن به میز کار" if fallback_endpoint == "desk.workdesk" else "رفتن به بخش در دسترس"
+    else:
+        fallback_url = url_for("auth.logout")
+        fallback_label = "خروج امن"
+    return render_template(
+        "errors/403.html",
+        fallback_url=fallback_url,
+        fallback_label=fallback_label,
+    ), 403
 
 app.jinja_env.filters["display_value"] = display_value
 app.jinja_env.filters["persian_digits"] = format_persian_digits

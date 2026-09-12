@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}دسترسی محدود | سامانه بهایاب{% endblock %}
+
+{% block content %}
+<section class="access-denied" aria-labelledby="access-denied-title">
+    <div class="access-denied__card" role="alert">
+        <div class="access-denied__icon" aria-hidden="true">
+            <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <p class="access-denied__eyebrow">دسترسی محدود</p>
+        <h1 id="access-denied-title">دسترسی به این بخش برای شما فعال نیست</h1>
+        <p class="access-denied__message">
+            این بخش در سطح دسترسی فعلی حساب شما در دسترس نیست.<br>
+            در صورت نیاز، می‌توانید با مدیر سامانه برای بررسی سطح دسترسی خود تماس بگیرید.
+        </p>
+        <div class="access-denied__actions">
+            <a class="btn btn-primary" href="{{ fallback_url }}">{{ fallback_label }}</a>
+            <a class="btn btn-outline-secondary" id="accessDeniedBack" href="{{ fallback_url }}">
+                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                بازگشت
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('accessDeniedBack').addEventListener('click', function (event) {
+        if (window.history.length > 1) {
+            event.preventDefault();
+            window.history.back();
+        }
+    });
+</script>
+{% endblock %}

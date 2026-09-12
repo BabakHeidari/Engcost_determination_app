@@ -81,8 +81,8 @@ def factory_details(factory_name):
         factory_record = FactoryService(get_profile_store()).require_access(factory_name, g.current_user, "factory_parameters")
     except FactoryNotFoundError as exc:
         return render_template("factory_parameters/unavailable.html", message=str(exc)), 404
-    except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
-        return render_template("factory_parameters/unavailable.html", message=str(exc)), 403
+    except (FactoryAccessDeniedError, FactoryInactiveError):
+        abort(403)
     factory = FactoryService(get_profile_store()).operational_key(factory_record)
     session["factory_id"] = factory_record["id"]
     session["factory_name"] = factory
@@ -164,8 +164,8 @@ def subfield(factory_name, Subfield):
         factory_record = FactoryService(get_profile_store()).require_access(factory_name, g.current_user, "factory_parameters")
     except FactoryNotFoundError as exc:
         return render_template("factory_parameters/unavailable.html", message=str(exc)), 404
-    except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
-        return render_template("factory_parameters/unavailable.html", message=str(exc)), 403
+    except (FactoryAccessDeniedError, FactoryInactiveError):
+        abort(403)
     operational_key = FactoryService(get_profile_store()).operational_key(factory_record)
     session["factory_id"] = factory_record["id"]
     session["factory_name"] = operational_key
