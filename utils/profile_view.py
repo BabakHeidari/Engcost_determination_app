@@ -116,7 +116,7 @@ def build_profile_view_model(store, authenticated_user):
         "users": [_public_user(u) for u in visible_users],
         "factories": visible_factories,
         "audit_events": audit_events,
-        "features": {"add_user": can_manage_users(current), "edit_user": can_manage_users(current), "add_factory": can_manage_factories(current), "edit_permissions": can_manage_users(current)},
+        "features": {"add_user": can_manage_users(current), "edit_user": can_manage_users(current), "add_factory": can_manage_factories(current), "edit_permissions": can_manage_users(current), "excel_export": is_top_level_admin(current)},
         "access_manager": {
             "factories": [dict(FactoryService._public(f), is_active=bool(f.get("is_active", True))) for f in data["factories"]],
             "global_modules": [{
