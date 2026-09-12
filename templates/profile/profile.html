@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">{% endblock %}
 {% block content %}
 <main class="profile-page" dir="rtl">
-  <button class="btn btn-secondary mb-3" type="button" onclick="history.back()">بازگشت</button>
+  <button class="btn btn-secondary mb-3" id="profileBackButton" type="button">بازگشت</button>
   <header class="profile-hero">
     <div><p class="profile-kicker">پروفایل کاربر</p><h2>{{ profile.current_user.full_name }}</h2></div>
     <div class="hero-actions"><span class="role-badge">{{ profile.current_user.system_role_label }}</span>{% if profile.features.add_user %}<button class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#createUserModal">افزودن کاربر</button>{% endif %}{% if profile.features.add_factory %}<button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#createFactoryModal">افزودن کارخانه جدید</button>{% endif %}</div>
@@ -37,7 +38,7 @@
     <h3>کاربران قابل مشاهده</h3>
     {% if profile.users %}
     <div class="table-responsive"><table><thead><tr><th>نام</th><th>نقش سامانه</th><th>عنوان شغلی</th>{% if profile.features.edit_user %}<th>عملیات</th>{% endif %}</tr></thead><tbody>
-      {% for item in profile.users %}<tr><td>{{ item.full_name }}</td><td>{{ item.system_role_label }}</td><td>{{ item.job_title or 'ثبت نشده' }}</td>{% if profile.features.edit_user %}<td><button type="button" class="btn btn-sm edit-user" data-user='{{ item|tojson }}' data-bs-toggle="modal" data-bs-target="#editUserModal">مدیریت</button></td>{% endif %}</tr>{% endfor %}
+      {% for item in profile.users %}<tr><td>{{ item.full_name }}</td><td>{{ item.system_role_label }}</td><td>{{ item.job_title or 'ثبت نشده' }}</td>{% if profile.features.edit_user %}<td><button type="button" class="btn btn-sm edit-user" data-user-id="{{ item.id }}" data-bs-toggle="modal" data-bs-target="#editUserModal">مدیریت</button></td>{% endif %}</tr>{% endfor %}
     </tbody></table></div>
     {% else %}<p class="empty-state">کاربر قابل مشاهده‌ای وجود ندارد.</p>{% endif %}
   </section>
@@ -77,30 +78,6 @@
       </form>
     </div></div>
   </div>
-  <script id="accessManagerConfig" type="application/json">{{ profile.access_manager|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/profile-access-manager.js') }}"></script>
-  <script>
-  (() => {
-    const form = document.getElementById('editUserForm'); const message = document.getElementById('editUserMessage');
-    document.querySelectorAll('.edit-user').forEach(button => button.addEventListener('click', () => {
-      const user = JSON.parse(button.dataset.user); form.reset(); message.className = 'alert d-none';
-      form.elements.user_id.value = user.id;
-      form.elements.expected_revision.value = user.revision;
-      for (const key of ['full_name','email','job_title','system_role']) form.elements[key].value = user[key];
-      form.elements.is_active.checked = user.is_active; window.profileAccessManager.load('editAccessManager', user.access_state || {global:{},factories:{}}); window.profileAccessManager.toggleRole('editAccessManager', user.system_role);
-      form.elements.reset_password.value = ''; form.elements.reset_confirmation.value = '';
-    }));
-    const show = (text, ok=false) => { message.textContent=text; message.className=`alert alert-${ok?'success':'danger'}`; };
-    form.elements.system_role.addEventListener('change', () => window.profileAccessManager.toggleRole('editAccessManager', form.elements.system_role.value));
-    form.addEventListener('submit', async event => { event.preventDefault(); const submit=event.submitter; submit.disabled=true;
-      const id=form.elements.user_id.value; const payload={expected_revision:Number(form.elements.expected_revision.value), full_name:form.elements.full_name.value, email:form.elements.email.value, job_title:form.elements.job_title.value, system_role:form.elements.system_role.value, is_active:form.elements.is_active.checked, access_grants:window.profileAccessManager.serialize('editAccessManager')};
-      try { const response=await fetch(`/api/profile/users/${encodeURIComponent(id)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const result=await response.json(); if(!response.ok){show(result.message||'ویرایش ناموفق بود.');return;} window.location.reload(); } catch(_){show('ارتباط با سرور برقرار نشد.');} finally {submit.disabled=false;}
-    });
-    document.getElementById('resetPasswordSubmit').addEventListener('click', async () => { const password=form.elements.reset_password.value; if(password !== form.elements.reset_confirmation.value){show('گذرواژه و تکرار آن یکسان نیستند.');return;} const id=form.elements.user_id.value;
-      const response=await fetch(`/api/profile/users/${encodeURIComponent(id)}/password-reset`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password,password_confirmation:form.elements.reset_confirmation.value,expected_revision:Number(form.elements.expected_revision.value)})}); const result=await response.json(); if(!response.ok){show(result.message||'بازنشانی ناموفق بود.');return;} show('گذرواژه بازنشانی شد. کاربر در ورود بعدی باید آن را تغییر دهد.',true); form.elements.expected_revision.value=result.user.revision; form.elements.reset_password.value=''; form.elements.reset_confirmation.value='';
-    });
-  })();
-  </script>
   {% endif %}
 
   {% if profile.features.add_user %}
@@ -123,39 +100,6 @@
       </form>
     </div></div>
   </div>
-  <script>
-  (() => {
-    const modal = document.getElementById('createUserModal');
-    const form = document.getElementById('createUserForm');
-    const message = document.getElementById('createUserMessage');
-    const role = document.getElementById('newUserRole');
-    const fullAccessHelp = document.getElementById('fullAccessHelp');
-    window.profileAccessManager.load('createAccessManager', {global:{},factories:{}});
-    const passwordFields = [document.getElementById('newUserInitialPassword'), document.getElementById('newUserInitialPasswordConfirmation')];
-    const clearPasswords = () => passwordFields.forEach(field => { field.value = ''; });
-    modal.addEventListener('hidden.bs.modal', clearPasswords);
-    role.addEventListener('change', () => {
-      const isAdmin = role.selectedOptions[0]?.dataset.isAdmin === 'true';
-      fullAccessHelp.hidden = !isAdmin;
-      window.profileAccessManager.toggleRole('createAccessManager', role.value);
-    });
-    role.dispatchEvent(new Event('change'));
-    form.addEventListener('submit', async event => {
-      event.preventDefault();
-      message.className = 'alert d-none';
-      if (passwordFields[0].value !== passwordFields[1].value) {
-        message.textContent = 'گذرواژه و تکرار آن یکسان نیستند.'; message.className = 'alert alert-danger'; return;
-      }
-      const payload = Object.fromEntries(new FormData(form).entries());
-      payload.access_grants = window.profileAccessManager.serialize('createAccessManager');
-      const response = await fetch('{{ url_for("profile.create_user") }}', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
-      const result = await response.json();
-      if (!response.ok) { message.textContent = result.message || 'ذخیره کاربر ناموفق بود.'; message.className = 'alert alert-danger'; return; }
-      clearPasswords();
-      window.location.reload();
-    });
-  })();
-  </script>
   {% endif %}
 
   {% if profile.features.add_factory %}
@@ -173,52 +117,17 @@
       </form>
     </div></div>
   </div>
-  <script>
-  (() => {
-    const modal = document.getElementById('createFactoryModal');
-    const form = document.getElementById('createFactoryForm');
-    const message = document.getElementById('createFactoryMessage');
-    const notification = document.getElementById('profileNotification');
-    const addFactoryOption = factory => {
-      const option = document.createElement('option');
-      option.value = factory.id;
-      option.textContent = `${factory.name} (${factory.code})`;
-      window.location.reload();
-    };
-    form.addEventListener('submit', async event => {
-      event.preventDefault();
-      message.className = 'alert d-none';
-      const submit = document.getElementById('createFactorySubmit');
-      submit.disabled = true;
-      try {
-        const response = await fetch('{{ url_for("profile.create_factory") }}', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form).entries()))});
-        const result = await response.json();
-        if (!response.ok) { message.textContent = result.message || 'ذخیره کارخانه ناموفق بود.'; message.className = 'alert alert-danger'; return; }
-        const factory = result.factory;
-        const item = document.createElement('li');
-        item.dataset.factoryId = factory.id;
-        const title = document.createElement('strong'); title.textContent = factory.name;
-        const code = document.createElement('span'); code.className = 'technical-value'; code.textContent = factory.code;
-        item.append(title, code);
-        if (factory.location) { const location = document.createElement('small'); location.textContent = factory.location; item.appendChild(location); }
-        document.getElementById('factoryList').appendChild(item);
-        document.getElementById('factoryEmptyState').classList.add('d-none');
-        document.getElementById('grantFactoryEmptyState')?.classList.add('d-none');
-        addFactoryOption(factory);
-        form.reset();
-        bootstrap.Modal.getOrCreateInstance(modal).hide();
-        notification.textContent = 'کارخانه با موفقیت ایجاد شد و اکنون برای تخصیص دسترسی در دسترس است.';
-        notification.className = 'alert alert-success mt-3';
-      } catch (_error) {
-        message.textContent = 'ارتباط با سرور برقرار نشد.'; message.className = 'alert alert-danger';
-      } finally { submit.disabled = false; }
-    });
-    modal.addEventListener('hidden.bs.modal', () => { form.reset(); message.className = 'alert d-none'; message.textContent = ''; });
-  })();
-  </script>
   {% endif %}
 </main>
-<style>
-  .profile-page{max-width:1200px;margin:0 auto;color:#172b3f}.profile-hero{background:linear-gradient(105deg,#0b1e33,#1a3350);color:#fff;border-radius:24px;padding:1.5rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}.hero-actions{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}.profile-kicker{color:#b9d4ef;margin:0 0 .35rem}.profile-hero h2{margin:0}.role-badge{background:#ffd966;color:#0b1e33;padding:.45rem 1rem;border-radius:999px;font-weight:700}.profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}.profile-card{background:#fff;border:1px solid #e5eaf0;border-radius:20px;padding:1.4rem;box-shadow:0 8px 24px rgba(15,35,55,.05)}.profile-card h3{font-size:1.1rem;margin:0 0 1rem}.section-card{margin-top:1rem}.details-list{margin:0}.details-list div{display:flex;justify-content:space-between;gap:1rem;padding:.65rem 0;border-bottom:1px solid #edf0f4}.details-list div:last-child{border:0}.details-list dd{margin:0}.technical-value{direction:ltr;unicode-bidi:isolate}.permission-list,.factory-list,.history-list{list-style:none;padding:0;margin:0;display:grid;gap:.65rem}.permission-list li,.factory-list li,.history-list li{background:#f6f8fb;border-radius:12px;padding:.75rem 1rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}.audit-main{display:grid;gap:.3rem}.audit-main small{color:#607286}.audit-change{font-size:.9rem;color:#344d65}.factory-list small{width:100%;color:#657587}.full-access-state,.admin-access-panel{background:#e8f6ee;color:#17653a;border-radius:12px;padding:1rem;text-align:center;font-weight:700}.access-section,.factory-access-card{border:1px solid #dce4ed;border-radius:14px;padding:1rem;margin-top:.75rem}.module-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,220px);align-items:center;gap:1rem;padding:.55rem 0;border-bottom:1px solid #edf0f4}.factory-card-header,.access-actions{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap}.access-summary{font-size:.85rem;color:#607286}.mandatory-access-detail{display:grid;justify-items:start;gap:.35rem}.mandatory-access-detail small{color:#536779}.empty-state{background:#f7f9fb;border:1px dashed #cfd8e3;border-radius:12px;color:#66788a;padding:1rem;text-align:center}.table-responsive{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:right}th,td{padding:.75rem;border-bottom:1px solid #e9edf2}.readonly-notice{text-align:center;color:#536779;margin:1rem 0}.btn{border:1px solid #d0d7e5;padding:.55rem 1.1rem;border-radius:20px;background:#f4f7fd;color:#1e3a5f}@media(max-width:760px){.profile-grid{grid-template-columns:1fr}.profile-hero{align-items:flex-start;flex-direction:column}.module-row{grid-template-columns:1fr}.modal-dialog{margin:.5rem}}
-</style>
+{% if profile.features.add_user or profile.features.edit_user %}
+<script id="accessManagerConfig" type="application/json">{{ profile.access_manager|tojson }}</script>
+{% endif %}
+<script id="profilePageConfig" type="application/json">{{ {
+  "users": profile.users if profile.features.edit_user else [],
+  "create_user_url": url_for("profile.create_user"),
+  "create_factory_url": url_for("profile.create_factory"),
+  "user_api_base_url": "/api/profile/users"
+}|tojson }}</script>
+{% if profile.features.add_user or profile.features.edit_user %}<script src="{{ url_for('static', filename='js/profile-access-manager.js') }}"></script>{% endif %}
+<script src="{{ url_for('static', filename='js/profile-page.js') }}"></script>
 {% endblock %}

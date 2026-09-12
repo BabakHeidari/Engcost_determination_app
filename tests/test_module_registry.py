@@ -89,16 +89,17 @@ def test_desk_registry_and_visual_manager_expose_read_only_mandatory_policy():
     assert desk["mandatory_access"] is True
     assert desk["minimum_level"] == "READ"
     script = Path("static/js/profile-access-manager.js").read_text(encoding="utf-8")
-    assert "m.mandatory_access ? mandatoryAccessRow(m)" in script
-    assert "دسترسی به میز کار برای همه کاربران سامانه فعال است." in script
+    assert "module.minimum_level === 'READ'" in script
+    assert "حداقل اجباری: فقط مشاهده" in script
+    assert ".filter(level => module.minimum_level !== 'READ' || level.value !== 'NONE')" in script
 
 
 def test_visual_manager_has_one_select_and_no_raw_permission_controls():
     script = Path("static/js/profile-access-manager.js").read_text(encoding="utf-8")
     template = Path("templates/profile/profile.html").read_text(encoding="utf-8")
-    assert "config.factory_modules.forEach(m=>card.append(selector(" in script
-    assert "config.global_modules.forEach(m => section.append(selector(" in script
-    assert "createElement('select')" in script
+    assert "config.factory_modules.forEach(module => card.append(selector(" in script
+    assert "config.global_modules.forEach(module => section.append(selector(" in script
+    assert "element('select', 'form-select access-level')" in script
     assert 'name="access_grants"' not in template
     assert 'type="checkbox" name="permissions"' not in template
 
