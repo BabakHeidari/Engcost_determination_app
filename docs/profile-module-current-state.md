@@ -1,5 +1,17 @@
 # Profile module current state
 
+## Phase 12 final state
+
+Phase 12 hardening and full regression are complete. The exact seven-module
+registry, peer top-level roles, hierarchical grants, mandatory active-user Desk
+READ baseline, dynamic canonical factory registry, Visual Access Manager,
+friendly Persian HTML/JSON 403 split, bounded real audit, and exchange-only
+Excel behavior remain the current contracts. Runtime secrets are environment
+configured, debug/demo activation is explicit, and operators now have a
+validated newest-backup recovery command. Deployment boundaries and the full
+verification procedure are documented in
+`docs/phase-12-hardening-and-operations.md`.
+
 As of Phase 6.5, Profile identity and authorization are read from the single
 version-2 JSON store through `ProfileDataStore`. Authentication reloads active
 users by stable ID. The Profile page displays system role and job title

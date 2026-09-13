@@ -2,6 +2,11 @@
 
 ## Status and scope
 
+> **Current-state note (Phase 12):** the implemented canonical schema is version
+> 2 and supersedes the historical Phase 2 proposal below. Validated recovery,
+> operational limits, and current commands are specified in
+> `docs/phase-12-hardening-and-operations.md`. JSON remains the sole live source.
+
 This is the Phase 2 architecture decision record. It documents the current system and the intended storage design; it does **not** change routes, authentication, persistence, authorization, UI behavior, or costing data. The requested earlier documents `docs/profile-module-current-state.md` and `docs/profile-module-implementation-plan.md` were not present when this investigation began. A Phase 2 implementation-plan update is added separately.
 
 ## 1. Existing storage mechanism
