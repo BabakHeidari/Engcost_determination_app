@@ -1,13 +1,33 @@
-from flask import Blueprint, g, jsonify, render_template, request
+from io import BytesIO
+
+from flask import Blueprint, g, jsonify, render_template, request, send_file
 
 from utils.auth import get_profile_store, login_required, require_access, require_top_level_admin
 from utils.profile_factories import prepare_new_factory
+from utils.profile_excel import profile_exchange_bytes
 from utils.profile_store import ProfileDataConflictError, ProfileDataValidationError, ProfileStoreError
 from utils.profile_users import prepare_new_user, prepare_password_reset, prepare_user_update
 from utils.profile_view import build_profile_view_model
 
 
 profile_bp = Blueprint("profile", __name__)
+
+
+@profile_bp.get("/api/profile/export.xlsx")
+@login_required
+@require_top_level_admin
+def export_profile_excel():
+    """Download a read-only administrative snapshot; Excel is never authoritative."""
+    try:
+        payload = profile_exchange_bytes(get_profile_store())
+    except (ProfileStoreError, OSError):
+        return jsonify({"ok": False, "message": "تهیه خروجی اکسل امکان‌پذیر نشد."}), 503
+    return send_file(
+        BytesIO(payload),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="profile-administration-export.xlsx",
+    )
 
 
 @profile_bp.route("/profile/profile")
