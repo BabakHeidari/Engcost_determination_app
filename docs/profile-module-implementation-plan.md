@@ -14,7 +14,11 @@ This plan was created during Phase 2 because no existing profile implementation-
 | Phase 6 — add user with initial password | **Complete** | Authorization-aware user creation, initial password hashing, atomic audit, Persian modal, and focused tests. General editing remains disabled. |
 | Phase 6.7 — factory creation | **Complete** | Equal top-level-admin creation, canonical locked/atomic persistence and audit, and dynamic Add User registry integration. |
 | Phase 8.4 — friendly access denied | **Complete** | Central Persian RTL HTML 403, machine-readable API 403, permission-aware recovery links, and non-disclosure tests. |
-| Phase 9 and later | **Not started** | Audit history and later-phase work remain separately scoped. |
+| Phases 9–11 | **Complete** | Real bounded audit, frontend refactor, and read-only Excel exchange are merged. |
+| Phase 12 — hardening and complete regression | **Complete** | Security/configuration review, validated corruption recovery, concurrency/regression verification, and deployment/support documentation. |
+
+Phase 12 is the final implemented phase in this plan. No subsequent phase or
+new business capability was started.
 
 ## Phase 2 decision update
 

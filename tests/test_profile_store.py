@@ -12,6 +12,7 @@ from utils.profile_store import (
     ProfileDataStore,
     ProfileDataValidationError,
     ProfileStoreNotInitializedError,
+    ProfileStoreError,
     public_user,
     validate_data,
 )
@@ -184,6 +185,37 @@ def test_backups_are_created_and_bounded(tmp_path):
     assert len(backups) == 2
     for backup in backups:
         validate_data(json.loads(backup.read_text(encoding="utf-8")))
+
+
+def test_recovery_skips_invalid_newest_backup_and_preserves_corrupt_file(tmp_path):
+    path = tmp_path / "app_data.json"
+    write(path, document())
+    store = ProfileDataStore(path, backup_limit=3)
+    store.create_factory({"id": "fac_1", "code": "F1", "name": "کارخانه"})
+    valid_backup = next((tmp_path / "backups").glob("app_data.*.json"))
+    invalid_backup = tmp_path / "backups" / "app_data.99999999T999999.999999Z.r99.json"
+    invalid_backup.write_text("{broken", encoding="utf-8")
+    path.write_text("{corrupt canonical", encoding="utf-8")
+
+    result = store.restore_latest_valid_backup()
+
+    assert Path(result["source_backup"]) == valid_backup
+    assert Path(result["corrupt_copy"]).read_text(encoding="utf-8") == "{corrupt canonical"
+    restored = store.load_data()
+    assert restored["factories"] == []
+    assert restored["metadata"]["last_recovery"]["source_backup"] == valid_backup.name
+
+
+def test_recovery_fails_closed_when_no_valid_backup_exists(tmp_path):
+    path = tmp_path / "app_data.json"
+    path.write_text("{corrupt", encoding="utf-8")
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    (backup_dir / "app_data.99999999T999999.999999Z.r1.json").write_text("[]", encoding="utf-8")
+
+    with pytest.raises(ProfileStoreError, match="No valid"):
+        ProfileDataStore(path).restore_latest_valid_backup()
+    assert path.read_text(encoding="utf-8") == "{corrupt"
 
 
 def test_data_file_is_not_served_through_static_routes(tmp_path):

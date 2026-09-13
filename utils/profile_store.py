@@ -575,6 +575,61 @@ class ProfileDataStore:
             if os.path.exists(temporary_name):
                 os.unlink(temporary_name)
 
+    def restore_latest_valid_backup(self):
+        """Validate and restore the newest usable backup under the write lock.
+
+        Invalid backups are skipped rather than trusted by filename order. The
+        corrupt canonical bytes are retained for incident analysis, and the
+        restored document records operator recovery metadata without inventing
+        a business actor or audit event.
+        """
+        descriptor = self._lock(True)
+        try:
+            candidates = sorted(
+                self.backup_dir.glob(f"{self.path.stem}.*.json"), reverse=True
+            )
+            restored = None
+            for candidate in candidates:
+                try:
+                    with candidate.open("r", encoding="utf-8") as stream:
+                        restored = validate_data(json.load(stream))
+                except (OSError, json.JSONDecodeError, ProfileDataValidationError):
+                    continue
+                break
+            if restored is None:
+                raise ProfileStoreError("No valid profile data backup is available")
+
+            now = _utc_now()
+            corrupt_copy = None
+            if self.path.exists():
+                corrupt_dir = self.path.parent / "corrupt"
+                corrupt_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+                stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+                corrupt_copy = corrupt_dir / f"{self.path.name}.{stamp}.corrupt"
+                with self.path.open("rb") as source, corrupt_copy.open("xb") as destination:
+                    os.chmod(corrupt_copy, 0o600)
+                    while chunk := source.read(1024 * 1024):
+                        destination.write(chunk)
+                    destination.flush()
+                    os.fsync(destination.fileno())
+
+            restored = copy.deepcopy(restored)
+            restored["metadata"]["revision"] += 1
+            restored["metadata"]["updated_at"] = now
+            restored["metadata"]["last_recovery"] = {
+                "completed_at": now,
+                "source_backup": candidate.name,
+            }
+            validate_data(restored)
+            self._atomic_write(restored, create_backup=False)
+            return {
+                "source_backup": str(candidate),
+                "corrupt_copy": str(corrupt_copy) if corrupt_copy else None,
+                "revision": restored["metadata"]["revision"],
+            }
+        finally:
+            self._unlock(descriptor)
+
     def _apply_audit_retention(self, data):
         """Keep the documented bounded live window in the canonical document."""
         overflow = len(data["audit_events"]) - self.audit_event_limit

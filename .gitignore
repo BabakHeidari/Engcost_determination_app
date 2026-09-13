@@ -3,3 +3,11 @@ instance/app_data.json
 instance/app_data.json.lock
 instance/backups/
 instance/.*.tmp
+instance/corrupt/
+.env
+.env.*
+!.env.example
+# Legacy credential migration inputs and production canonical data are operator-owned.
+Data/Overall/auth_data.json
+Data/Overall/auth_data.xlsx
+Data_Better_Structure/auth_data.json
