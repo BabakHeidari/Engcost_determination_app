@@ -679,7 +679,7 @@
         </div>
         <div class="total-cost-card">
             <span class="total-label">🏁 کل هزینه محاسبه‌شده (برای هر واحد)</span>
-            <span class="total-value" id="totalCostDisplay">0.00 ریال</span>
+            <span class="total-value" id="totalCostDisplay">—</span>
         </div>
         <div class="step-container">
             <div class="step-title">⚙️ اجزای هزینه به تفکیک مرحله</div>
@@ -701,7 +701,7 @@
     // ============================================================
     // DATA FROM FLASK BACKEND
     // ============================================================
-    const tableJSON = {{ table_json | safe }};
+    const tableJSON = {{ table_json | tojson }};
     const displayMappings = {{ display_mappings | default({}, true) | tojson }};
     
     function jsonToRows(jsonObj) {
@@ -726,10 +726,7 @@
     }
     
     let rawData = tableJSON;
-    let tableData = jsonToRows(rawData);
-    if (tableData.length === 0 && Array.isArray(rawData)) {
-        tableData = rawData;
-    }
+    let tableData = Array.isArray(rawData) ? rawData : jsonToRows(rawData);
     const hasData = tableData.length > 0;
     
     // DOM elements
@@ -755,8 +752,16 @@
     let currentCostData = null;
     
 
+    function finiteNumber(value) {
+        if (value === null || value === undefined || value === "") return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
     function formatNumber(value) {
-        return Number(value || 0).toLocaleString('en-US', {
+        const parsed = finiteNumber(value);
+        if (parsed === null) return "—";
+        return parsed.toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
@@ -803,10 +808,6 @@
         `;
     }
     
-    function getRandomDelay(min = 1000, max = 2000) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-    
     function showCSVLoadingModal(productCount) {
         modalProductCount.textContent = `در حال پردازش ${productCount} محصول...`;
         csvLoadingModal.classList.add('active');
@@ -821,45 +822,33 @@
     // ======================
     //  BACKEND API CALLS
     // ======================
-    async function fetchCostForProduct(product) {
+    async function requestJSON(url, options) {
         try {
-            const response = await fetch("/cost/get_cost", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    Product_Name: product.Product_Name,
-                    Factory: product.Factory || "",
-                    Category: product.Category || "",
-                    Subcategory: product.Subcategory || ""
-                })
-            });
-            if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-            return await response.json();
+            const response = await fetch(url, {...options, redirect: "follow"});
+            const contentType = response.headers.get("content-type") || "";
+            if (!contentType.toLowerCase().includes("application/json")) {
+                return {status: response.status, ok: false, kind: response.redirected || response.status === 401 ? "auth" : "non-json", data: null};
+            }
+            let data;
+            try { data = await response.json(); }
+            catch (_) { return {status: response.status, ok: false, kind: "invalid-json", data: null}; }
+            return {status: response.status, ok: response.ok, kind: "http", data};
         } catch (err) {
-            console.error("Failed to fetch cost:", err);
-            return null;
+            console.error("Cost request failed:", err);
+            return {status: 0, ok: false, kind: "network", data: null};
         }
+    }
+
+    function productPayload(product) {
+        return {Product_Name: product.Product_Name, Factory: product.Factory || "", Category: product.Category || "", Subcategory: product.Subcategory || ""};
+    }
+
+    function fetchCostForProduct(product) {
+        return requestJSON("/cost/get_cost", {method: "POST", headers: {"Content-Type": "application/json", "Accept": "application/json"}, body: JSON.stringify(productPayload(product))});
     }
     
     async function fetchBulkCosts(products) {
-        try {
-            const payload = products.map(p => ({
-                Product_Name: p.Product_Name,
-                Factory: p.Factory || "",
-                Category: p.Category || "",
-                Subcategory: p.Subcategory || ""
-            }));
-            const response = await fetch("/cost/get_costs_bulk", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-            return await response.json();
-        } catch (err) {
-            console.error("Bulk cost fetch failed:", err);
-            return {};
-        }
+        return requestJSON("/cost/get_costs_bulk", {method: "POST", headers: {"Content-Type": "application/json", "Accept": "application/json"}, body: JSON.stringify(products.map(productPayload))});
     }
 
     function costIdentityKey(product) {
@@ -870,15 +859,24 @@
     function buildDropdown(id, columnName) {
         const container = document.getElementById(id);
         if (!container) return;
-        container.innerHTML = "";
+        container.replaceChildren();
         const uniqueVals = [...new Set(tableData.map(x => x[columnName] || ""))].filter(v => v !== "").sort();
-        const allDiv = document.createElement("div");
-        allDiv.innerHTML = `<label><input type="checkbox" class="filter-checkbox" data-column="${columnName}" data-value="__all__" checked> ✅ همه</label>`;
-        container.appendChild(allDiv);
-        uniqueVals.forEach(val => {
+        const addOption = (value, labelText, checked = false) => {
             const div = document.createElement("div");
-            div.innerHTML = `<label><input type="checkbox" class="filter-checkbox" data-column="${columnName}" data-value="${escapeHtml(val)}"> ${escapeHtml(displayValue(val, "categories"))}</label>`;
+            const label = document.createElement("label");
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.className = "filter-checkbox";
+            input.dataset.column = columnName;
+            input.dataset.value = value;
+            input.checked = checked;
+            label.append(input, document.createTextNode(` ${labelText}`));
+            div.appendChild(label);
             container.appendChild(div);
+        };
+        addOption("__all__", "✅ همه", true);
+        uniqueVals.forEach(val => {
+            addOption(String(val), displayValue(val, "categories"));
         });
     }
     
@@ -920,32 +918,19 @@
         } else {
             pageRows.forEach(row => {
                 const tr = document.createElement("tr");
-                const productName = escapeHtml(row.Product_Name || "");
-                const factory = escapeHtml(displayValue(row.Factory || "", "categories"));
-                const category = escapeHtml(displayValue(row.Category || "", "categories"));
-                const subcategory = escapeHtml(displayValue(row.Subcategory || "", "categories"));
-                const productDataAttr = escapeHtml(JSON.stringify(row));
-                tr.innerHTML = `
-                    <td>${productName}</td>
-                    <td>${factory}</td>
-                    <td>${category}</td>
-                    <td>${subcategory}</td>
-                    <td><button class="open-btn" data-product='${productDataAttr}'>💰 محاسبه هزینه</button></td>
-                `;
+                [row.Product_Name || "", row.Factory_Label || displayValue(row.Factory || "", "categories"),
+                 displayValue(row.Category || "", "categories"), displayValue(row.Subcategory || "", "categories")]
+                    .forEach(value => { const td = document.createElement("td"); td.textContent = value; tr.appendChild(td); });
+                const action = document.createElement("td");
+                const button = document.createElement("button");
+                button.className = "open-btn";
+                button.textContent = "💰 محاسبه هزینه";
+                button.addEventListener("click", () => updateCostCalculation(row));
+                action.appendChild(button);
+                tr.appendChild(action);
                 tbody.appendChild(tr);
             });
         }
-        document.querySelectorAll(".open-btn").forEach(btn => {
-            btn.addEventListener("click", (e) => {
-                try {
-                    const productRaw = btn.getAttribute("data-product");
-                    const product = JSON.parse(productRaw);
-                    updateCostCalculation(product);
-                } catch (err) {
-                    console.error("Parse error", err);
-                }
-            });
-        });
         const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
         pageInfo.textContent = `صفحه ${currentPage} از ${totalPages}`;
     }
@@ -962,37 +947,32 @@
         exportBtn.disabled = true;
         
         try {
-            const allCosts = await fetchBulkCosts(filteredProducts);
+            const response = await fetchBulkCosts(filteredProducts);
+            if (!response.ok || !response.data || !response.data.results) throw new Error(userMessageForResponse(response));
+            const allCosts = response.data.results;
             modalProductCount.textContent = "در حال تولید فایل CSV...";
-            const delay = getRandomDelay(1000, 6000);
-            await new Promise(resolve => setTimeout(resolve, delay));
             
             const headers = [
                 "نام محصول", "کارخانه", "دسته", "زیردسته",
                 "کل هزینه (هر واحد)", "BOM", "حقوق و دستمزد", "سربار",
                 "استهلاک", "اداری و پژوهشی", "هزینه‌های مالی",
-                "هزینه‌ها و درآمدهای غیرعملیاتی"
+                "هزینه‌ها و درآمدهای غیرعملیاتی", "وضعیت", "کد خطا", "شرح"
             ];
             const rows = [headers];
             for (const product of filteredProducts) {
                 const name = product.Product_Name || "";
                 const costs = allCosts[costIdentityKey(product)] || {};
-                if (costs.state !== "OK") {
-                    throw new Error(`محاسبه هزینه برای ${name} کامل نیست: ${costs.state || "MISSING_INPUT"}`);
-                }
+                const ok = costs.state === "OK" && finiteNumber(costs.Final_Production_Cost) !== null;
+                const numeric = key => ok && finiteNumber(costs[key]) !== null ? finiteNumber(costs[key]).toFixed(2) : "";
                 rows.push([
                     `"${name.replace(/"/g, '""')}"`,
                     `"${(product.Factory || "").replace(/"/g, '""')}"`,
                     `"${(product.Category || "").replace(/"/g, '""')}"`,
                     `"${(product.Subcategory || "").replace(/"/g, '""')}"`,
-                    (costs.Final_Production_Cost ?? 0).toFixed(2),
-                    (costs.BOM ?? 0).toFixed(2),
-                    (costs.Payroll ?? 0).toFixed(2),
-                    (costs.Overhead ?? 0).toFixed(2),
-                    (costs.Depriciation ?? 0).toFixed(2),
-                    (costs.AdministrativeandResearch ?? 0).toFixed(2),
-                    (costs.FinancialCosts ?? 0).toFixed(2),
-                    (costs.NonOperationalCostsandIncomes ?? 0).toFixed(2)
+                    numeric("Final_Production_Cost"), numeric("BOM"), numeric("Payroll"), numeric("Overhead"),
+                    numeric("Depriciation"), numeric("AdministrativeandResearch"), numeric("FinancialCosts"),
+                    numeric("NonOperationalCostsandIncomes"), costs.state || "INVALID", costs.error?.code || costs.errors?.[0]?.code || "",
+                    `"${String(costs.error?.message || costs.errors?.[0]?.message || "").replace(/"/g, '""')}"`
                 ]);
             }
             
@@ -1013,13 +993,14 @@
             URL.revokeObjectURL(url);
             
             setTimeout(() => {
-                alert(`✅ ${filteredProducts.length} محصول به CSV صادر شد.`);
+                const coverage = response.data.coverage;
+                alert(coverage.excluded ? `⚠️ گزارش جزئی صادر شد: ${coverage.calculated} موفق و ${coverage.excluded} ناموفق. ردیف‌های ناموفق دارای علت هستند.` : `✅ ${coverage.calculated} محصول به CSV صادر شد.`);
             }, 300);
             
         } catch (error) {
             hideCSVLoadingModal();
             console.error("Export failed:", error);
-            alert("❌ خروجی CSV ناموفق بود. دوباره تلاش کنید.");
+            alert(`❌ خروجی CSV ناموفق بود: ${error.message || "دوباره تلاش کنید."}`);
         } finally {
             exportBtn.disabled = false;
         }
@@ -1108,43 +1089,62 @@
     const totalCostDisplay = document.getElementById("totalCostDisplay");
     const stepsContainer = document.getElementById("stepsContainer");
     const selectedProductLabel = document.getElementById("selectedProductLabel");
+    let calculationSequence = 0;
+
+    function userMessageForResponse(response) {
+        const serverMessage = response.data?.error?.message || response.data?.errors?.[0]?.message;
+        if (response.kind === "network") return "ارتباط با سرور برقرار نشد؛ اتصال شبکه یا دسترس‌پذیری Backend را بررسی کنید.";
+        if (response.kind === "auth" || response.status === 401) return "نشست شما پایان یافته است؛ دوباره وارد سامانه شوید.";
+        if (response.kind === "invalid-json") return "پاسخ سرور JSON معتبر نیست.";
+        if (response.kind === "non-json") return "پاسخ غیرمنتظره و غیر JSON از سرور دریافت شد.";
+        if (response.status === 400) return serverMessage || "درخواست محاسبه معتبر یا کامل نیست.";
+        if (response.status === 403) return "شما مجوز محاسبه هزینه این کارخانه را ندارید.";
+        if (response.status === 404) return serverMessage || "محصول یا کارخانه درخواست‌شده یافت نشد.";
+        if (response.status === 422) return serverMessage || "ورودی‌های مصوب محاسبه کامل یا معتبر نیستند.";
+        if (response.status >= 500) return `خطای داخلی سرور رخ داد.${response.data?.error?.request_id ? ` شناسه پیگیری: ${response.data.error.request_id}` : ""}`;
+        return serverMessage || "پاسخ محاسبه قابل استفاده نیست.";
+    }
+
+    function clearCostResult(product, message) {
+        currentCostData = null;
+        selectedProductLabel.textContent = product ? `⚠️ ${product.Product_Name}` : "محصولی انتخاب نشده است";
+        totalCostDisplay.textContent = "—";
+        stepsContainer.textContent = "";
+        const error = document.createElement("div");
+        error.className = "empty-selection";
+        error.textContent = message;
+        stepsContainer.appendChild(error);
+    }
     
     async function updateCostCalculation(product) {
+        const sequence = ++calculationSequence;
         if (!product || !product.Product_Name) {
-            currentCostData = null;
-            selectedProductLabel.innerText = "محصولی انتخاب نشده است";
-            totalCostDisplay.innerText = "0.00 ریال";
-            stepsContainer.innerHTML = `<div class="empty-selection">✨ برای مشاهده تفکیک هزینه، یک محصول انتخاب کنید.</div>`;
+            clearCostResult(null, "✨ برای مشاهده تفکیک هزینه، یک محصول انتخاب کنید.");
             return;
         }
-    
-        selectedProductLabel.innerText = `⏳ در حال محاسبه هزینه برای ${product.Product_Name}...`;
-        totalCostDisplay.innerText = "...";
-        stepsContainer.innerHTML = showLoadingAnimation(`در حال محاسبه هزینه برای ${product.Product_Name}`);
-        
-        const costs = await fetchCostForProduct(product);
-        
-        // Store costs globally for BOM details access
+
+        currentCostData = null;
+        selectedProductLabel.textContent = `⏳ در حال محاسبه هزینه برای ${product.Product_Name}...`;
+        totalCostDisplay.textContent = "—";
+        stepsContainer.innerHTML = showLoadingAnimation(`در حال محاسبه هزینه برای ${escapeHtml(product.Product_Name)}`);
+        const response = await fetchCostForProduct(product);
+        if (sequence !== calculationSequence) return;
+        const costs = response.data;
+        const total = finiteNumber(costs?.Final_Production_Cost);
+        if (!response.ok || costs?.state !== "OK" || total === null) {
+            clearCostResult(product, userMessageForResponse(response));
+            return;
+        }
+
         currentCostData = costs;
-        
-        const delay = getRandomDelay(1000, 2000);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        
-        if (!costs) {
-            selectedProductLabel.innerText = `⚠️ ${product.Product_Name}`;
-            totalCostDisplay.innerText = "خطا";
-            stepsContainer.innerHTML = `<div class="empty-selection">❌ داده‌های هزینه بارگذاری نشد. ممکن است Backend در دسترس نباشد.</div>`;
-            return;
-        }
-    
-        selectedProductLabel.innerText = `✅ ${product.Product_Name} | ${product.Factory || ""} | ${product.Category || ""}`;
-        const total = costs.Final_Production_Cost ?? 0;
+        selectedProductLabel.textContent = `✅ ${product.Product_Name} | ${product.Factory_Label || product.Factory || ""} | ${product.Category || ""}`;
         
         totalCostDisplay.style.opacity = "0";
         totalCostDisplay.style.transform = "translateY(-10px)";
         totalCostDisplay.style.transition = "all 0.3s ease";
         
         setTimeout(() => {
+            if (sequence !== calculationSequence) return;
             totalCostDisplay.innerText = `${formatCurrency(total)}`;
             totalCostDisplay.style.opacity = "1";
             totalCostDisplay.style.transform = "translateY(0)";
@@ -1159,31 +1159,31 @@
         const stepsHtml = `
             <li class="step-item">
                 <span class="step-desc"><span class="step-icon">🧱</span><strong>BOM</strong> ${bomDetailsButton}</span>
-                <span class="step-cost">${formatCurrency(costs.BOM ?? 0)}</span>
+                <span class="step-cost">${formatCurrency(costs.BOM)}</span>
             </li>
             <li class="step-item">
                 <span class="step-desc"><span class="step-icon">👥</span><strong>حقوق و دستمزد</strong></span>
-                <span class="step-cost">${formatCurrency(costs.Payroll ?? 0)}</span>
+                <span class="step-cost">${formatCurrency(costs.Payroll)}</span>
             </li>
             <li class="step-item">
                 <span class="step-desc"><span class="step-icon">⚡</span><strong>سربار</strong></span>
-                <span class="step-cost">${formatCurrency(costs.Overhead ?? 0)}</span>
+                <span class="step-cost">${formatCurrency(costs.Overhead)}</span>
             </li>
             <li class="step-item">
                 <span class="step-desc"><span class="step-icon">🏭</span><strong>استهلاک</strong></span>
-                <span class="step-cost">${formatCurrency(costs.Depriciation ?? 0)}</span>
+                <span class="step-cost">${formatCurrency(costs.Depriciation)}</span>
             </li>
             <li class="step-item">
                 <span class="step-desc"><span class="step-icon">📋</span><strong>اداری و پژوهشی</strong></span>
-                <span class="step-cost">${formatCurrency(costs.AdministrativeandResearch ?? 0)}</span>
+                <span class="step-cost">${formatCurrency(costs.AdministrativeandResearch)}</span>
             </li>
             <li class="step-item">
                 <span class="step-desc"><span class="step-icon">💰</span><strong>هزینه‌های مالی</strong></span>
-                <span class="step-cost">${formatCurrency(costs.FinancialCosts ?? 0)}</span>
+                <span class="step-cost">${formatCurrency(costs.FinancialCosts)}</span>
             </li>
             <li class="step-item">
                 <span class="step-desc"><span class="step-icon">📈</span><strong>غیرعملیاتی</strong></span>
-                <span class="step-cost">${formatCurrency(costs.NonOperationalCostsandIncomes ?? 0)}</span>
+                <span class="step-cost">${formatCurrency(costs.NonOperationalCostsandIncomes)}</span>
             </li>
             <li class="step-item total-step">
                 <span class="step-desc"><span class="step-icon">🏁</span><strong>کل هزینه</strong></span>
@@ -1196,6 +1196,7 @@
         stepsContainer.style.transition = "all 0.3s ease";
         
         setTimeout(() => {
+            if (sequence !== calculationSequence) return;
             stepsContainer.innerHTML = `<ul class="steps-list">${stepsHtml}</ul>`;
             stepsContainer.style.opacity = "1";
             stepsContainer.style.transform = "translateY(0)";
