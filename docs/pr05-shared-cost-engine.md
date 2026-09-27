@@ -26,6 +26,12 @@
 | تخصیص pool | pool کامل برای هر محصول | یک‌بار روی prediction کل جمعیت دسته |
 | زمان | بدون period | owner binding صریح؛ baseline legacy متمایز از actual |
 
+Product/BOM editor نیز همان G1 را برای preview اجرا می‌کند: هر دو درصد مستقل
+در بازهٔ بستهٔ ۰ تا ۱۰۰ اعتبارسنجی و پیش از ضرب بر ۱۰۰ تقسیم می‌شوند. server
+در `/save_bom` ورودی‌ها و mapping قیمت/ارز را دوباره اعتبارسنجی و فیلدهای مشتق
+تاریخی را refresh می‌کند؛ بنابراین ورودی ناقص به مبلغ ظاهراً معتبر صفر تبدیل
+نمی‌شود و `Recyclability > Loss` مجاز است.
+
 آزمون‌های `tests/test_costing_characterization.py` به‌عنوان شاهد توصیفی legacy
 حفظ شده‌اند. goldenهای business-approved مستقل در `tests/test_costing_engine.py`
 قرار دارند. هیچ دادهٔ production/demo برای این تغییر ویرایش نشده است.
@@ -36,4 +42,8 @@
   برای آن period صادقانه `MISSING_INPUT` می‌دهد.
 - منابع legacy ممکن است ردیف ناقص یا mapping ارز مبهم داشته باشند؛ V1 به‌جای
   حدس یا صفر آنها را رد می‌کند.
+- BOMهایی که پیش از این اصلاح با درصدهای غیرصفر ذخیره شده‌اند ممکن است در
+  `cost_of_material_in_rial` مبلغ صفر نادرست داشته باشند. این فیلد در live V1
+  authoritative نیست؛ در نخستین ذخیرهٔ معتبر بعدی refresh می‌شود. مهاجرت یا
+  backfill داده‌های production خارج از دامنهٔ PR-05 است.
 - UI Dashboard و Sensitivity و KPIهای آنها عمداً در PR-05 پیاده نشده‌اند.

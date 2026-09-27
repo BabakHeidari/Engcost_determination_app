@@ -1,6 +1,7 @@
 from flask import Blueprint, abort, g, render_template, jsonify, request, session
 from utils.auth import get_profile_store, login_required
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
+from utils.costing_engine import CostInputError, validate_live_bom_payload
 from utils.paths import product_path, material_path, parent_path
 from utils.load_data import load_json, load_bom
 from utils.updaters import create_product_metadata, category_adder, subcategory_adder, product_adder, directory_tracer, category_weights_updater, capacity_writer
@@ -185,6 +186,15 @@ def save_bom():
     except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
         return jsonify({"status": "error", "message": str(exc)}), 403
     payload = request.get_json(force=True)
+
+    try:
+        payload = validate_live_bom_payload(payload, load_json(material_path + ".json"))
+    except CostInputError as exc:
+        return jsonify({
+            "status": "error",
+            "state": exc.state.value,
+            "message": f"ورودی BOM معتبر نیست ({exc.detail.code}).",
+        }), 400
 
     final_bom = {
         "_order": payload["_order"],

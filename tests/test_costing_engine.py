@@ -21,7 +21,9 @@ from utils.costing_engine import (
     ProductIdentity,
     ProductPrediction,
     SourceProvenance,
+    calculate_live_bom_line,
     calculate_cost,
+    validate_live_bom_payload,
 )
 
 
@@ -61,6 +63,23 @@ def test_g1_live_bom_formula_ignores_historical_stored_amount():
     assert result.value == Decimal("98000000")
     assert result.to_dict()["Final_Production_Cost"] == 98000000
     assert result.to_dict()["BOM_Details"]["row-1:lead"] == 98000000
+
+
+@pytest.mark.parametrize(
+    ("loss", "recyclable", "factor", "expected"),
+    [
+        ("10", "80", "0.92", "92000"),
+        ("10", "0", "1", "100000"),
+        ("0", "80", "1", "100000"),
+        ("0", "100", "1", "100000"),
+        ("100", "100", "0", "0"),
+    ],
+)
+def test_g1_independent_percentages_and_boundaries(loss, recyclable, factor, expected):
+    gross, efficiency, live = calculate_live_bom_line(100, 1000, 1, loss, recyclable)
+    assert gross == Decimal("100000")
+    assert efficiency == Decimal(factor)
+    assert live == Decimal(expected)
 
 
 def test_g2_pool_is_allocated_once_over_full_category_population():
@@ -245,3 +264,48 @@ def test_loader_preserves_repeated_material_rows_with_stable_local_ids(tmp_path)
     result = calculate_cost(inputs)
     assert [item.row_id for item in result.bom_components] == ["row-1", "row-2"]
     assert result.bom_total == Decimal("3000000")
+
+
+def test_bom_save_validation_round_trips_live_values_and_duplicate_rows():
+    payload = {"_order": ["materials", "usage", "lost_percentage", "recycability_percentage"], "data": {
+        "materials": ["lead", "lead"], "usage": [100, 40],
+        "lost_percentage": [10, 0], "recycability_percentage": [80, 100],
+        "cost_of_material_in_rial": [0, 0],
+    }}
+    materials = {"data": {
+        "material": ["lead"], "unit": ["kg"], "currency": ["IRR - Iranian Rial"],
+        "cost_per_unit_in_currency": [1],
+    }}
+    saved = validate_live_bom_payload(payload, materials)
+    assert saved["data"]["recycability_percentage"] == [80, 100]
+    assert saved["data"]["cost_of_material_in_rial"] == [92, 40]
+    assert sum(saved["data"]["cost_of_material_in_rial"]) == 132
+
+
+@pytest.mark.parametrize("field,value", [
+    ("usage", ""), ("usage", -1), ("lost_percentage", -1),
+    ("lost_percentage", 101), ("recycability_percentage", "bad"),
+    ("recycability_percentage", 101),
+])
+def test_bom_save_validation_rejects_invalid_required_values(field, value):
+    data = {"materials": ["lead"], "usage": [1], "lost_percentage": [0], "recycability_percentage": [0]}
+    data[field][0] = value
+    materials = {"data": {"material": ["lead"], "unit": ["kg"],
+                           "currency": ["IRR - Iranian Rial"], "cost_per_unit_in_currency": [1]}}
+    with pytest.raises(CostInputError):
+        validate_live_bom_payload({"_order": list(data), "data": data}, materials)
+
+
+def test_bom_save_validation_rejects_missing_price_and_fx_instead_of_saving_zero():
+    payload = {"_order": [], "data": {"materials": ["lead"], "usage": [1],
+                                      "lost_percentage": [0], "recycability_percentage": [0]}}
+    missing_price = {"data": {"material": [], "unit": [], "currency": [], "cost_per_unit_in_currency": []}}
+    with pytest.raises(CostInputError) as caught:
+        validate_live_bom_payload(payload, missing_price)
+    assert caught.value.state is CostState.MISSING_INPUT
+
+    missing_fx = {"data": {"material": ["lead"], "unit": ["kg"],
+                           "currency": ["USD"], "cost_per_unit_in_currency": [2]}}
+    with pytest.raises(CostInputError) as caught:
+        validate_live_bom_payload(payload, missing_fx)
+    assert caught.value.state is CostState.AMBIGUOUS_INPUT

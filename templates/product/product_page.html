@@ -397,6 +397,7 @@
     }
 </style>
 
+<script src="{{ url_for('static', filename='js/bom_costing.js') }}"></script>
 <script>
     const productName = "{{ product_name }}";
     const bomPayload = {{ bom_json | tojson }};
@@ -462,15 +463,7 @@
         return null;
     }
 
-    // Calculate efficiency factor based on lost_percentage and recycability_percentage
-    // Efficiency = (1 - lost_percentage * recycability_percentage)
-    function calculateEfficiencyFactor(lostPercentage, recycabilityPercentage) {
-        const lost = parseFloat(lostPercentage) || 0;
-        const rec = parseFloat(recycabilityPercentage) || 0;
-        const factor = 1 - (lost * rec);
-        // Ensure factor is not negative (minimum 0)
-        return Math.max(0, factor);
-    }
+    const { calculateLineCost, percentage, requiredNumber } = window.BomCosting;
 
     function updateDerivedFields(rowIndex, selectedMaterial) {
         const row = bomRows[rowIndex];
@@ -491,20 +484,25 @@
             row.cost_currency = "";
         }
 
-        const usage = parseFloat(row.usage) || 0;
-        const costPerUnit = parseFloat(row.cost_per_unit_in_currency) || 0;
-        const costCurrency = parseFloat(row.cost_currency) || 0;
-        const lostPercentage = row.lost_percentage;
-        const recycabilityPercentage = row.recycability_percentage;
-        
-        // Calculate efficiency factor: (1 - lost_percentage * recycability_percentage)
-        const efficiencyFactor = calculateEfficiencyFactor(lostPercentage, recycabilityPercentage);
-        
-        // cost_of_material_in_its_currency = costPerUnit * usage * efficiencyFactor
-        row.cost_of_material_in_its_currency = (costPerUnit * usage * efficiencyFactor).toFixed(4);
-        
-        // cost_of_material_in_rial = costPerUnit * usage * costCurrency * efficiencyFactor
-        row.cost_of_material_in_rial = (costPerUnit * usage * costCurrency * efficiencyFactor).toFixed(4);
+        try {
+            const result = calculateLineCost({
+                usage: row.usage,
+                unitPrice: row.cost_per_unit_in_currency,
+                fxFactor: row.cost_currency,
+                lossPercentage: row.lost_percentage,
+                recyclabilityPercentage: row.recycability_percentage
+            });
+            row.cost_of_material_in_its_currency =
+                (result.liveCostInRial / Number(row.cost_currency)).toFixed(4);
+            row.cost_of_material_in_rial = result.liveCostInRial.toFixed(4);
+            row._calculation_error = "";
+            return true;
+        } catch (error) {
+            row.cost_of_material_in_its_currency = "";
+            row.cost_of_material_in_rial = "";
+            row._calculation_error = error.message;
+            return false;
+        }
     }
 
     function updateAllDerivedFields() {
@@ -513,47 +511,19 @@
         });
     }
 
-    function validateAndNormalizePercentage(value, maxValue = 100) {
-        if (value === "" || value === null || value === undefined) return "";
-        let num = parseFloat(value);
-        if (isNaN(num)) return "";
-        num = Math.max(0, Math.min(maxValue, Math.round(num * 1000) / 1000));
-        if (num >= maxValue) return maxValue - 0.001;
-        return num;
-    }
-
     function validateRowPercentages(rowIndex) {
         const row = bomRows[rowIndex];
-        if (!row) return;
-        
-        // Validate lost_percentage (0-100, but <100)
-        if (row.lost_percentage !== "" && row.lost_percentage !== undefined) {
-            let lostNum = parseFloat(row.lost_percentage);
-            if (!isNaN(lostNum)) {
-                if (lostNum < 0) row.lost_percentage = 0;
-                else if (lostNum >= 100) row.lost_percentage = 99.999;
-                else row.lost_percentage = Math.round(lostNum * 1000) / 1000;
-            }
+        if (!row) return false;
+        try {
+            percentage(row.lost_percentage, "درصد ضایعات");
+            percentage(row.recycability_percentage, "درصد بازیافت‌پذیری");
+        } catch (error) {
+            row._calculation_error = error.message;
+            row.cost_of_material_in_its_currency = "";
+            row.cost_of_material_in_rial = "";
+            return false;
         }
-        
-        // Validate recycability_percentage (0-100, and must be < lost_percentage when lost_percentage > 0)
-        if (row.recycability_percentage !== "" && row.recycability_percentage !== undefined) {
-            let recNum = parseFloat(row.recycability_percentage);
-            let lostNum = parseFloat(row.lost_percentage);
-            if (!isNaN(recNum)) {
-                if (recNum < 0) row.recycability_percentage = 0;
-                else if (!isNaN(lostNum) && lostNum > 0 && recNum >= lostNum) {
-                    row.recycability_percentage = Math.max(0, lostNum - 0.001);
-                } else {
-                    row.recycability_percentage = Math.round(recNum * 1000) / 1000;
-                }
-            }
-        }
-        
-        // After validation, update derived fields
-        if (row.materials) {
-            updateDerivedFields(rowIndex, row.materials);
-        }
+        return row.materials ? updateDerivedFields(rowIndex, row.materials) : false;
     }
 
     function sortRows(column, direction) {
@@ -680,81 +650,67 @@
                     const input = document.createElement("input");
                     input.type = "number";
                     input.step = "0.001";
+                    input.min = "0";
                     let displayValue = row[h] !== undefined && row[h] !== null ? row[h] : "";
                     if (typeof displayValue === 'number') displayValue = displayValue.toFixed(3);
                     input.value = displayValue;
                     input.onchange = () => {
                         let val = input.value;
-                        let num = parseFloat(val);
-                        if (!isNaN(num)) {
-                            num = Math.max(0, Math.round(num * 1000) / 1000);
-                            bomRows[originalIndex][h] = num;
-                            input.value = num.toFixed(3);
-                        } else {
-                            bomRows[originalIndex][h] = "";
-                            input.value = "";
-                        }
+                        bomRows[originalIndex][h] = val;
                         if (bomRows[originalIndex].materials) {
                             updateDerivedFields(originalIndex, bomRows[originalIndex].materials);
                             buildTable();
                         }
                     };
+                    try {
+                        if (requiredNumber(row[h], "مصرف") < 0) throw new RangeError("مصرف نمی‌تواند منفی باشد.");
+                    } catch (error) {
+                        input.classList.add("error-input");
+                        input.title = error.message;
+                    }
                     td.appendChild(input);
                 } else if (h === "lost_percentage") {
                     const input = document.createElement("input");
                     input.type = "number";
                     input.step = "0.001";
+                    input.min = "0";
+                    input.max = "100";
                     let displayValue = row[h] !== undefined && row[h] !== null ? row[h] : "";
                     if (typeof displayValue === 'number') displayValue = displayValue.toFixed(3);
                     input.value = displayValue;
                     input.onchange = () => {
                         let val = input.value;
-                        let num = parseFloat(val);
-                        if (!isNaN(num)) {
-                            num = Math.max(0, Math.round(num * 1000) / 1000);
-                            if (num >= 100) num = 99.999;
-                            bomRows[originalIndex][h] = num;
-                            input.value = num.toFixed(3);
-                        } else {
-                            bomRows[originalIndex][h] = "";
-                            input.value = "";
-                        }
+                        bomRows[originalIndex][h] = val;
                         validateRowPercentages(originalIndex);
                         buildTable();
                     };
+                    try {
+                        percentage(row[h], "درصد ضایعات");
+                    } catch (error) {
+                        input.classList.add("error-input");
+                        input.title = error.message;
+                    }
                     td.appendChild(input);
                 } else if (h === "recycability_percentage") {
                     const input = document.createElement("input");
                     input.type = "number";
                     input.step = "0.001";
+                    input.min = "0";
+                    input.max = "100";
                     let displayValue = row[h] !== undefined && row[h] !== null ? row[h] : "";
                     if (typeof displayValue === 'number') displayValue = displayValue.toFixed(3);
                     input.value = displayValue;
                     input.onchange = () => {
                         let val = input.value;
-                        let num = parseFloat(val);
-                        let lostNum = parseFloat(bomRows[originalIndex].lost_percentage);
-                        if (!isNaN(num)) {
-                            num = Math.max(0, Math.round(num * 1000) / 1000);
-                            if (!isNaN(lostNum) && lostNum > 0 && num >= lostNum) {
-                                num = Math.max(0, lostNum - 0.001);
-                            }
-                            bomRows[originalIndex][h] = num;
-                            input.value = num.toFixed(3);
-                        } else {
-                            bomRows[originalIndex][h] = "";
-                            input.value = "";
-                        }
-                        // Update derived fields after percentage change
-                        if (bomRows[originalIndex].materials) {
-                            updateDerivedFields(originalIndex, bomRows[originalIndex].materials);
-                            buildTable();
-                        }
+                        bomRows[originalIndex][h] = val;
+                        validateRowPercentages(originalIndex);
+                        buildTable();
                     };
-                    const lostNum = parseFloat(bomRows[originalIndex].lost_percentage);
-                    const recNum = parseFloat(row[h]);
-                    if (!isNaN(lostNum) && !isNaN(recNum) && lostNum > 0 && recNum >= lostNum) {
+                    try {
+                        percentage(row[h], "درصد بازیافت‌پذیری");
+                    } catch (error) {
                         input.classList.add("error-input");
+                        input.title = error.message;
                     }
                     td.appendChild(input);
                 } else {
@@ -831,14 +787,8 @@
     function saveBOM() {
         let hasErrors = false;
         bomRows.forEach((row, idx) => {
-            const lost = parseFloat(row.lost_percentage);
-            const rec = parseFloat(row.recycability_percentage);
-            if (!isNaN(lost) && lost >= 100) {
-                alert(`ردیف ${idx + 1}: درصد ضایعات باید کمتر از 100٪ باشد`);
-                hasErrors = true;
-            }
-            if (!isNaN(lost) && !isNaN(rec) && lost > 0 && rec >= lost) {
-                alert(`ردیف ${idx + 1}: درصد بازیافت‌پذیری (${rec}) باید کمتر از درصد ضایعات (${lost}) باشد`);
+            if (!validateRowPercentages(idx)) {
+                alert(`ردیف ${idx + 1}: ${row._calculation_error || "ورودی محاسبه هزینه کامل و معتبر نیست."}`);
                 hasErrors = true;
             }
         });

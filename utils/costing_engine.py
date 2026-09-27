@@ -237,6 +237,24 @@ def _decimal(value: Any, name: str, *, nonnegative: bool = True) -> Decimal:
     return result
 
 
+def calculate_live_bom_line(usage: Any, unit_price: Any, fx_rate: Any,
+                            loss_percentage: Any, recyclability_percentage: Any) -> tuple[Decimal, Decimal, Decimal]:
+    """Return gross cost, efficiency factor and live Rial cost for one row."""
+    parsed_usage = _decimal(usage, "usage")
+    price = _decimal(unit_price, "material unit price")
+    fx = _decimal(fx_rate, "FX")
+    loss = _decimal(loss_percentage, "loss percentage")
+    recyclable = _decimal(recyclability_percentage, "recyclability percentage")
+    if loss > 100 or recyclable > 100:
+        raise CostInputError(CostState.INVALID_INPUT, "INVALID_PERCENTAGE",
+                             "loss and recyclability must be in [0, 100]")
+    if fx <= 0:
+        raise CostInputError(CostState.INVALID_INPUT, "INVALID_FX_RATE", "applicable FX must be positive")
+    gross = parsed_usage * price * fx
+    factor = Decimal(1) - (loss / Decimal(100)) * (recyclable / Decimal(100))
+    return gross, factor, gross * factor
+
+
 def calculate_cost(inputs: CostInputs, overrides: CostOverrides | None = None) -> CostResult:
     """Calculate an approved V1 unit cost without reading or writing external state."""
     overrides = overrides or CostOverrides()
@@ -261,18 +279,14 @@ def calculate_cost(inputs: CostInputs, overrides: CostOverrides | None = None) -
 
         bom_components = []
         for line in inputs.bom_lines:
-            usage = _decimal(line.usage, f"usage[{line.row_id}]")
-            loss = _decimal(line.loss_percentage, f"loss[{line.row_id}]")
-            recyclable = _decimal(line.recyclability_percentage, f"recyclability[{line.row_id}]")
-            if loss > 100 or recyclable > 100:
-                raise CostInputError(CostState.INVALID_INPUT, "INVALID_PERCENTAGE", "loss and recyclability must be in [0, 100]")
             price = _decimal(overrides.material_unit_prices.get(line.row_id, line.price.unit_price), f"price[{line.row_id}]")
             fx = _decimal(overrides.fx_rates.get(line.price.currency, line.price.fx_rate), f"FX[{line.row_id}]")
-            if fx <= 0:
-                raise CostInputError(CostState.INVALID_INPUT, "INVALID_FX_RATE", "applicable FX must be positive")
-            gross = usage * price * fx
-            factor = Decimal(1) - (loss / Decimal(100)) * (recyclable / Decimal(100))
-            bom_components.append(BomContribution(line.row_id, line.material, gross, factor, gross * factor, line.historical_cost_in_rial))
+            gross, factor, live = calculate_live_bom_line(
+                line.usage, price, fx, line.loss_percentage, line.recyclability_percentage
+            )
+            bom_components.append(BomContribution(
+                line.row_id, line.material, gross, factor, live, line.historical_cost_in_rial
+            ))
 
         driver_components = []
         for pool in inputs.factory_pools:
@@ -462,3 +476,64 @@ class CostInputLoader:
                 continue
             products.append(ProductIdentity(factory_id, category, path.parent.name, path.stem))
         return tuple(products)
+
+
+def validate_live_bom_payload(payload, material_document):
+    """Validate BOM inputs and refresh historical preview fields before save."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("data"), dict):
+        raise CostInputError(CostState.INVALID_INPUT, "INVALID_BOM_SCHEMA", "ساختار BOM معتبر نیست.")
+    data = payload["data"]
+    required = ("materials", "usage", "lost_percentage", "recycability_percentage")
+    if any(not isinstance(data.get(key), list) for key in required):
+        raise CostInputError(CostState.INVALID_INPUT, "INVALID_BOM_SCHEMA", "ستون‌های الزامی BOM کامل نیستند.")
+    lengths = {len(data[key]) for key in required}
+    if len(lengths) != 1:
+        raise CostInputError(CostState.INVALID_INPUT, "INVALID_BOM_SCHEMA", "طول ستون‌های BOM یکسان نیست.")
+
+    material_data = material_document.get("data", {}) if isinstance(material_document, dict) else {}
+    material_fields = ("material", "unit", "currency", "cost_per_unit_in_currency")
+    if any(not isinstance(material_data.get(key), list) for key in material_fields):
+        raise CostInputError(CostState.INVALID_INPUT, "INVALID_MATERIAL_SCHEMA", "منبع قیمت مواد معتبر نیست.")
+    material_lengths = {len(material_data[key]) for key in material_fields}
+    if len(material_lengths) != 1:
+        raise CostInputError(CostState.INVALID_INPUT, "INVALID_MATERIAL_SCHEMA", "ستون‌های منبع قیمت هم‌اندازه نیستند.")
+    prices = {}
+    for index, material in enumerate(material_data["material"]):
+        prices.setdefault(material, []).append({key: material_data[key][index] for key in material_fields})
+
+    row_count = next(iter(lengths), 0)
+    refreshed = {key: list(values) if isinstance(values, list) else values for key, values in data.items()}
+    for field in ("unit", "cost_per_unit_in_currency", "cost_currency",
+                  "cost_of_material_in_its_currency", "cost_of_material_in_rial"):
+        refreshed[field] = [None] * row_count
+
+    def json_number(value):
+        return int(value) if value == value.to_integral_value() else float(value)
+
+    for index in range(row_count):
+        material = data["materials"][index]
+        matches = prices.get(material, [])
+        if len(matches) != 1:
+            state = CostState.MISSING_INPUT if not matches else CostState.AMBIGUOUS_INPUT
+            raise CostInputError(state, "MATERIAL_PRICE_NOT_UNIQUE",
+                                 f"ردیف {index + 1}: قیمت ماده باید دقیقاً یک رکورد معتبر داشته باشد.")
+        current = matches[0]
+        currency = current["currency"]
+        if currency == "IRR - Iranian Rial":
+            fx = 1
+        else:
+            fx_matches = prices.get(currency, [])
+            if len(fx_matches) != 1 or fx_matches[0]["currency"] != "IRR - Iranian Rial":
+                raise CostInputError(CostState.AMBIGUOUS_INPUT, "AMBIGUOUS_FX_MAPPING",
+                                     f"ردیف {index + 1}: نرخ ارز معتبر و یکتا نیست.")
+            fx = fx_matches[0]["cost_per_unit_in_currency"]
+        _, _, live = calculate_live_bom_line(
+            data["usage"][index], current["cost_per_unit_in_currency"], fx,
+            data["lost_percentage"][index], data["recycability_percentage"][index],
+        )
+        refreshed["unit"][index] = current["unit"]
+        refreshed["cost_per_unit_in_currency"][index] = current["cost_per_unit_in_currency"]
+        refreshed["cost_currency"][index] = fx
+        refreshed["cost_of_material_in_its_currency"][index] = json_number(live / Decimal(str(fx)))
+        refreshed["cost_of_material_in_rial"][index] = json_number(live)
+    return {"_order": payload.get("_order", []), "data": refreshed}
