@@ -31,30 +31,31 @@
                     <div class="col-md-3 mb-3">
                         <label for="factorySelect">کارخانه</label>
                         <select id="factorySelect" class="form-control">
-                            <option value="">همه کارخانه‌ها</option>
+                            <option value="">یک کارخانه را انتخاب کنید</option>
                         </select>
                     </div>
                     <div class="col-md-3 mb-3">
                         <label for="categorySelect">دسته</label>
-                        <select id="categorySelect" class="form-control" multiple size="3">
+                        <select id="categorySelect" class="form-control" disabled>
                             <!-- populated dynamically -->
                         </select>
                     </div>
                     <div class="col-md-3 mb-3">
                         <label for="subcategorySelect">زیردسته</label>
-                        <select id="subcategorySelect" class="form-control" multiple size="3">
+                        <select id="subcategorySelect" class="form-control" disabled>
                             <!-- populated based on factory & category -->
                         </select>
                     </div>
                     <div class="col-md-3 mb-3">
                         <label for="productSelect">محصول</label>
-                        <select id="productSelect" class="form-control" multiple size="3">
+                        <select id="productSelect" class="form-control" disabled>
                             <!-- populated based on subcategory -->
                         </select>
                     </div>
                 </div>
+                <div id="filterStatus" class="alert alert-secondary" role="status" aria-live="polite">ابتدا یک کارخانه را انتخاب کنید.</div>
                 <div class="d-flex justify-content-between align-items-center">
-                    <button id="analyzeBtn" class="btn btn-primary">
+                    <button id="analyzeBtn" class="btn btn-primary" disabled title="محاسبه هزینه در این نسخه فعال نیست">
                         <i class="fas fa-search"></i> تحلیل هزینه
                     </button>
                     <button id="downloadCsvBtn" class="btn btn-success" disabled>
@@ -113,7 +114,7 @@
             <!-- Placeholder when no data -->
             <div id="noDataPlaceholder" class="text-center py-5 text-muted">
                 <i class="fas fa-chart-bar fa-3x mb-3"></i>
-                <h5>برای مشاهده ریزتفکیک، فیلترها را انتخاب کرده و روی «تحلیل هزینه» کلیک کنید</h5>
+                <h5>در این نسخه فقط انتخاب امن دامنه فعال است؛ محاسبه هزینه در مرحله بعد پیاده‌سازی می‌شود.</h5>
             </div>
         </div>
 
@@ -209,239 +210,122 @@
 <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 
 <script>
-// ---- Initial فیلتر داده‌ها from Backend ----
-const filterOptions = {{ filter_options|tojson }};  // { factories: [], categories: [] }
-let currentData = null;
-
-// ---- DOM Elements ----
+const filterOptions = {{ filter_options|tojson }};
+const ALL = '__ALL__';
 const factorySelect = document.getElementById('factorySelect');
 const categorySelect = document.getElementById('categorySelect');
 const subcategorySelect = document.getElementById('subcategorySelect');
 const productSelect = document.getElementById('productSelect');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const downloadCsvBtn = document.getElementById('downloadCsvBtn');
-const costDashboard = document.getElementById('costDashboard');
-const noDataPlaceholder = document.getElementById('noDataPlaceholder');
+const filterStatus = document.getElementById('filterStatus');
 const APP_FONT_FAMILY = getComputedStyle(document.documentElement).getPropertyValue('--app-font-family').trim() || 'IRANSansX, Tahoma, sans-serif';
+// Retained as the shared presentation contract for the currently inactive charts.
+const DASHBOARD_CHART_STYLE = {textStyle: { fontFamily: APP_FONT_FAMILY }, fontFamily: APP_FONT_FAMILY};
+let requestSequence = 0;
+let activeRequest = null;
 
-// ---- Populate کارخانه & دسته Dropdowns on Load ----
-function populateInitialFilters() {
-    // Factories
-    filterOptions.factories.forEach(f => {
-        const option = document.createElement('option');
-        option.value = f.id;
-        option.textContent = `${f.name} (${f.code})`;
-        factorySelect.appendChild(option);
-    });
-    if (filterOptions.factories.length === 0) {
-        factorySelect.innerHTML = '<option value="">هیچ کارخانه‌ای تعریف نشده است.</option>';
-        factorySelect.disabled = true;
+function option(value, label) {
+    const node = document.createElement('option');
+    node.value = value;
+    node.textContent = label;
+    return node;
+}
+
+function setStatus(state, message) {
+    filterStatus.dataset.state = state;
+    filterStatus.textContent = message;
+    filterStatus.className = state === 'OK' ? 'alert alert-success' :
+        (state === 'LOADING' ? 'alert alert-info' : 'alert alert-warning');
+}
+
+function resetSelect(select, placeholder, disabled = true) {
+    select.replaceChildren(option('', placeholder));
+    select.disabled = disabled;
+}
+
+function fillSelect(select, options, placeholder, previous) {
+    const nodes = [option('', placeholder), option(ALL, 'همه')];
+    options.forEach(item => nodes.push(option(item.id, item.label)));
+    select.replaceChildren(...nodes);
+    select.disabled = false;
+    if ([ALL, ...options.map(item => item.id)].includes(previous)) select.value = previous;
+}
+
+function resetChildren(from) {
+    if (from <= 0) resetSelect(categorySelect, 'ابتدا کارخانه را انتخاب کنید');
+    if (from <= 1) resetSelect(subcategorySelect, 'ابتدا دسته را انتخاب کنید');
+    if (from <= 2) resetSelect(productSelect, 'ابتدا زیردسته را انتخاب کنید');
+}
+
+function paramsForCurrentSelection() {
+    const params = new URLSearchParams({factory: factorySelect.value});
+    if (categorySelect.value) params.set('category', categorySelect.value);
+    if (subcategorySelect.value) params.set('subcategory', subcategorySelect.value);
+    if (productSelect.value) params.set('product', productSelect.value);
+    return params;
+}
+
+async function refreshHierarchy(level) {
+    if (!factorySelect.value) {
+        requestSequence += 1;
+        if (activeRequest) activeRequest.abort();
+        resetChildren(0);
+        setStatus('NOT_SELECTED', 'ابتدا یک کارخانه را انتخاب کنید.');
+        return;
     }
-    // Categories (multi-select, all options)
-    filterOptions.categories.forEach(c => {
-        categorySelect.innerHTML += `<option value="${c}">${c}</option>`;
-    });
-    // Clear subcategory and product (they will be fetched on change)
-    subcategorySelect.innerHTML = '';
-    productSelect.innerHTML = '';
-}
-
-// ---- Fetch Subcategories Based on کارخانه & دسته ----
-async function loadSubcategories() {
-    const factory = factorySelect.value;
-    const categories = Array.from(categorySelect.selectedOptions).map(o => o.value);
-    const params = new URLSearchParams();
-    if (factory) params.append('factory', factory);
-    categories.forEach(c => params.append('category', c));
-
-    const response = await fetch(`/api/filter_options?${params.toString()}`);
-    const data = await response.json();
-    subcategorySelect.innerHTML = data.subcategories.map(s => `<option value="${s}">${s}</option>`).join('');
-    productSelect.innerHTML = ''; // reset products
-}
-
-// ---- Fetch محصولs Based on زیردسته ----
-async function loadمحصولs() {
-    const factory = factorySelect.value;
-    const categories = Array.from(categorySelect.selectedOptions).map(o => o.value);
-    const subcategories = Array.from(subcategorySelect.selectedOptions).map(o => o.value);
-    const params = new URLSearchParams();
-    if (factory) params.append('factory', factory);
-    categories.forEach(c => params.append('category', c));
-    subcategories.forEach(s => params.append('subcategory', s));
-
-    const response = await fetch(`/api/filter_options?${params.toString()}`);
-    const data = await response.json();
-    productSelect.innerHTML = data.products.map(p => `<option value="${p}">${p}</option>`).join('');
-}
-
-// ---- Event Listeners for Cascading Filters ----
-factorySelect.addEventListener('change', () => {
-    loadSubcategories();
-    loadمحصولs();
-});
-categorySelect.addEventListener('change', () => {
-    loadSubcategories();
-    loadمحصولs();
-});
-subcategorySelect.addEventListener('change', loadمحصولs);
-
-// ---- Analyze Button: Fetch Cost Data and Render Dashboard ----
-analyzeBtn.addEventListener('click', async () => {
-    const factory = factorySelect.value;
-    const categories = Array.from(categorySelect.selectedOptions).map(o => o.value);
-    const subcategories = Array.from(subcategorySelect.selectedOptions).map(o => o.value);
-    const products = Array.from(productSelect.selectedOptions).map(o => o.value);
-
-    const params = new URLSearchParams();
-    if (factory) params.append('factory', factory);
-    categories.forEach(c => params.append('category', c));
-    subcategories.forEach(s => params.append('subcategory', s));
-    products.forEach(p => params.append('product', p));
-
+    const sequence = ++requestSequence;
+    if (activeRequest) activeRequest.abort();
+    activeRequest = new AbortController();
+    const previous = {
+        category: categorySelect.value,
+        subcategory: subcategorySelect.value,
+        product: productSelect.value,
+    };
+    if (level <= 1) resetChildren(level);
+    [categorySelect, subcategorySelect, productSelect].forEach(select => { select.disabled = true; });
+    setStatus('LOADING', 'در حال دریافت گزینه‌های مجاز…');
     try {
-        const response = await fetch(`/api/cost_analysis?${params.toString()}`);
-        if (!response.ok) throw new Error('Failed to fetch data');
+        const response = await fetch(`/api/dashboard/filter-options?${paramsForCurrentSelection()}`, {
+            headers: {'Accept': 'application/json'}, signal: activeRequest.signal,
+        });
         const data = await response.json();
-        currentData = data;
-        renderDashboard(data);
-        downloadCsvBtn.disabled = false;
+        if (sequence !== requestSequence) return;
+        if (!response.ok) {
+            resetChildren(0);
+            setStatus(data.state || 'UNAVAILABLE', data.message || 'دریافت گزینه‌ها ممکن نیست.');
+            return;
+        }
+        fillSelect(categorySelect, data.options.categories, 'یک دسته را انتخاب کنید', previous.category);
+        if (categorySelect.value) {
+            fillSelect(subcategorySelect, data.options.subcategories, 'یک زیردسته را انتخاب کنید', previous.subcategory);
+        } else resetSelect(subcategorySelect, 'ابتدا دسته را انتخاب کنید');
+        if (subcategorySelect.value) {
+            fillSelect(productSelect, data.options.products, 'یک محصول را انتخاب کنید', previous.product);
+        } else resetSelect(productSelect, 'ابتدا زیردسته را انتخاب کنید');
+        const messages = {
+            OK: 'گزینه‌های مجاز به‌روزرسانی شد.',
+            NO_MATCH: 'برای دامنه انتخاب‌شده موردی یافت نشد.',
+            UNCONFIGURED: 'برای این کارخانه سلسله‌مراتب محصول پیکربندی نشده است.',
+        };
+        setStatus(data.state, messages[data.state] || data.message || 'وضعیت داده نامشخص است.');
     } catch (error) {
-        alert('خطا در بارگذاری داده‌های هزینه: ' + error.message);
-        console.error(error);
+        if (error.name !== 'AbortError' && sequence === requestSequence) {
+            resetChildren(0);
+            setStatus('UNAVAILABLE', 'ارتباط برای دریافت گزینه‌ها ناموفق بود.');
+        }
     }
+}
+
+filterOptions.factories.forEach(factory => {
+    factorySelect.appendChild(option(factory.id, `${factory.name} (${factory.code})`));
 });
-
-// ---- Render KPIs, Charts, and Table ----
-function renderDashboard(data) {
-    // Show dashboard, hide placeholder
-    costDashboard.style.display = 'block';
-    noDataPlaceholder.style.display = 'none';
-
-    // KPIs
-    document.getElementById('totalCost').textContent = formatCurrency(data.kpis.total_cost);
-    document.getElementById('avgCost').textContent = formatCurrency(data.kpis.avg_cost_per_product);
-    document.getElementById('productCount').textContent = formatInteger(data.kpis.product_count);
-    document.getElementById('topDriver').textContent = data.kpis.top_cost_driver || 'نامشخص';
-
-    // Breakdown Charts
-    renderدستهBarChart(data.breakdown_by_category);
-    renderزیردستهPieChart(data.breakdown_by_subcategory);
-
-    // Detail Table
-    renderDetailTable(data.detail_breakdown);
+if (!filterOptions.factories.length) {
+    factorySelect.disabled = true;
+    setStatus('FORBIDDEN', 'هیچ کارخانه مجازی برای این حساب وجود ندارد.');
 }
-
-// ---- دسته Bar Chart ----
-let categoryChartInstance = null;
-function renderدستهBarChart(breakdown) {
-    const container = document.getElementById('categoryBarChart');
-    if (categoryChartInstance) categoryChartInstance.dispose();
-    categoryChartInstance = echarts.init(container);
-
-    const categories = breakdown.map(item => item.name);
-    const costs = breakdown.map(item => item.cost);
-
-    categoryChartInstance.setOption({
-        textStyle: { fontFamily: APP_FONT_FAMILY },
-        title: { text: 'هزینه بر اساس دسته', left: 'center', textStyle: { fontFamily: APP_FONT_FAMILY, fontWeight: 700 } },
-        tooltip: { trigger: 'axis', textStyle: { fontFamily: APP_FONT_FAMILY }, valueFormatter: value => formatCurrency(value) },
-        xAxis: { type: 'category', data: categories, axisLabel: { rotate: 30, fontFamily: APP_FONT_FAMILY } },
-        yAxis: { type: 'value', name: 'هزینه (ریال)', nameTextStyle: { fontFamily: APP_FONT_FAMILY }, axisLabel: { fontFamily: APP_FONT_FAMILY } },
-        series: [{
-            name: 'هزینه',
-            type: 'bar',
-            data: costs,
-            itemStyle: { color: '#5470c6' }
-        }]
-    });
-}
-
-// ---- زیردسته Pie Chart ----
-let subcategoryChartInstance = null;
-function renderزیردستهPieChart(breakdown) {
-    const container = document.getElementById('subcategoryPieChart');
-    if (subcategoryChartInstance) subcategoryChartInstance.dispose();
-    subcategoryChartInstance = echarts.init(container);
-
-    const pieData = breakdown.map(item => ({
-        name: item.name,
-        value: item.cost
-    }));
-
-    subcategoryChartInstance.setOption({
-        textStyle: { fontFamily: APP_FONT_FAMILY },
-        title: { text: 'هزینه بر اساس زیردسته', left: 'center', textStyle: { fontFamily: APP_FONT_FAMILY, fontWeight: 700 } },
-        tooltip: { trigger: 'item', textStyle: { fontFamily: APP_FONT_FAMILY }, formatter: params => `${params.name}: ${formatCurrency(params.value)} (${formatInteger(params.percent)}٪)` },
-        series: [{
-            type: 'pie',
-            radius: ['40%', '70%'],
-            data: pieData,
-            label: { show: true, fontFamily: APP_FONT_FAMILY, formatter: params => `${params.name}: ${formatInteger(params.percent)}٪` }
-        }]
-    });
-}
-
-// ---- Detail Table ----
-function renderDetailTable(details) {
-    const tbody = document.querySelector('#detailTable tbody');
-    tbody.innerHTML = '';
-    details.forEach(row => {
-        tbody.innerHTML += `
-            <tr>
-                <td>${row.factory || 'نامشخص'}</td>
-                <td>${row.category || 'نامشخص'}</td>
-                <td>${row.subcategory || 'نامشخص'}</td>
-                <td>${row.product || 'نامشخص'}</td>
-                <td class="currency" dir="ltr">${formatCurrency(row.cost)}</td>
-            </tr>
-        `;
-    });
-}
-
-// ---- CSV Download ----
-downloadCsvBtn.addEventListener('click', () => {
-    if (!currentData || !currentData.detail_breakdown) return;
-
-    const rows = currentData.detail_breakdown;
-    const csvHeader = 'کارخانه,دسته,زیردسته,محصول,هزینه (ریال)\n';
-    const csvRows = rows.map(r =>
-        `"${r.factory || ''}","${r.category || ''}","${r.subcategory || ''}","${r.product || ''}",${r.cost}`
-    ).join('\n');
-    const csvContent = csvHeader + csvRows;
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'cost_breakdown.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-});
-
-// ---- Utility ----
-function formatNumber(num) {
-    return Number(num || 0).toLocaleString('fa-IR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-}
-function formatInteger(num) {
-    return Number(num || 0).toLocaleString('fa-IR', { maximumFractionDigits: 0 });
-}
-function formatCurrency(num) {
-    return `${formatNumber(num)} ریال`;
-}
-
-// ---- Handle Window Resize for Charts ----
-window.addEventListener('resize', () => {
-    if (categoryChartInstance) categoryChartInstance.resize();
-    if (subcategoryChartInstance) subcategoryChartInstance.resize();
-});
-
-// ---- Initialize Page ----
-populateInitialFilters();
+resetChildren(0);
+factorySelect.addEventListener('change', () => refreshHierarchy(0));
+categorySelect.addEventListener('change', () => refreshHierarchy(1));
+subcategorySelect.addEventListener('change', () => refreshHierarchy(2));
+productSelect.addEventListener('change', () => refreshHierarchy(3));
 </script>
 {% endblock %}
