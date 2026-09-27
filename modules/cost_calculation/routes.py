@@ -5,7 +5,12 @@ from utils.auth import get_profile_store, login_required
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.paths import product_path
 from utils.localization import DISPLAY_MAPPINGS
-from utils.cost_determiners import cost_aggregator
+from utils.costing_engine import (
+    CostInputError,
+    CostInputLoader,
+    ProductIdentity,
+    calculate_cost,
+)
 
 
 cost_calculation_bp = Blueprint("cost_calculation", __name__)
@@ -47,7 +52,8 @@ def get_cost():
         "Product_Name": "...",
         "Factory": "...",
         "Category": "...",
-        "Subcategory": "..."
+        "Subcategory": "...",
+        "Period": "..."  // optional only when one owner binding is active
     }
     Returns JSON with cost breakdown.
     """
@@ -55,19 +61,23 @@ def get_cost():
     if not data:
         return jsonify({"error": "No JSON payload"}), 400
 
+    service = FactoryService(get_profile_store())
+    factory_id = data.get("Factory", "")
+    identity = ProductIdentity(
+        factory_id, data.get("Category", ""), data.get("Subcategory", ""), data.get("Product_Name", "")
+    )
     try:
-        factory = FactoryService(get_profile_store()).require_access(data.get("Factory", ""), g.current_user, "cost_calculation")
+        inputs = CostInputLoader(service).load(
+            factory_id, g.current_user, identity, data.get("Period", ""), module="cost_calculation"
+        )
     except FactoryNotFoundError as exc:
         return jsonify({"error": str(exc)}), 404
     except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
         return jsonify({"error": str(exc)}), 403
-    cost = cost_aggregator(
-        product=data.get("Product_Name", ""),
-        fac=FactoryService(get_profile_store()).operational_key(factory),
-        cat=data.get("Category", ""),
-        subc=data.get("Subcategory", "")
-    )
-    return jsonify(cost)
+    except CostInputError as exc:
+        return jsonify({"state": exc.state.value, "errors": [exc.detail.__dict__]}), 422
+    result = calculate_cost(inputs)
+    return jsonify(result.to_dict()), 200 if result.state.value == "OK" else 422
 
 
 # ------------------------------------------------------------
@@ -86,26 +96,32 @@ def get_costs_bulk():
 
     # Validate the complete batch before loading/calculating any protected
     # factory data, so a later tampered item cannot produce a partial read.
+    service = FactoryService(get_profile_store())
+    loader = CostInputLoader(service)
     authorized_products = []
     for prod in products:
         if not isinstance(prod, dict):
             return jsonify({"error": "Invalid product entry"}), 400
         try:
-            factory = FactoryService(get_profile_store()).require_access(prod.get("Factory", ""), g.current_user, "cost_calculation")
+            factory = service.require_access(prod.get("Factory", ""), g.current_user, "cost_calculation")
         except FactoryNotFoundError as exc:
             return jsonify({"error": str(exc)}), 404
         except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
             return jsonify({"error": str(exc)}), 403
-        authorized_products.append((prod, FactoryService(get_profile_store()).operational_key(factory)))
+        authorized_products.append((prod, factory))
 
     result = {}
-    for prod, operational_key in authorized_products:
+    for prod, factory in authorized_products:
         name = prod.get("Product_Name", "")
-        cost = cost_aggregator(
-            product=name,
-            fac=operational_key,
-            cat=prod.get("Category", ""),
-            subc=prod.get("Subcategory", "")
+        identity = ProductIdentity(factory["id"], prod.get("Category", ""), prod.get("Subcategory", ""), name)
+        key = json.dumps(
+            [identity.factory_id, identity.category, identity.subcategory, identity.product],
+            ensure_ascii=False,
+            separators=(",", ":"),
         )
-        result[name] = cost
+        try:
+            inputs = loader.load(factory["id"], g.current_user, identity, prod.get("Period", ""), module="cost_calculation")
+            result[key] = calculate_cost(inputs).to_dict()
+        except CostInputError as exc:
+            result[key] = {"state": exc.state.value, "errors": [exc.detail.__dict__], "identity": identity.__dict__}
     return jsonify(result)

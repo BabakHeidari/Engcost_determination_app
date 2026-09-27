@@ -1,0 +1,17 @@
+{
+  "bindings": [
+    {
+      "factory_id": "replace-with-canonical-factory-id",
+      "period_id": "replace-with-owner-period-id",
+      "active": true,
+      "start": "YYYY-MM-DD",
+      "end": "YYYY-MM-DD",
+      "sources": [
+        "materials", "bom", "weights", "predictions",
+        "pool:AdministrativeandResearch", "pool:Payroll", "pool:Overhead",
+        "pool:FinancialCosts", "pool:Depriciation",
+        "pool:NonOperationalCostsandIncomes"
+      ]
+    }
+  ]
+}
