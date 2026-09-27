@@ -409,6 +409,11 @@ class CostInputLoader:
                           tuple(provenance), datetime.now(timezone.utc))
 
     def _period_binding(self, factory_id: str, period_id: str) -> tuple[PlanningPeriod, set[str]]:
+        if not self.period_bindings_path.is_file():
+            raise CostInputError(
+                CostState.MISSING_INPUT, "PERIOD_NOT_BOUND",
+                "owner-approved costing period configuration is not installed",
+            )
         document, _ = self._read(self.period_bindings_path)
         matches = [
             item for item in document.get("bindings", [])
