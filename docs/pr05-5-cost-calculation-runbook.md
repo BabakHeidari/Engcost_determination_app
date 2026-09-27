@@ -144,6 +144,27 @@ Bulk اکنون `{state, coverage, results}` برمی‌گرداند. در حا�
 `PARTIAL` است و CSV ردیف‌های موفق را با عدد معتبر و ردیف‌های ناموفق را با عدد
 خالی و state/code/message صادر می‌کند؛ این خروجی «جمع کامل کارخانه» نیست.
 
+### تشخیص فقط‌خواندنی binding واقعی
+
+پیش از ساخت یا تغییر دوره، وضعیت runtime را با همان canonical ID ارسال‌شده از
+ردیف محصول بررسی کنید:
+
+```bash
+python scripts/diagnose_costing_period.py \
+  --profile-file "$APP_DATA_FILE" \
+  --binding-file instance/costing_period_bindings.json \
+  --factory-id CANONICAL_ID_FROM_BROWSER_PAYLOAD
+```
+
+فرمان هیچ فایلی را تغییر نمی‌دهد و factory input، canonical resolution، مسیر و
+وجود فایل runtime، factory ID ذخیره‌شده در binding، period ID، start/end، status،
+active، approved، approval owner و نتیجه هر شرط موتور را گزارش می‌کند. موتور هر
+سه شرط `active=true`، `approved=true` و `status=ACTIVE` را همراه start/end معتبر
+و active یکتا لازم دارد. اگر رکورد `DRAFT` باشد، discovery فقط پیشنهاد ساخته و
+مسیر approval احراز هویت‌شده هنوز باید توسط مدیر مجاز طی شود؛ draft جدید نسازید.
+اگر فقط `start_date`/`end_date` وجود داشته باشد، schema با loader سازگار نیست؛
+فیلدهای canonical runtime در قرارداد فعلی `start` و `end` هستند.
+
 ## قبل و بعد
 
 - **قبل:** انتخاب ردیف دارای operational key به 404 می‌رسید؛ 422 و network هر

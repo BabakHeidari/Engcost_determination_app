@@ -5,7 +5,7 @@ import pytest
 
 from utils.costing_engine import CostInputError, CostInputLoader, FACTORY_POOL_IDS
 from utils.factory_service import FactoryService
-from utils.planning_periods import REQUIRED_SOURCES, approve_initial_period, discover_initial_period
+from utils.planning_periods import REQUIRED_SOURCES, approve_initial_period, discover_initial_period, validate_costing_period
 from utils.profile_store import ProfileDataStore
 
 
@@ -94,3 +94,38 @@ def test_factories_discover_independent_initial_dates(tmp_path):
     assert first["start"] == "2025-01-02"
     assert second["start"] == "2024-03-04"
     assert first["factory_id"] != second["factory_id"]
+
+
+def test_period_diagnostic_traces_operational_resolution_and_draft_reason(tmp_path):
+    store = _registry(tmp_path)
+    data, binding = tmp_path / "Data", tmp_path / "bindings.json"
+    _write(data / "Overall" / "material_costs.json", {"effective_date": "2026-01-01"})
+    discover_initial_period(FactoryService(store), "F1", data, binding, clock=lambda: NOW)
+
+    result = validate_costing_period(FactoryService(store), binding, "op-one")
+
+    assert result["factory_input"] == "op-one"
+    assert result["canonical_id"] == result["binding_factory_id"] == "F1"
+    assert result["factory_resolution"] == "UNIQUE_OPERATIONAL_KEY"
+    assert result["period_found"] is True and result["period_id"] == "INITIAL"
+    assert result["status"] == "DRAFT" and result["approved"] is False
+    assert result["usable_by_costing"] is False
+    assert "owner approval is missing" in result["reason"]
+
+
+def test_period_diagnostic_reports_active_approved_and_schema_failures(tmp_path):
+    store = _registry(tmp_path)
+    data, binding = tmp_path / "Data", tmp_path / "bindings.json"
+    _write(data / "Overall" / "material_costs.json", {"effective_date": "2026-01-01"})
+    discover_initial_period(FactoryService(store), "F1", data, binding, clock=lambda: NOW)
+    approve_initial_period(store, binding, "F1", "manager", "2026-12-31", REQUIRED_SOURCES, clock=lambda: NOW)
+    usable = validate_costing_period(FactoryService(store), binding, "F1", "INITIAL")
+    assert usable["checks"] == {"active": True, "approved": True, "active_status": True, "valid_dates": True}
+    assert usable["usable_by_costing"] is True and usable["approval_owner"] == "manager"
+
+    document = json.loads(binding.read_text(encoding="utf-8"))
+    document["bindings"][0]["start_date"] = document["bindings"][0].pop("start")
+    _write(binding, document)
+    invalid = validate_costing_period(FactoryService(store), binding, "F1")
+    assert invalid["usable_by_costing"] is False
+    assert "canonical start/end fields" in invalid["reason"]
