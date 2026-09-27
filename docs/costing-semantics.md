@@ -23,28 +23,32 @@ reconcile شوند.
 Prediction تعداد برنامه‌ریزی‌شدهٔ همان پیکربندی در بازهٔ دارای شروع و پایان
 صریح است. pool و prediction باید هم‌دوره باشند. نرخ FX ریال برای یک واحد ارز
 خارجی و تازه‌ترین نرخ **معتبر** در زمان محاسبه با source time/version است.
-نبود period/version/as-of در منبع، مجوز ساخت metadata نیست.
+نبود period/version/as-of در منبع، مجوز ساخت metadata نیست. legacy تنها با
+binding صریح مالک به یک planning period پذیرفته می‌شود؛ تاریخ `2026-09-27`
+در این حالت owner-assigned baseline است، نه actual source timestamp.
 
 هدف تحلیلی recomputation سمت سرور از ورودی‌های جاری معتبر عمومی/مواد/FX/BOM
 است؛ مبلغ ریالی ذخیره‌شدهٔ BOM فقط مرجع تاریخی/مقایسه‌ای است. Usage ناخالص و
 شامل loss و recycled material است؛ Loss بر Usage ناخالص اعمال می‌شود؛ Loss و
 Recyclability هر دو درصد ۰..۱۰۰ هستند. stock re-entry، مصرف فرضی کل بازیافتی،
-carryover ledger و هزینهٔ پردازش بازیافت در BOM وجود ندارد. با این حال عبارت
-عددی دقیق تا حل دروازهٔ فرمول تصویب نشده است.
+carryover ledger و هزینهٔ پردازش بازیافت در BOM وجود ندارد. فرمول مصوب هر ردیف
+`Usage × current price × FX × (1-(Loss/100 × Recyclability/100))` است. FX برای
+قیمت ریالی ۱ است، stored Rial در live دخالت ندارد و گردکردن پولی میانی انجام نمی‌شود.
 
 ## تخصیص، دقت و اعتبارسنجی
 
-تقسیم فعلی pool بر `selling_share_of_category / 100` برای یک محصول حفظ می‌شود
-و به ضرب تبدیل نمی‌شود. این تصویب، تکرار pool مشترک در جمع چند محصول را تصویب
-نمی‌کند. شناسه‌های شش subfield ذخیره‌شده یعنی `AdministrativeandResearch`،
+تقسیم pool بر `selling_share_of_category / 100` حفظ می‌شود و به ضرب تبدیل
+نمی‌شود. adjusted pool یک‌بار بر مجموع prediction همهٔ محصولات eligible همان
+دسته و period تقسیم می‌شود؛ display filter این جمعیت را محدود نمی‌کند. raw pool،
+modeled allocation و اختلاف آنها جدا هستند. شناسه‌های شش subfield ذخیره‌شده یعنی `AdministrativeandResearch`،
 `Payroll`، `Overhead`، `FinancialCosts`، `Depriciation` (با همین املای ذخیره‌شده)
 و `NonOperationalCostsandIncomes` بدون تغییر حفظ می‌شوند؛ label منبع
 currency/period/accounting semantics نیست.
 
 محاسبه باید با دقت کافی و گردکردن فقط در presentation انجام شود؛ Decimal بدون
 آزمون سازگاری اجازهٔ تغییر مرز حسابداری ندارد. ورودی‌ها در ingestion/calculation
-اعتبارسنجی می‌شوند. duplicate هرگز بی‌صدا overwrite، discard یا sum نمی‌شود و
-تا تصویب قاعده، `AMBIGUOUS_INPUT`/پوشش ناقص تولید می‌کند.
+اعتبارسنجی می‌شوند. هر ردیف BOM هویت مستقل دارد؛ نام ماده می‌تواند تکرار شود و
+contribution ردیف‌های معتبر بدون overwrite جمع می‌شود. malformed row خطای typed است.
 
-جزئیات باز در [دروازه‌های مالک](dashboard-owner-approval-gates.md) ثبت شده‌اند؛
-DASH-0 از نظر عددی کامل اعلام نمی‌شود.
+golden vectorهای بسته‌شده در [دروازه‌های مالک](dashboard-owner-approval-gates.md)
+و پیاده‌سازی PR-05 ثبت شده‌اند.

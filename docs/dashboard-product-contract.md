@@ -59,6 +59,15 @@ sequence و AbortController کنار می‌گذارد، فقط انتخاب ه�
 پارامتر عمومی یا `Data/Factories` مجاز نیست. زمان محاسبه و provenance فقط اگر
 منبع واقعاً پشتیبانی کند گزارش می‌شود؛ timestamp حدسی ممنوع است.
 
+## موتور مشترک هزینهٔ PR-05
+
+فرمول live و چهار gate عددی G1–G4 در تاریخ `2026-09-27` به تأیید مالک رسیدند.
+Cost Calculation از loader فقط‌خواندنی و همان تابع pure که مصرف‌کنندگان تحلیلی
+آتی استفاده خواهند کرد عبور می‌کند. period legacy باید در فایل binding
+owner-controlled به یک کارخانه و یک بازهٔ صریح متصل باشد. baseline مالک از
+actual timestamp و calculation timestamp جدا گزارش می‌شود. Dashboard KPI و UI
+حساسیت همچنان خارج از دامنهٔ این PR هستند.
+
 ## فرض‌های فنیِ تأییدنشده
 
 نام فایل JSON غیر `_meta` فعلاً نشانگر پیکربندی محصول در read-model است؛ این

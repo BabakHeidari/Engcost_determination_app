@@ -861,6 +861,10 @@
             return {};
         }
     }
+
+    function costIdentityKey(product) {
+        return JSON.stringify([product.Factory || "", product.Category || "", product.Subcategory || "", product.Product_Name || ""]);
+    }
     
     // Build dropdown filters
     function buildDropdown(id, columnName) {
@@ -972,7 +976,10 @@
             const rows = [headers];
             for (const product of filteredProducts) {
                 const name = product.Product_Name || "";
-                const costs = allCosts[name] || {};
+                const costs = allCosts[costIdentityKey(product)] || {};
+                if (costs.state !== "OK") {
+                    throw new Error(`محاسبه هزینه برای ${name} کامل نیست: ${costs.state || "MISSING_INPUT"}`);
+                }
                 rows.push([
                     `"${name.replace(/"/g, '""')}"`,
                     `"${(product.Factory || "").replace(/"/g, '""')}"`,
