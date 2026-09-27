@@ -97,48 +97,69 @@ def _read_bindings(path: Path) -> dict:
 
 def discover_initial_period(factory_service: FactoryService, factory_id: str, data_root: Path,
                             binding_path: Path, *, clock=None, persist=True) -> dict:
-    """Create a non-active draft from the earliest embedded source date."""
+    """Create the first factory period as an auditable system-approved ACTIVE binding."""
     factory = factory_service.get_factory(factory_id)
     if not factory:
         raise ValueError("canonical factory ID is absent from the profile registry")
     document = _read_bindings(binding_path)
     existing = [item for item in document["bindings"] if item.get("factory_id") == factory_id]
-    if any(item.get("active") is True and item.get("approved") is True and item.get("status") == "ACTIVE" for item in existing):
-        raise ValueError("factory already has an approved active planning period")
-    if any(item.get("period_id") == "INITIAL" for item in existing):
-        raise ValueError("factory already has an INITIAL planning-period record")
+    if existing:
+        initial = [item for item in existing if item.get("period_id") == "INITIAL"]
+        if len(existing) == 1 and len(initial) == 1:
+            candidate = initial[0]
+            try:
+                valid_dates = date.fromisoformat(candidate["start"]) <= date.fromisoformat(candidate["end"])
+            except (KeyError, TypeError, ValueError):
+                valid_dates = False
+            if (candidate.get("active") is True and candidate.get("approved") is True
+                    and candidate.get("status") == "ACTIVE" and valid_dates):
+                return candidate
+        raise ValueError("factory already has costing-period history; automatic initialization is first-period only")
 
     operational_key = factory_service.operational_key(factory)
     root, factory_root = Path(data_root).resolve(), Path(data_root).resolve() / "Factories" / operational_key
     paths = [root / "Overall" / "material_costs.json"]
     if factory_root.is_dir():
         paths.extend(sorted(path for path in factory_root.rglob("*.json") if not path.name.startswith("_")))
-    evidence = []
+    evidence, readable_sources = [], 0
     for path in paths:
         try:
             source = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             continue
+        if not isinstance(source, dict):
+            continue
+        data = source.get("data")
+        if isinstance(data, dict) and any(isinstance(value, list) and value for value in data.values()):
+            readable_sources += 1
         for parsed, identifier, raw in _dates(source):
             evidence.append({"date": parsed.isoformat(), "source_type": _source_type(path, factory_root),
                              "source": path.name, "source_identifier": identifier, "raw_value": raw,
                              "confidence": "AUTHORITATIVE_SOURCE_DATE"})
     evidence.sort(key=lambda item: (item["date"], item["source_type"], item["source"], item["source_identifier"]))
     now = _utc_now(clock)
+    if not readable_sources:
+        raise ValueError("no valid costing data exists for initial period creation")
     if evidence:
-        start, reason, baseline_type, status = evidence[0]["date"], "FIRST_AVAILABLE_DATA_DATE", "SOURCE_DATE", "DISCOVERED"
+        start, date_origin, discovery_status = evidence[0]["date"], "SOURCE_DATE", "DISCOVERED"
     else:
-        start, reason, baseline_type, status = now.date().isoformat(), "SYSTEM_INITIALIZATION_DATE", "SYSTEM_INITIALIZATION_DATE", "NO_AUTHORITATIVE_SOURCE_DATE"
-    draft = {
-        "factory_id": factory_id, "period_id": "INITIAL", "start": start, "end": None,
-        "active": False, "approved": False, "status": "DRAFT", "creation_reason": reason,
-        "baseline_type": baseline_type, "discovery_status": status, "created_at": now.isoformat(),
-        "source_evidence": evidence,
+        start, date_origin, discovery_status = now.date().isoformat(), "SYSTEM_INITIALIZATION_DATE", "NO_AUTHORITATIVE_SOURCE_DATE"
+    # The initialization instant is an explicit system boundary, not source
+    # history. A future-dated authoritative source produces a one-day period.
+    end = max(date.fromisoformat(start), now.date()).isoformat()
+    initial = {
+        "factory_id": factory_id, "period_id": "INITIAL", "start": start, "end": end,
+        "active": True, "approved": True, "status": "ACTIVE",
+        "approved_by": "SYSTEM_INITIALIZATION", "approval_type": "SYSTEM_INITIALIZATION",
+        "approved_at": now.isoformat(), "creation_reason": "FIRST_FACTORY_COSTING_INITIALIZATION",
+        "date_origin": date_origin, "end_date_origin": "SYSTEM_INITIALIZATION_BOUNDARY",
+        "discovery_status": discovery_status, "created_at": now.isoformat(),
+        "source_evidence": evidence, "sources": sorted(REQUIRED_SOURCES),
     }
-    document["bindings"].append(draft)
+    document["bindings"].append(initial)
     if persist:
         _write_document(Path(binding_path), document)
-    return draft
+    return initial
 
 
 def approve_initial_period(store, binding_path: Path, factory_id: str, actor_id: str,

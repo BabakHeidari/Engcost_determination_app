@@ -70,10 +70,28 @@ python scripts/manage_costing_bindings.py \
 در deployment واقعی هنوز این ورودی‌ها لازم‌اند: canonical factory ID، period
 ID، start، end، active و فهرست منابعی که مالک برای همان period تأیید کرده است.
 
-## راه‌اندازی نخستین دوره برای کارخانه جدید
+## راه‌اندازی خودکار نخستین دوره برای کارخانه جدید
 
-اگر کارخانه هنوز هیچ دوره ACTIVE و approved ندارد، ابتدا کشف را به‌صورت dry-run
-انجام دهید:
+فقط وقتی هیچ رکورد دوره‌ای برای canonical factory وجود ندارد، نخستین درخواست
+محاسبه می‌تواند discovery را اجرا کند و یک رکورد `INITIAL` با
+`status=ACTIVE`, `active=true` و `approved=true` بسازد. این approval انسانی نیست:
+`approved_by` و `approval_type` هر دو `SYSTEM_INITIALIZATION` هستند و زمان واقعی
+initialization در `approved_at`/`created_at` ثبت می‌شود. اگر هر دوره‌ای از قبل
+وجود داشته باشد، رکورد دیگری ساخته یا فعال نمی‌شود؛ دوره‌های آینده همان lifecycle
+کنترل‌شده عادی را دارند.
+
+کشف، تاریخ‌های درج‌شده در material prices، BOMها، پارامترهای کارخانه، prediction
+و شش pool را می‌خواند. زودترین تاریخ معتبر start است و evidence شامل نوع منبع،
+نام فایل، شناسه فیلد، raw value و confidence می‌ماند. `date_origin=SOURCE_DATE`
+یعنی start از منبع آمده است. اگر داده هزینه‌ای معتبر وجود دارد ولی هیچ تاریخ
+authoritative ندارد، start روز initialization و
+`date_origin=SYSTEM_INITIALIZATION_DATE` است؛ این تاریخ هرگز timestamp تاریخی
+منبع معرفی نمی‌شود. end مرز شفاف initialization است
+(`end_date_origin=SYSTEM_INITIALIZATION_BOUNDARY`) و برای تاریخ منبع آینده، با
+start یکسان می‌شود تا بازه معکوس ساخته نشود. نبود هرگونه داده معتبر، خطای typed
+می‌دهد و period خالی نمی‌سازد.
+
+برای dry-run/بازبینی کنسول مورد اعتماد:
 
 ```bash
 python scripts/initialize_planning_period.py \
@@ -82,46 +100,11 @@ python scripts/initialize_planning_period.py \
   discover --factory-id CANONICAL_ID --data-root Data
 ```
 
-کشف، تاریخ‌های کسب‌وکاری درج‌شده در material prices، BOMهای کارخانه، پارامترهای
-کارخانه، prediction و شش pool را بررسی و زودترین تاریخ معتبر را همراه نوع منبع،
-نام فایل، شناسه فیلد، زمان کشف و confidence ثبت می‌کند. mtime فایل استفاده
-نمی‌شود. تاریخ جلالی ورودی برای storage به ISO canonical تبدیل می‌شود. برای ثبت
-پیش‌نویس، پس از بازبینی همان فرمان را با `--write` اجرا کنید.
-
-اگر هیچ تاریخ authoritative در محتوای منابع وجود نداشته باشد، تاریخ جاری فقط با
-`baseline_type=SYSTEM_INITIALIZATION_DATE` و
-`creation_reason=SYSTEM_INITIALIZATION_DATE` ثبت می‌شود. `source_evidence` خالی
-می‌ماند؛ این مقدار timestamp تاریخی، تاریخ ایجاد منبع یا تراکنش کسب‌وکار نیست.
-
-خروجی کشف همیشه `status=DRAFT`, `approved=false`, `active=false` و `end=null`
-است و موتور هزینه آن را نمی‌پذیرد. مدیر فعال با نقش موجود `IT_ADMIN` یا
-`FINANCE_ECONOMIC_ADMIN` باید end و تمام منابع را صریحاً تأیید کند؛ job title یا
-مجوز جدیدی ساخته نشده است:
-
-```bash
-python scripts/initialize_planning_period.py \
-  --profile-file instance/app_data.json \
-  --binding-file instance/costing_period_bindings.json \
-  approve --factory-id CANONICAL_ID --actor-id TOP_LEVEL_USER_ID \
-  --end OWNER_APPROVED_END_ISO \
-  --source materials --source bom --source weights --source predictions \
-  --source pool:AdministrativeandResearch --source pool:Payroll \
-  --source pool:Overhead --source pool:FinancialCosts \
-  --source pool:Depriciation --source pool:NonOperationalCostsandIncomes
-```
-
-ابتدا dry-run و سپس با `--write` ثبت کنید. approval رکورد را به
-`status=ACTIVE`, `approved=true`, `active=true` تبدیل و actor/time را ثبت می‌کند.
-تا پیش از آن `PERIOD_NOT_BOUND` رفتار صحیح است. وجود draft، به‌تنهایی period
-پیش‌فرض یا fallback ایجاد نمی‌کند.
-
-در استقرار وب، مسیر ترجیحی و احراز هویت‌شده برای همین عملیات‌ها
-`POST /cost/planning-period/initial/discover` با بدنه `{"factory_id":"..."}` و
-`POST /cost/planning-period/initial/approve` با بدنه شامل `factory_id`، `end` و
-`sources` است. هر دو route نشست معتبر و نقش موجود top-level را الزام می‌کنند؛
-actor approval از نشست خوانده می‌شود، نه از بدنه درخواست. CLI فقط برای کنسول
-محلیِ مورد اعتماد اپراتور است و همچنان رکورد actor باید نقش فعال IT یا
-مالی/اقتصادی داشته باشد.
+`--write` فقط برای ایجاد اولین رکورد استفاده می‌شود. درخواست عادی
+`POST /cost/get_cost` همین initialization را در نبود کامل تاریخچه به‌صورت امن
+انجام می‌دهد و سپس با loader تازه محاسبه را ادامه می‌دهد. endpoint محافظت‌شده
+`POST /cost/planning-period/initial/discover` نیز همین قرارداد را دارد. هیچ user
+ID جعلی یا manager approval ثبت نمی‌شود.
 
 ## راستی‌آزمایی و عیب‌یابی
 
@@ -160,8 +143,7 @@ python scripts/diagnose_costing_period.py \
 وجود فایل runtime، factory ID ذخیره‌شده در binding، period ID، start/end، status،
 active، approved، approval owner و نتیجه هر شرط موتور را گزارش می‌کند. موتور هر
 سه شرط `active=true`، `approved=true` و `status=ACTIVE` را همراه start/end معتبر
-و active یکتا لازم دارد. اگر رکورد `DRAFT` باشد، discovery فقط پیشنهاد ساخته و
-مسیر approval احراز هویت‌شده هنوز باید توسط مدیر مجاز طی شود؛ draft جدید نسازید.
+و active یکتا لازم دارد. اگر رکورد legacy `DRAFT` باشد، تاریخچه از قبل وجود دارد و قانون first-period آن را خودکار فعال نمی‌کند؛ draft جدید نسازید و lifecycle کنترل‌شده موجود را طی کنید.
 اگر فقط `start_date`/`end_date` وجود داشته باشد، schema با loader سازگار نیست؛
 فیلدهای canonical runtime در قرارداد فعلی `start` و `end` هستند.
 

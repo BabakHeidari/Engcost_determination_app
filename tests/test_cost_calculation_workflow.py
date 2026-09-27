@@ -88,12 +88,29 @@ def test_single_route_golden_and_bulk_use_same_four_part_identity(workflow):
 
 def test_missing_binding_is_typed_actionable_and_never_zero(workflow):
     app, client, binding = workflow
-    app.config["COSTING_PERIOD_BINDINGS_FILE"] = str(binding.with_name("absent.json"))
+    unusable = binding.with_name("draft.json")
+    _write(unusable, {"bindings": [{"factory_id": "factory-canonical", "period_id": "INITIAL",
+                                     "start": "2026-10-01", "end": None, "status": "DRAFT",
+                                     "approved": False, "active": False}]})
+    app.config["COSTING_PERIOD_BINDINGS_FILE"] = str(unusable)
     response = client.post("/cost/get_cost", json=_payload())
     assert response.status_code == 422
     body = response.get_json()
     assert body["state"] == "MISSING_INPUT" and body["error"]["code"] == "PERIOD_NOT_BOUND"
     assert "پیکربندی" in body["error"]["message"] and "Final_Production_Cost" not in body
+
+
+def test_first_calculation_auto_initializes_period_and_continues(workflow):
+    app, client, binding = workflow
+    binding.unlink()
+    response = client.post("/cost/get_cost", json=_payload())
+    assert response.status_code == 200
+    assert response.get_json()["Final_Production_Cost"] == 98000100
+    initial = json.loads(binding.read_text(encoding="utf-8"))["bindings"]
+    assert len(initial) == 1
+    assert initial[0]["period_id"] == "INITIAL"
+    assert initial[0]["status"] == "ACTIVE" and initial[0]["approved"] is True and initial[0]["active"] is True
+    assert initial[0]["approval_type"] == initial[0]["approved_by"] == "SYSTEM_INITIALIZATION"
 
 
 def test_request_and_authorization_fail_closed(workflow):

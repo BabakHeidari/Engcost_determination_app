@@ -17,7 +17,7 @@ def parser():
     command.add_argument("--profile-file", required=True, type=Path)
     command.add_argument("--binding-file", required=True, type=Path)
     subcommands = command.add_subparsers(dest="action", required=True)
-    discover = subcommands.add_parser("discover", help="ایجاد DRAFT غیرفعال")
+    discover = subcommands.add_parser("discover", help="ایجاد خودکار نخستین دوره ACTIVE کارخانه")
     discover.add_argument("--factory-id", required=True)
     discover.add_argument("--data-root", required=True, type=Path)
     discover.add_argument("--write", action="store_true")

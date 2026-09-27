@@ -38,6 +38,8 @@ ERROR_MESSAGES = {
     "CATEGORY_SHARE_NOT_UNIQUE": "سهم دسته محصول موجود یا یکتا نیست.",
     "INVALID_PERCENTAGE": "درصد ضایعات یا بازیافت باید بین صفر تا صد باشد.",
     "INVALID_PERIOD_BINDING": "تنظیمات دوره برنامه‌ریزی معتبر نیست.",
+    "INITIAL_FACTORY_DATA_MISSING": "اطلاعات کارخانه برای ایجاد دوره اولیه کافی نیست.",
+    "INITIAL_COSTING_DATA_MISSING": "برای شروع محاسبه، هیچ داده معتبر هزینه‌ای برای این کارخانه پیدا نشد.",
 }
 
 
@@ -80,7 +82,26 @@ def _identity_key(identity):
 
 
 def _calculate(loader, user, identity, period):
-    inputs = loader.load(identity.factory_id, user, identity, period, module="cost_calculation")
+    try:
+        inputs = loader.load(identity.factory_id, user, identity, period, module="cost_calculation")
+    except CostInputError as exc:
+        if exc.detail.code != "PERIOD_NOT_BOUND" or period not in ("", "INITIAL"):
+            raise
+        data_root, binding = _costing_paths()
+        try:
+            discover_initial_period(loader.factory_service, identity.factory_id, data_root, binding)
+        except ValueError as initialization_error:
+            message = str(initialization_error)
+            if "canonical factory" in message:
+                code, localized = "INITIAL_FACTORY_DATA_MISSING", ERROR_MESSAGES["INITIAL_FACTORY_DATA_MISSING"]
+            elif "no valid costing data" in message:
+                code, localized = "INITIAL_COSTING_DATA_MISSING", ERROR_MESSAGES["INITIAL_COSTING_DATA_MISSING"]
+            else:
+                raise exc from initialization_error
+            raise CostInputError(exc.state, code, localized) from initialization_error
+        inputs = _loader(loader.factory_service).load(
+            identity.factory_id, user, identity, period, module="cost_calculation"
+        )
     result = calculate_cost(inputs)
     payload = result.to_dict()
     for source in payload.get("source_metadata", []):
@@ -196,8 +217,8 @@ def discover_initial_planning_period():
     store = get_profile_store()
     try:
         data_root, binding = _costing_paths()
-        draft = discover_initial_period(FactoryService(store), data["factory_id"], data_root, binding)
-        return jsonify({"state": "DRAFT", "period": draft}), 201
+        initial = discover_initial_period(FactoryService(store), data["factory_id"], data_root, binding)
+        return jsonify({"state": "ACTIVE", "period": initial}), 200
     except ValueError as exc:
         return jsonify({"state": "INVALID_REQUEST", "error": {"code": "INITIAL_PERIOD_DISCOVERY_REJECTED", "message": str(exc)}}), 422
 
