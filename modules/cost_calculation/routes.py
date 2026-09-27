@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from flask import Blueprint, abort, current_app, g, jsonify, render_template, request
 
-from utils.auth import get_profile_store, login_required
+from utils.auth import get_profile_store, login_required, require_top_level_admin
 from utils.costing_engine import CostInputError, CostInputLoader, ProductIdentity, calculate_cost
 from utils.factory_service import (
     FactoryAccessDeniedError,
@@ -17,6 +17,7 @@ from utils.factory_service import (
 )
 from utils.localization import DISPLAY_MAPPINGS
 from utils.paths import product_path
+from utils.planning_periods import approve_initial_period, discover_initial_period
 
 
 cost_calculation_bp = Blueprint("cost_calculation", __name__)
@@ -47,6 +48,12 @@ def _loader(service):
     if current_app.config.get("COSTING_PERIOD_BINDINGS_FILE"):
         options["period_bindings_path"] = Path(current_app.config["COSTING_PERIOD_BINDINGS_FILE"])
     return CostInputLoader(service, **options)
+
+
+def _costing_paths():
+    data_root = Path(current_app.config.get("COSTING_DATA_ROOT") or Path(product_path).resolve().parents[1])
+    binding = Path(current_app.config.get("COSTING_PERIOD_BINDINGS_FILE") or (data_root.parent / "instance" / "costing_period_bindings.json"))
+    return data_root, binding
 
 
 def _typed_error(exc):
@@ -177,3 +184,35 @@ def get_costs_bulk():
     states = [item.get("state") for item in results.values()]
     coverage = {"configured": len(results), "calculated": states.count("OK"), "excluded": len(results) - states.count("OK")}
     return jsonify({"state": "OK" if not coverage["excluded"] else "PARTIAL", "coverage": coverage, "results": results})
+
+
+@cost_calculation_bp.route("/planning-period/initial/discover", methods=["POST"])
+@login_required
+@require_top_level_admin
+def discover_initial_planning_period():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get("factory_id"), str):
+        return jsonify({"state": "INVALID_REQUEST", "error": {"code": "MISSING_FACTORY_ID", "message": "شناسه canonical کارخانه الزامی است."}}), 400
+    store = get_profile_store()
+    try:
+        data_root, binding = _costing_paths()
+        draft = discover_initial_period(FactoryService(store), data["factory_id"], data_root, binding)
+        return jsonify({"state": "DRAFT", "period": draft}), 201
+    except ValueError as exc:
+        return jsonify({"state": "INVALID_REQUEST", "error": {"code": "INITIAL_PERIOD_DISCOVERY_REJECTED", "message": str(exc)}}), 422
+
+
+@cost_calculation_bp.route("/planning-period/initial/approve", methods=["POST"])
+@login_required
+@require_top_level_admin
+def approve_initial_planning_period():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get("factory_id"), str) or not isinstance(data.get("end"), str) or not isinstance(data.get("sources"), list):
+        return jsonify({"state": "INVALID_REQUEST", "error": {"code": "INVALID_APPROVAL", "message": "کارخانه، پایان دوره و منابع تأییدشده الزامی هستند."}}), 400
+    store = get_profile_store()
+    try:
+        _, binding = _costing_paths()
+        active = approve_initial_period(store, binding, data["factory_id"], g.current_user["id"], data["end"], data["sources"])
+        return jsonify({"state": "ACTIVE", "period": active}), 200
+    except (ValueError, PermissionError) as exc:
+        return jsonify({"state": "INVALID_REQUEST", "error": {"code": "INITIAL_PERIOD_APPROVAL_REJECTED", "message": str(exc)}}), 422

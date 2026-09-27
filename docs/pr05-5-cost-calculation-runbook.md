@@ -50,6 +50,7 @@ binding را صریح بدهید. شناسه canonical کارخانه همان `
 python scripts/manage_costing_bindings.py \
   --profile-file instance/app_data.json \
   --binding-file instance/costing_period_bindings.json \
+  --actor-id AUTHORIZED_TOP_LEVEL_USER_ID \
   --factory-id OWNER_CANONICAL_ID --period-id OWNER_PERIOD_ID \
   --start OWNER_START_ISO --end OWNER_END_ISO --active \
   --source materials --source bom --source weights --source predictions \
@@ -68,6 +69,59 @@ python scripts/manage_costing_bindings.py \
 منبع و start/end دوره نیست. start/end بالا باید مستقیماً توسط مالک ارائه شوند.
 در deployment واقعی هنوز این ورودی‌ها لازم‌اند: canonical factory ID، period
 ID، start، end، active و فهرست منابعی که مالک برای همان period تأیید کرده است.
+
+## راه‌اندازی نخستین دوره برای کارخانه جدید
+
+اگر کارخانه هنوز هیچ دوره ACTIVE و approved ندارد، ابتدا کشف را به‌صورت dry-run
+انجام دهید:
+
+```bash
+python scripts/initialize_planning_period.py \
+  --profile-file instance/app_data.json \
+  --binding-file instance/costing_period_bindings.json \
+  discover --factory-id CANONICAL_ID --data-root Data
+```
+
+کشف، تاریخ‌های کسب‌وکاری درج‌شده در material prices، BOMهای کارخانه، پارامترهای
+کارخانه، prediction و شش pool را بررسی و زودترین تاریخ معتبر را همراه نوع منبع،
+نام فایل، شناسه فیلد، زمان کشف و confidence ثبت می‌کند. mtime فایل استفاده
+نمی‌شود. تاریخ جلالی ورودی برای storage به ISO canonical تبدیل می‌شود. برای ثبت
+پیش‌نویس، پس از بازبینی همان فرمان را با `--write` اجرا کنید.
+
+اگر هیچ تاریخ authoritative در محتوای منابع وجود نداشته باشد، تاریخ جاری فقط با
+`baseline_type=SYSTEM_INITIALIZATION_DATE` و
+`creation_reason=SYSTEM_INITIALIZATION_DATE` ثبت می‌شود. `source_evidence` خالی
+می‌ماند؛ این مقدار timestamp تاریخی، تاریخ ایجاد منبع یا تراکنش کسب‌وکار نیست.
+
+خروجی کشف همیشه `status=DRAFT`, `approved=false`, `active=false` و `end=null`
+است و موتور هزینه آن را نمی‌پذیرد. مدیر فعال با نقش موجود `IT_ADMIN` یا
+`FINANCE_ECONOMIC_ADMIN` باید end و تمام منابع را صریحاً تأیید کند؛ job title یا
+مجوز جدیدی ساخته نشده است:
+
+```bash
+python scripts/initialize_planning_period.py \
+  --profile-file instance/app_data.json \
+  --binding-file instance/costing_period_bindings.json \
+  approve --factory-id CANONICAL_ID --actor-id TOP_LEVEL_USER_ID \
+  --end OWNER_APPROVED_END_ISO \
+  --source materials --source bom --source weights --source predictions \
+  --source pool:AdministrativeandResearch --source pool:Payroll \
+  --source pool:Overhead --source pool:FinancialCosts \
+  --source pool:Depriciation --source pool:NonOperationalCostsandIncomes
+```
+
+ابتدا dry-run و سپس با `--write` ثبت کنید. approval رکورد را به
+`status=ACTIVE`, `approved=true`, `active=true` تبدیل و actor/time را ثبت می‌کند.
+تا پیش از آن `PERIOD_NOT_BOUND` رفتار صحیح است. وجود draft، به‌تنهایی period
+پیش‌فرض یا fallback ایجاد نمی‌کند.
+
+در استقرار وب، مسیر ترجیحی و احراز هویت‌شده برای همین عملیات‌ها
+`POST /cost/planning-period/initial/discover` با بدنه `{"factory_id":"..."}` و
+`POST /cost/planning-period/initial/approve` با بدنه شامل `factory_id`، `end` و
+`sources` است. هر دو route نشست معتبر و نقش موجود top-level را الزام می‌کنند؛
+actor approval از نشست خوانده می‌شود، نه از بدنه درخواست. CLI فقط برای کنسول
+محلیِ مورد اعتماد اپراتور است و همچنان رکورد actor باید نقش فعال IT یا
+مالی/اقتصادی داشته باشد.
 
 ## راستی‌آزمایی و عیب‌یابی
 

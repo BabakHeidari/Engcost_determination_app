@@ -8,7 +8,8 @@
 مخفی ندارد. binding مالک در `instance/costing_period_bindings.json` قرار می‌گیرد؛
 فایل example عمداً تاریخ واقعی اختراع نمی‌کند.
 برای سازگاری endpoint قدیمی که period نمی‌فرستد، دقیقاً یک binding با
-`active: true` به‌صورت owner-controlled انتخاب می‌شود؛ صفر یا چند active خطاست.
+`active: true`، `approved: true` و `status: ACTIVE` به‌صورت owner-controlled
+انتخاب می‌شود؛ draft، صفر یا چند active خطاست.
 
 `calculate_cost(inputs, overrides=None)` تابع pure و نسخهٔ فرمول آن
 `cost-v1-owner-approved-2026-09-27` است. خروجی typed شامل state، واحد، هویت

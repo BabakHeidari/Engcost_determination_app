@@ -202,7 +202,9 @@ def _fixture_tree(tmp_path):
         _write(factory / f"Factory_Data_{pool_id}.json", {"data": {"cost": [1000 if pool_id == "Payroll" else 0]}})
     sources = ["materials", "bom", "weights", "predictions", *(f"pool:{item}" for item in FACTORY_POOL_IDS)]
     binding = tmp_path / "bindings.json"
-    _write(binding, {"bindings": [{"factory_id": "factory-1", "period_id": "P", "active": True, "start": "2026-10-01", "end": "2026-12-31", "sources": sources}]})
+    _write(binding, {"bindings": [{"factory_id": "factory-1", "period_id": "P", "active": True,
+                                    "approved": True, "status": "ACTIVE",
+                                    "start": "2026-10-01", "end": "2026-12-31", "sources": sources}]})
     return data, binding
 
 

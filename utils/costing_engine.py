@@ -418,6 +418,9 @@ class CostInputLoader:
         matches = [
             item for item in document.get("bindings", [])
             if item.get("factory_id") == factory_id
+            and item.get("approved") is True
+            and item.get("status") == "ACTIVE"
+            and item.get("active") is True
             and (item.get("period_id") == period_id if period_id else item.get("active") is True)
         ]
         if len(matches) != 1:

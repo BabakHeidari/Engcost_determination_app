@@ -12,6 +12,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from utils.costing_engine import FACTORY_POOL_IDS
+from utils.profile_authorization import is_top_level_admin
 from utils.profile_store import ProfileDataStore
 
 
@@ -23,6 +24,7 @@ def parser():
     command.add_argument("--profile-file", required=True, type=Path)
     command.add_argument("--binding-file", required=True, type=Path)
     command.add_argument("--factory-id", required=True)
+    command.add_argument("--actor-id", required=True, help="شناسه مدیر IT یا مالی/اقتصادی تأییدکننده")
     command.add_argument("--period-id", required=True)
     command.add_argument("--start", required=True)
     command.add_argument("--end", required=True)
@@ -43,6 +45,9 @@ def main(argv=None):
     if set(args.sources) != KNOWN_SOURCES:
         raise SystemExit("all required sources must be approved explicitly with repeated --source options")
     store = ProfileDataStore(args.profile_file)
+    actor = store.get_user_by_id(args.actor_id)
+    if not actor or not actor.get("is_active") or not is_top_level_admin(actor):
+        raise SystemExit("only an active IT or Finance/Economic manager may approve a binding")
     factory = next((item for item in store.list_factories() if item.get("id") == args.factory_id), None)
     if not factory:
         raise SystemExit("canonical factory ID is absent from the profile registry")
@@ -54,7 +59,9 @@ def main(argv=None):
     if not isinstance(bindings, list):
         raise SystemExit("binding file must contain a bindings list")
     candidate = {"factory_id": args.factory_id, "period_id": args.period_id, "active": args.active,
-                 "start": args.start, "end": args.end, "sources": args.sources}
+                 "approved": True, "status": "ACTIVE" if args.active else "APPROVED_INACTIVE",
+                 "start": args.start, "end": args.end, "sources": args.sources,
+                 "approved_by": args.actor_id}
     bindings = [item for item in bindings if not (item.get("factory_id") == args.factory_id and item.get("period_id") == args.period_id)]
     bindings.append(candidate)
     if args.active and sum(item.get("factory_id") == args.factory_id and item.get("active") is True for item in bindings) != 1:

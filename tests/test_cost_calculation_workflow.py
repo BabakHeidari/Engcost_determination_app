@@ -46,6 +46,7 @@ def workflow(tmp_path, monkeypatch):
     sources = ["materials", "bom", "weights", "predictions", *(f"pool:{item}" for item in FACTORY_POOL_IDS)]
     binding = tmp_path / "costing_period_bindings.json"
     _write(binding, {"bindings": [{"factory_id": "factory-canonical", "period_id": "P", "active": True,
+                                    "approved": True, "status": "ACTIVE",
                                     "start": "2026-10-01", "end": "2026-12-31", "sources": sources}]})
     monkeypatch.setattr("modules.cost_calculation.routes.product_path", str(catalogue.with_suffix("")))
     app_module.app.config.update(TESTING=True, APP_DATA_FILE=str(profiles), SECRET_KEY="test",
@@ -105,6 +106,8 @@ def test_request_and_authorization_fail_closed(workflow):
     assert missing.status_code == 404
     anonymous = app.test_client().post("/cost/get_cost", json=_payload())
     assert anonymous.status_code == 302
+    setup = client.post("/cost/planning-period/initial/discover", json={"factory_id": "factory-canonical"})
+    assert setup.status_code == 403
 
 
 def test_frontend_distinguishes_failures_zero_and_stale_responses(workflow):

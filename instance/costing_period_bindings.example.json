@@ -4,6 +4,8 @@
       "factory_id": "replace-with-canonical-factory-id",
       "period_id": "replace-with-owner-period-id",
       "active": true,
+      "approved": true,
+      "status": "ACTIVE",
       "start": "YYYY-MM-DD",
       "end": "YYYY-MM-DD",
       "sources": [
