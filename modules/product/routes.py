@@ -2,9 +2,10 @@ from flask import Blueprint, abort, g, render_template, jsonify, request, sessio
 from utils.auth import get_profile_store, login_required
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.costing_engine import CostInputError, validate_live_bom_payload
-from utils.paths import product_path, material_path, parent_path
+from utils.paths import material_path, parent_path
 from utils.load_data import load_json, load_bom
-from utils.updaters import create_product_metadata, category_adder, subcategory_adder, product_adder, directory_tracer, category_weights_updater, capacity_writer
+from utils.updaters import category_adder, subcategory_adder, product_adder, directory_tracer, category_weights_updater, capacity_writer
+from utils.product_catalog import build_product_hierarchy, product_catalog_document
 import json
 from pathlib import Path
 
@@ -21,13 +22,15 @@ def production_selection():
     factories = service.get_accessible_factories(g.current_user, "product")
     if not factories:
         abort(403)
-    registered_keys = _registered_operational_keys(service)
-    create_product_metadata(parent_path, product_path, "Factories", ".json", factory_keys=registered_keys)
-    product_data = load_json(product_path+".json")
-    allowed = {service.operational_key(factory) for factory in factories}
-    if isinstance(product_data, dict) and isinstance(product_data.get("Factory"), dict):
-        indexes = [key for key, value in product_data["Factory"].items() if value in allowed]
-        product_data = {column: {str(i): values[key] for i, key in enumerate(indexes)} for column, values in product_data.items()}
+    operational_to_id = {service.operational_key(factory): factory["id"] for factory in factories}
+    product_data = product_catalog_document(
+        Path(parent_path) / "Factories", operational_to_id,
+    )
+    # Browser forms submit canonical registry IDs; operational keys never act
+    # as authorization identities.
+    product_data["Factory"] = {
+        index: operational_to_id[value] for index, value in product_data["Factory"].items()
+    }
     return render_template("product/production_selection.html", 
                            table_json = product_data)
 
@@ -40,10 +43,8 @@ def product_options():
     factories = service.get_accessible_factories(g.current_user, "product")
     if not factories:
         abort(403)
-    registered_keys = _registered_operational_keys(service)
-    directory_tracer(Path(parent_path) / "Factories", factory_keys=registered_keys)
-    __meta_data = load_json(str(Path(parent_path) / "Factories" / "__metadata.json"))
-    raw_hierarchy = __meta_data["product_hierarchy"]
+    operational_to_id = {service.operational_key(factory): factory["id"] for factory in factories}
+    raw_hierarchy = build_product_hierarchy(Path(parent_path) / "Factories", operational_to_id)
     product_hierarchy = {}
     categories = set()
     subcategories = set()

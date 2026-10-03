@@ -222,7 +222,7 @@
 
 <script>
 // JSON data passed from Flask
-const rawData = {{ table_json | safe }};
+const rawData = {{ table_json | tojson }};
 
 const DATA_DISPLAY_LABELS = {
     "DinMohamadpour": "کارخانه دین‌محمدپور",

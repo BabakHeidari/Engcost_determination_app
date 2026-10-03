@@ -1,7 +1,5 @@
 import json
 
-import pytest
-
 from utils.product_catalog import build_product_catalog, build_product_hierarchy, product_catalog_document
 
 
@@ -60,14 +58,19 @@ def test_directory_metadata_and_multiple_factories_are_isolated(tmp_path):
 
 
 def test_production_selection_and_options_exclude_v2_configuration(tmp_path, monkeypatch):
-    pytest.importorskip("flask")
-    app_module = __import__("app")
-    product_routes = __import__("modules.product.routes", fromlist=["routes"])
-    updaters = __import__("utils.updaters", fromlist=["updaters"])
     ProfileDataStore = __import__("utils.profile_store", fromlist=["ProfileDataStore"]).ProfileDataStore
 
     data = tmp_path / "Data"
     factory_fixture(data, with_meta=False)
+    factory_fixture(data, factory="OtherOperational", product="SecretProduct")
+    write(data / "Factories" / "DinMohamadpour" / "RealCategory" / "RealSubcategory" / "MalformedProduct.json",
+          {"data": {}})
+    malformed_meta = data / "Factories" / "DinMohamadpour" / "RealCategory" / "RealSubcategory" / "MalformedProduct_meta.json"
+    malformed_meta.write_text("{not-json", encoding="utf-8")
+    write(data / "Factories" / "DinMohamadpour" / "RealCategory" / "RealSubcategory" / "محصول'ایمن.json",
+          {"data": {}})
+    write(data / "Factories" / "DinMohamadpour" / "RealCategory" / "RealSubcategory" / "محصول'ایمن_meta.json",
+          {"capacity": "</script><script>alert(true)</script>"})
     (data / "Overall").mkdir(parents=True)
     store_path = tmp_path / "app_data.json"
     store = ProfileDataStore(store_path)
@@ -77,9 +80,27 @@ def test_production_selection_and_options_exclude_v2_configuration(tmp_path, mon
         "system_role": "IT_ADMIN", "job_title": "مدیر", "access_grants": [], "is_active": True,
         "must_change_password": False, "password_hash": "unused", "password_scheme": "werkzeug", "revision": 1,
     })
-    store.create_factory_as_actor("admin", {"code": "DinMohamadpour", "name": "کارخانه آزمون"})
+    # Profile state is isolated before importing the module-level Flask app, so
+    # startup initialization cannot touch the checkout's real profile data.
+    monkeypatch.setenv("APP_DATA_FILE", str(store_path))
+    app_module = __import__("app")
+    product_routes = __import__("modules.product.routes", fromlist=["routes"])
+    updaters = __import__("utils.updaters", fromlist=["updaters"])
+    class RouteFactoryService:
+        def __init__(self, _store):
+            pass
+
+        def get_accessible_factories(self, _user, _module):
+            return [{"id": "factory-canonical", "name": "کارخانه آزمون"}]
+
+        def list_factories(self):
+            return [{"id": "factory-canonical", "name": "کارخانه آزمون"}]
+
+        def operational_key(self, _factory):
+            return "DinMohamadpour"
+
     monkeypatch.setattr(product_routes, "parent_path", data)
-    monkeypatch.setattr(product_routes, "product_path", str(data / "Overall" / "ProductsLater"))
+    monkeypatch.setattr(product_routes, "FactoryService", RouteFactoryService)
     monkeypatch.setattr(updaters, "parent_path", data)
     app_module.app.config.update(TESTING=True, APP_DATA_FILE=str(store_path), SECRET_KEY="test")
 
@@ -89,12 +110,24 @@ def test_production_selection_and_options_exclude_v2_configuration(tmp_path, mon
     page = client.get("/product/production_selection")
     assert page.status_code == 200
     body = page.get_data(as_text=True)
-    assert "RealProduct" in body and "ثبت نشده" in body
+    assert "RealProduct" in body and "MalformedProduct" in body and "ثبت نشده" in body
+    assert "factory-canonical" in body
+    assert "محصول\\u0027ایمن" in body
+    assert "</script><script>alert(true)</script>" not in body
+    assert "SecretProduct" not in body and "OtherOperational" not in body
     assert all(pool not in body for pool in POOLS)
     options = client.get("/api/product_options")
     assert options.status_code == 200
     payload = options.get_json()
     assert payload["product_hierarchy"] == {
-        "DinMohamadpour": {"RealCategory": ["RealSubcategory"]}
+        "factory-canonical": {"RealCategory": ["RealSubcategory"]}
     }
     assert "configuration" not in repr(payload) and "cost_pools" not in repr(payload)
+
+    # A genuinely empty authorized catalogue still renders its Persian empty
+    # state contract instead of raising while serializing empty columns.
+    for path in (data / "Factories" / "DinMohamadpour" / "RealCategory" / "RealSubcategory").glob("*.json"):
+        path.unlink()
+    empty_page = client.get("/product/production_selection")
+    assert empty_page.status_code == 200
+    assert "محصولی یافت نشد" in empty_page.get_data(as_text=True)
