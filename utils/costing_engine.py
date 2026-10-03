@@ -340,9 +340,37 @@ class CostInputLoader:
         diagnostic = self._diagnostic(period, approved_sources, paths)
         missing = diagnostic["missing_sources"]
         if missing:
-            first = missing[0]
+            from utils.legacy_costing_migration import ensure_canonical_costing_sources
+
+            migration = ensure_canonical_costing_sources(
+                self.factory_service, factory_id, self.data_root, identity, persist=True,
+            )
+            diagnostic = self._diagnostic(period, approved_sources, paths)
+            diagnostic["legacy_migration"] = migration
+            if migration["conflicts"]:
+                conflict_name = migration["conflicts"][0]
+                conflict = next(item for item in migration["actions"]
+                                if item["source_name"] == conflict_name and item["status"] == "CONFLICT")
+                raise CostInputError(
+                    CostState.AMBIGUOUS_INPUT, "LEGACY_SOURCE_CONFLICT",
+                    "canonical and legacy costing sources conflict",
+                    self._display_path(Path(conflict["canonical_path"])), diagnostic,
+                )
+            missing = diagnostic["missing_sources"]
+            if missing:
+                first = missing[0]
+                raise CostInputError(
+                    CostState.MISSING_INPUT, "SOURCE_UNAVAILABLE", first["reason"],
+                    first["expected_location"], diagnostic,
+                )
+
+        incomplete = [item for item in diagnostic["source_resolutions"]
+                      if item.get("migration_status") == "NEEDS_INPUT"]
+        if incomplete:
+            first = incomplete[0]
             raise CostInputError(
-                CostState.MISSING_INPUT, "SOURCE_UNAVAILABLE", first["reason"],
+                CostState.MISSING_INPUT, "LEGACY_SOURCE_NEEDS_INPUT",
+                "generated canonical source requires business input",
                 first["expected_location"], diagnostic,
             )
 
@@ -472,13 +500,21 @@ class CostInputLoader:
                 reason = "file not found"
             else:
                 reason = "file found"
-            resolutions.append({
+            resolution = {
                 "source_name": source_name,
                 "expected_location": expected_location,
                 "resolution_status": "AVAILABLE" if found else "MISSING",
                 "actual_file_found": found[0] if len(found) == 1 else found or None,
                 "reason": reason,
-            })
+            }
+            if len(found) == 1 and expected is not None and not isinstance(expected, tuple):
+                migration = self._migration_metadata(expected)
+                if migration:
+                    resolution["migration_status"] = migration.get("status")
+                    resolution["canonicalization_status"] = "AUTO_MIGRATED"
+                    resolution["legacy_source"] = migration.get("source")
+                    resolution["calculation_ready"] = migration.get("status") == "READY"
+            resolutions.append(resolution)
         resolved = [item for item in resolutions if item["resolution_status"] == "AVAILABLE"]
         missing = [item for item in resolutions if item["resolution_status"] == "MISSING"]
         return {
@@ -491,6 +527,15 @@ class CostInputLoader:
             "source_resolutions": resolutions,
             "available_sources": [item["source_name"] for item in resolved],
         }
+
+    @staticmethod
+    def _migration_metadata(path: Path) -> dict | None:
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            return None
+        migration = document.get("_migration") if isinstance(document, dict) else None
+        return migration if isinstance(migration, dict) else None
 
     def _period_binding(self, factory_id: str, period_id: str) -> tuple[PlanningPeriod, set[str]]:
         if not self.period_bindings_path.is_file():

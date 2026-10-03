@@ -165,6 +165,39 @@ BOMهای موجود کارخانه را در برابر الگوی مورد ا�
 binding را تغییر نمی‌دهد. پاسخ `SOURCE_UNAVAILABLE` API نیز همین تشخیص را به
 همراه نام منبع گمشده، مسیر مورد انتظار و منابع در دسترس برمی‌گرداند.
 
+### نرمال‌سازی امن منابع legacy
+
+اگر مسیر canonical گم شده باشد، loader فقط یک بار در همان درخواست سرویس مرکزی
+`legacy_costing_migration` را اجرا و سپس diagnostic را دوباره محاسبه می‌کند.
+تنها نگاشت عددی تأییدشده، ردیف یکتای `Subfield`/`Cost` در
+`Factory_Data.json` به فایل همان pool است؛ `Cost` بدون اعمال
+`PercentageOfAll` عیناً منتقل می‌شود و صفر صریح نیز یک مقدار معتبر است. فایل
+canonical موجود هرگز بازنویسی نمی‌شود. تعارض مقدار canonical و aggregate قدیمی
+فقط با وضعیت `CONFLICT` گزارش می‌شود.
+
+برای prediction، سهم دسته یا BOM فاقد مقدار authoritative، سرویس فقط در صورت
+شناخته‌شدن هویت محصول/دسته یک ساختار قابل‌ویرایش با مقدار `null` یا ردیف‌های
+خالی و `_migration.status=NEEDS_INPUT` می‌سازد. loader این فایل را
+calculation-ready نمی‌داند و با `LEGACY_SOURCE_NEEDS_INPUT` متوقف می‌شود؛ Capacity،
+`PercentageOfAll` و metadata محصول هرگز به prediction، سهم فروش یا BOM تبدیل
+نمی‌شوند. برای material price/FX نیز هیچ نگاشت speculative یا placeholder عددی
+وجود ندارد.
+
+ابزار batch به‌طور پیش‌فرض dry run است:
+
+```bash
+python scripts/migrate_legacy_costing_sources.py --factory-id CANONICAL_ID
+python scripts/migrate_legacy_costing_sources.py --all-factories
+```
+
+تنها افزودن `--write` فایل‌ها را ایجاد می‌کند. وضعیت‌های `AVAILABLE`،
+`WOULD_CREATE_READY`، `WOULD_CREATE_NEEDS_INPUT`، `CREATED_READY`،
+`CREATED_NEEDS_INPUT`، `CONFLICT` و `UNRECOVERABLE` بدون چاپ payload خام گزارش
+می‌شوند. همه فایل‌های تولیدشده fingerprint منبع (هرجا منبع واقعی وجود دارد)،
+نسخه migration، زمان ایجاد و `business_value_invented=false` دارند. اجرای مجدد
+فایل موجود یا `generated_at` آن را تغییر نمی‌دهد و هیچ فایل XLSX یا
+`ProductsLater.json` دست‌کاری نمی‌شود.
+
 ## قبل و بعد
 
 - **قبل:** انتخاب ردیف دارای operational key به 404 می‌رسید؛ 422 و network هر

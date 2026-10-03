@@ -290,7 +290,8 @@ def test_missing_source_has_exact_resolution_diagnostic_and_never_falls_back(tmp
     with pytest.raises(CostInputError) as caught:
         loader.load("factory-1", {}, IDENTITY_A, "P")
     assert caught.value.detail.code == "SOURCE_UNAVAILABLE"
-    assert caught.value.diagnostic == diagnostic
+    assert caught.value.diagnostic["source_resolutions"] == diagnostic["source_resolutions"]
+    assert "pool:Payroll" in caught.value.diagnostic["legacy_migration"]["unrecoverable"]
 
 
 def test_loader_preserves_repeated_material_rows_with_stable_local_ids(tmp_path):

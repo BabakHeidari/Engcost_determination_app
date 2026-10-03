@@ -12,6 +12,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.costing_engine import CostInputError, CostInputLoader, ProductIdentity
 from utils.factory_service import FactoryService
+from utils.legacy_costing_migration import ensure_canonical_costing_sources
 from utils.profile_store import ProfileDataStore
 
 
@@ -39,6 +40,17 @@ def main(argv=None):
     )
     try:
         result = loader.diagnose_sources(args.factory_id, args.period_id, identity)
+        recovery = ensure_canonical_costing_sources(
+            loader.factory_service, args.factory_id, args.data_root, identity, persist=False,
+        )
+        actions = {item["source_name"]: item for item in recovery["actions"]}
+        for resolution in result["source_resolutions"]:
+            action = actions.get(resolution["source_name"])
+            if action:
+                resolution["legacy_recovery_status"] = action["status"]
+                if action.get("legacy_source"):
+                    resolution["legacy_source"] = action["legacy_source"]
+        result["legacy_recovery"] = recovery
     except CostInputError as exc:
         result = {"state": exc.state.value, "error": exc.detail.__dict__}
         print(json.dumps(result, ensure_ascii=False, indent=2))

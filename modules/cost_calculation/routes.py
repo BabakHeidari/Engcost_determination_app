@@ -28,6 +28,8 @@ ERROR_MESSAGES = {
     "PERIOD_NOT_BOUND": "دوره برنامه‌ریزی برای این کارخانه پیکربندی یا توسط مالک تأیید نشده است.",
     "UNBOUND_LEGACY_SOURCE": "همه منابع لازم برای دوره برنامه‌ریزی توسط مالک تأیید نشده‌اند.",
     "SOURCE_UNAVAILABLE": "منبع مورد نیاز برای محاسبه پیدا نشد.",
+    "LEGACY_SOURCE_NEEDS_INPUT": "ساختار منبع از داده‌های قدیمی ایجاد شد، اما مقدارهای کسب‌وکار باید تکمیل شوند.",
+    "LEGACY_SOURCE_CONFLICT": "داده قدیمی با منبع فعلی تعارض دارد و تطبیق خودکار مجاز نیست.",
     "SOURCE_PARSE_ERROR": "ساختار یکی از منابع داده تأییدشده قابل خواندن نیست.",
     "INVALID_SOURCE_SCHEMA": "ساختار یکی از منابع داده کامل یا معتبر نیست.",
     "COLUMN_LENGTH_MISMATCH": "ستون‌های یکی از منابع داده هم‌اندازه نیستند.",
@@ -65,8 +67,13 @@ def _typed_error(exc):
         detail["expected_path"] = exc.detail.source
     if exc.diagnostic:
         missing = exc.diagnostic.get("missing_sources", [])
+        if not missing and exc.detail.code == "LEGACY_SOURCE_NEEDS_INPUT":
+            missing = [item for item in exc.diagnostic.get("source_resolutions", [])
+                       if item.get("migration_status") == "NEEDS_INPUT"]
         if missing:
             detail["missing_source"] = missing[0]["source_name"]
+            if exc.detail.code == "LEGACY_SOURCE_NEEDS_INPUT" and missing[0]["source_name"] == "predictions":
+                detail["message"] = "ساختار پیش‌بینی تولید از داده‌های قدیمی ایجاد شد، اما مقدار پیش‌بینی تولید باید تکمیل شود."
         detail["available_sources"] = exc.diagnostic.get("available_sources", [])
         detail["source_diagnostic"] = exc.diagnostic
     return {"state": exc.state.value, "error": detail, "errors": [detail]}
