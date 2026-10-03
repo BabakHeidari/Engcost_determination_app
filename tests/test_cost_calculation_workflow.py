@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -98,6 +99,23 @@ def test_missing_binding_is_typed_actionable_and_never_zero(workflow):
     body = response.get_json()
     assert body["state"] == "MISSING_INPUT" and body["error"]["code"] == "PERIOD_NOT_BOUND"
     assert "پیکربندی" in body["error"]["message"] and "Final_Production_Cost" not in body
+
+
+def test_missing_source_response_exposes_diagnostic_without_zero_fallback(workflow):
+    app, client, _ = workflow
+    payroll = Path(app.config["COSTING_DATA_ROOT"]) / "Factories" / "legacy-folder" / "Factory_Data_Payroll.json"
+    payroll.unlink()
+
+    response = client.post("/cost/get_cost", json=_payload())
+
+    assert response.status_code == 422
+    error = response.get_json()["error"]
+    assert error["message"] == "منبع مورد نیاز برای محاسبه پیدا نشد."
+    assert error["missing_source"] == "pool:Payroll"
+    assert error["expected_path"].endswith("Factory_Data_Payroll.json")
+    assert "materials" in error["available_sources"]
+    assert error["source_diagnostic"]["missing_sources"][0]["reason"] == "file not found"
+    assert "Final_Production_Cost" not in response.get_json()
 
 
 def test_first_calculation_auto_initializes_period_and_continues(workflow):

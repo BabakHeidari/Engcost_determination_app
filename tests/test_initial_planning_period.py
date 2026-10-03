@@ -67,6 +67,24 @@ def test_no_date_uses_explicit_system_initialization_baseline_not_source_timesta
     assert "actual_as_of" not in draft
 
 
+def test_initialization_records_metadata_only_for_valid_readable_sources(tmp_path):
+    store = _registry(tmp_path)
+    data, binding = tmp_path / "Data", tmp_path / "bindings.json"
+    _write(data / "Overall" / "material_costs.json", {"data": {"material": ["lead"]}})
+    invalid = data / "Factories" / "op-one" / "category_weights.json"
+    invalid.parent.mkdir(parents=True, exist_ok=True)
+    invalid.write_text("{bad", encoding="utf-8")
+    _write(data / "Factories" / "op-one" / "ProductionPrediction.json", {"data": {"Product Name": ["A"]}})
+
+    initial = discover_initial_period(FactoryService(store), "F1", data, binding, clock=lambda: NOW)
+
+    assert initial["source_metadata"] == [
+        {"source_name": "materials", "location": "Data/Overall/material_costs.json"},
+        {"source_name": "predictions", "location": "Data/Factories/op-one/ProductionPrediction.json"},
+    ]
+    assert "weights" in initial["sources"]
+
+
 def test_automatic_initial_period_is_immediately_usable_and_not_duplicated(tmp_path):
     store = _registry(tmp_path)
     data, binding = tmp_path / "Data", tmp_path / "bindings.json"

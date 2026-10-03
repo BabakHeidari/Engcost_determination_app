@@ -220,9 +220,11 @@ class CostResult:
 
 
 class CostInputError(ValueError):
-    def __init__(self, state: CostState, code: str, message: str, source: str | None = None):
+    def __init__(self, state: CostState, code: str, message: str, source: str | None = None,
+                 diagnostic: dict[str, Any] | None = None):
         super().__init__(message)
         self.state, self.detail = state, CostError(code, message, source)
+        self.diagnostic = diagnostic
 
 
 def _decimal(value: Any, name: str, *, nonnegative: bool = True) -> Decimal:
@@ -325,23 +327,52 @@ class CostInputLoader:
              *, module: str = "cost_calculation") -> CostInputs:
         factory = self.factory_service.require_access(factory_id, user, module)
         operational_key = self.factory_service.operational_key(factory)
+        factory_root = self._inside(self.data_root / "Factories" / operational_key)
         if identity.factory_id != factory_id:
             raise CostInputError(CostState.INVALID_INPUT, "FACTORY_ID_MISMATCH", "identity factory does not match authorized factory")
         period, approved_sources = self._period_binding(factory_id, period_id)
-        factory_root = self._inside(self.data_root / "Factories" / operational_key)
-        material_path = self._inside(self.data_root / "Overall" / "material_costs.json")
-        paths = {
-            "materials": material_path,
-            "bom": self._inside(factory_root / identity.category / identity.subcategory / f"{identity.product}.json"),
-            "weights": self._inside(factory_root / "category_weights.json"),
-            "predictions": self._inside(factory_root / "ProductionPrediction.json"),
-        }
-        for pool_id in FACTORY_POOL_IDS:
-            paths[f"pool:{pool_id}"] = self._inside(factory_root / f"Factory_Data_{pool_id}.json")
+        paths = self._source_paths(operational_key, identity)
         missing_binding = sorted(set(paths) - approved_sources)
         if missing_binding:
             raise CostInputError(CostState.MISSING_INPUT, "UNBOUND_LEGACY_SOURCE",
                                  f"period binding does not approve sources: {', '.join(missing_binding)}")
+
+        diagnostic = self._diagnostic(period, approved_sources, paths)
+        missing = diagnostic["missing_sources"]
+        if missing:
+            from utils.legacy_costing_migration import ensure_canonical_costing_sources
+
+            migration = ensure_canonical_costing_sources(
+                self.factory_service, factory_id, self.data_root, identity, persist=True,
+            )
+            diagnostic = self._diagnostic(period, approved_sources, paths)
+            diagnostic["legacy_migration"] = migration
+            if migration["conflicts"]:
+                conflict_name = migration["conflicts"][0]
+                conflict = next(item for item in migration["actions"]
+                                if item["source_name"] == conflict_name and item["status"] == "CONFLICT")
+                raise CostInputError(
+                    CostState.AMBIGUOUS_INPUT, "LEGACY_SOURCE_CONFLICT",
+                    "canonical and legacy costing sources conflict",
+                    self._display_path(Path(conflict["canonical_path"])), diagnostic,
+                )
+            missing = diagnostic["missing_sources"]
+            if missing:
+                first = missing[0]
+                raise CostInputError(
+                    CostState.MISSING_INPUT, "SOURCE_UNAVAILABLE", first["reason"],
+                    first["expected_location"], diagnostic,
+                )
+
+        incomplete = [item for item in diagnostic["source_resolutions"]
+                      if item.get("migration_status") == "NEEDS_INPUT"]
+        if incomplete:
+            first = incomplete[0]
+            raise CostInputError(
+                CostState.MISSING_INPUT, "LEGACY_SOURCE_NEEDS_INPUT",
+                "generated canonical source requires business input",
+                first["expected_location"], diagnostic,
+            )
 
         documents, provenance, provenance_by_name = {}, [], {}
         for name, path in paths.items():
@@ -407,6 +438,104 @@ class CostInputLoader:
             raise CostInputError(CostState.MISSING_INPUT, "MISSING_PRODUCT_PREDICTION", "requested product is outside category population")
         return CostInputs(identity, period, tuple(lines), tuple(pools), share, target_prediction, tuple(predictions),
                           tuple(provenance), datetime.now(timezone.utc))
+
+    def diagnose_sources(self, factory_id: str, period_id: str = "",
+                         identity: ProductIdentity | None = None) -> dict[str, Any]:
+        """Compare active-period metadata with the exact paths the loader resolves."""
+        factory = self.factory_service.get_factory(factory_id)
+        if factory is None:
+            raise CostInputError(CostState.MISSING_INPUT, "FACTORY_NOT_FOUND",
+                                 "factory is absent from the canonical registry")
+        period, approved_sources = self._period_binding(factory_id, period_id)
+        paths = self._source_paths(self.factory_service.operational_key(factory), identity)
+        return self._diagnostic(period, approved_sources, paths)
+
+    def _source_paths(self, operational_key: str,
+                      identity: ProductIdentity | None) -> dict[str, Path | tuple[Path, ...]]:
+        factory_root = self._inside(self.data_root / "Factories" / operational_key)
+        if identity is None:
+            bom_path: Path | tuple[Path, ...] = tuple(sorted(
+                path.resolve() for path in factory_root.glob("*/*/*.json")
+                if not path.name.startswith("_")
+            ))
+        else:
+            bom_path = self._inside(
+                factory_root / identity.category / identity.subcategory / f"{identity.product}.json"
+            )
+        paths: dict[str, Path | tuple[Path, ...]] = {
+            "materials": self._inside(self.data_root / "Overall" / "material_costs.json"),
+            "bom": bom_path,
+            "weights": self._inside(factory_root / "category_weights.json"),
+            "predictions": self._inside(factory_root / "ProductionPrediction.json"),
+        }
+        for pool_id in FACTORY_POOL_IDS:
+            paths[f"pool:{pool_id}"] = self._inside(factory_root / f"Factory_Data_{pool_id}.json")
+        return paths
+
+    def _display_path(self, path: Path) -> str:
+        try:
+            return str(Path(self.data_root.name) / path.relative_to(self.data_root))
+        except ValueError:
+            return str(path)
+
+    def _diagnostic(self, period: PlanningPeriod, approved_sources: set[str],
+                    paths: Mapping[str, Path | tuple[Path, ...]]) -> dict[str, Any]:
+        resolutions = []
+        for source_name in sorted(approved_sources):
+            expected = paths.get(source_name)
+            if isinstance(expected, tuple):
+                found = [self._display_path(path) for path in expected if path.is_file()]
+                expected_location = str(
+                    Path(self.data_root.name) / "Factories" / "<operational-key>"
+                    / "<category>" / "<subcategory>" / "<product>.json"
+                )
+            elif expected is not None:
+                found = [self._display_path(expected)] if expected.is_file() else []
+                expected_location = self._display_path(expected)
+            else:
+                found, expected_location = [], None
+            if expected is None:
+                reason = "source name is stored in the period but is not recognized by CostInputLoader"
+            elif not found:
+                reason = "file not found"
+            else:
+                reason = "file found"
+            resolution = {
+                "source_name": source_name,
+                "expected_location": expected_location,
+                "resolution_status": "AVAILABLE" if found else "MISSING",
+                "actual_file_found": found[0] if len(found) == 1 else found or None,
+                "reason": reason,
+            }
+            if len(found) == 1 and expected is not None and not isinstance(expected, tuple):
+                migration = self._migration_metadata(expected)
+                if migration:
+                    resolution["migration_status"] = migration.get("status")
+                    resolution["canonicalization_status"] = "AUTO_MIGRATED"
+                    resolution["legacy_source"] = migration.get("source")
+                    resolution["calculation_ready"] = migration.get("status") == "READY"
+            resolutions.append(resolution)
+        resolved = [item for item in resolutions if item["resolution_status"] == "AVAILABLE"]
+        missing = [item for item in resolutions if item["resolution_status"] == "MISSING"]
+        return {
+            "active_period": {"period_id": period.period_id, "start": period.start.isoformat(),
+                              "end": period.end.isoformat()},
+            "required_sources": sorted(approved_sources),
+            "loader_sources": sorted(paths),
+            "resolved_sources": resolved,
+            "missing_sources": missing,
+            "source_resolutions": resolutions,
+            "available_sources": [item["source_name"] for item in resolved],
+        }
+
+    @staticmethod
+    def _migration_metadata(path: Path) -> dict | None:
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            return None
+        migration = document.get("_migration") if isinstance(document, dict) else None
+        return migration if isinstance(migration, dict) else None
 
     def _period_binding(self, factory_id: str, period_id: str) -> tuple[PlanningPeriod, set[str]]:
         if not self.period_bindings_path.is_file():
