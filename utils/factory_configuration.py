@@ -19,6 +19,7 @@ from typing import Any
 
 from utils.paths import parent_path
 from utils.file_lock import interprocess_file_lock
+from utils.product_catalog import build_product_catalog
 
 
 POOL_IDS = (
@@ -152,11 +153,13 @@ def _copy_or_incomplete(factory_root: Path, legacy_name: str, order: list[str],
 
 
 def _known_products(factory_root: Path) -> list[str]:
-    return sorted({path.stem for path in factory_root.glob("*/*/*.json") if not path.name.startswith("_")})
+    products = build_product_catalog(factory_root.parent, [factory_root.name])
+    return sorted({item.product for item in products}, key=str.casefold)
 
 
 def _known_categories(factory_root: Path) -> list[str]:
-    return sorted({path.parent.parent.name for path in factory_root.glob("*/*/*.json") if not path.name.startswith("_")})
+    products = build_product_catalog(factory_root.parent, [factory_root.name])
+    return sorted({item.category for item in products}, key=str.casefold)
 
 
 def ensure_factory_configuration_v2(factory_id: str, operational_key: str | None = None,

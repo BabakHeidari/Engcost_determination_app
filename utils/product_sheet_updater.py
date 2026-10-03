@@ -1,24 +1,20 @@
-import pandas as pd
+"""Regenerate the legacy product catalogue from canonical product discovery."""
+from __future__ import annotations
+
+import json
 from pathlib import Path
-from paths import parent_path, product_path
-import os
 
-df = pd.DataFrame(columns=["Product_Name", 
-                           "Factory" ,"Category", "Subcategory"])#, "Product_ID", 
+from utils.paths import parent_path, product_path
+from utils.product_catalog import product_catalog_document
 
-results = []
 
-for root, dirs, files in os.walk(parent_path/"Factories"):
-    for file in files:
-        if file.endswith(".json"):
-            results.append([root, file.replace(".json", "")])
+def regenerate_product_catalog(factory_keys=None) -> dict:
+    document = product_catalog_document(Path(parent_path) / "Factories", factory_keys)
+    Path(f"{product_path}.json").write_text(
+        json.dumps(document, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    return document
 
-for i, r in enumerate(results):
-    df.loc[i, "Product_Name"] = r[1]
-    df.loc[i, "Factory"] = r[0].split("\\")[-3]
-    df.loc[i, "Category"] = r[0].split("\\")[-2]
-    df.loc[i, "Subcategory"] = r[0].split("\\")[-1]
 
-# print(df.columns)
-df.to_excel(product_path+".xlsx")
-df.to_json(product_path+".json")
+if __name__ == "__main__":
+    regenerate_product_catalog()

@@ -18,6 +18,7 @@ from typing import Any, Mapping
 
 from utils.factory_service import FactoryService
 from utils.paths import parent_path
+from utils.product_catalog import build_product_catalog
 
 
 FORMULA_VERSION = "cost-v1-owner-approved-2026-09-27"
@@ -462,8 +463,8 @@ class CostInputLoader:
         factory_root = self._inside(self.data_root / "Factories" / operational_key)
         if identity is None:
             bom_path: Path | tuple[Path, ...] = tuple(sorted(
-                path.resolve() for path in factory_root.glob("*/*/*.json")
-                if not path.name.startswith("_")
+                item.bom_path.resolve()
+                for item in build_product_catalog(factory_root.parent, [operational_key])
             ))
         else:
             bom_path = self._inside(
@@ -622,12 +623,12 @@ class CostInputLoader:
 
     @staticmethod
     def _category_products(category_root: Path, factory_id: str, category: str) -> tuple[ProductIdentity, ...]:
-        products = []
-        for path in sorted(category_root.glob("*/*.json")):
-            if path.name.startswith("_"):
-                continue
-            products.append(ProductIdentity(factory_id, category, path.parent.name, path.stem))
-        return tuple(products)
+        factory_root = category_root.parent
+        return tuple(
+            ProductIdentity(factory_id, item.category, item.subcategory, item.product)
+            for item in build_product_catalog(factory_root.parent, [factory_root.name])
+            if item.category == category
+        )
 
 
 def validate_live_bom_payload(payload, material_document):

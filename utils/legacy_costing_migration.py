@@ -105,12 +105,13 @@ def _canonical_pool_total(document: dict | None) -> Decimal | None:
 
 
 def _product_names(factory_root: Path) -> list[str]:
-    return sorted({path.stem for path in factory_root.glob("*/*/*.json")
-                   if not path.name.startswith("_") and not path.stem.endswith("_meta")})
+    from utils.product_catalog import build_product_catalog
+    return sorted({item.product for item in build_product_catalog(factory_root.parent, [factory_root.name])})
 
 
 def _category_names(factory_root: Path) -> list[str]:
-    return sorted(path.name for path in factory_root.iterdir() if path.is_dir()) if factory_root.is_dir() else []
+    from utils.product_catalog import build_product_hierarchy
+    return sorted(build_product_hierarchy(factory_root.parent, [factory_root.name]).get(factory_root.name, {}))
 
 
 def _known_product(root: Path, factory_root: Path, operational_key: str,
