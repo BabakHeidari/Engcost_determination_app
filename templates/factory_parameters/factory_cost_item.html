@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block content %}<div class="page-container" dir="rtl">
+<nav><a href="{{ url_for('factory_parameters.factory_parameters') }}">پارامترهای کارخانه</a> &gt; <a href="{{ url_for('factory_parameters.factory_details',factory_name=factory_id) }}">کارخانه {{ factory_name }}</a> &gt; <a href="{{ url_for('factory_parameters.subfield',factory_name=factory_id,Subfield=pool_id) }}">{{ pool_label }}</a> &gt; {{ subject }}</nav>
+<h2>{{ subject }}</h2><p class="alert alert-info">سطح نهایی ساختار هزینه</p><p>شناسه ثابت: <code>{{ item_id }}</code></p>
+<label>موضوع <input id="subject" value="{{ subject }}"></label><label>هزینه <input id="cost" type="number" min="0" step="any" value="{{ cost }}"></label><button id="save" class="btn btn-save">ذخیره</button>
+</div><script>document.getElementById('save').onclick=async()=>{const r=await fetch({{ save_url|tojson }},{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:document.getElementById('subject').value,cost:Number(document.getElementById('cost').value)})});alert(r.ok?'ذخیره شد':'ذخیره ناموفق بود');};</script>{% endblock %}

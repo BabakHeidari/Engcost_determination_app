@@ -2,12 +2,18 @@ from flask import Blueprint, abort, g, render_template, jsonify, request, sessio
 from utils.auth import get_profile_store, login_required
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.costing_engine import CostInputError, validate_live_bom_payload
-from utils.paths import product_path, material_path, parent_path
+from utils.paths import material_path, parent_path
 from utils.load_data import load_json, load_bom
-from utils.updaters import create_product_metadata, category_adder, subcategory_adder, product_adder, directory_tracer, category_weights_updater, capacity_writer
+from utils.updaters import category_adder, subcategory_adder, product_adder, directory_tracer, category_weights_updater, capacity_writer
+from utils.product_catalog import build_product_hierarchy, product_catalog_document
 import json
+from pathlib import Path
 
 product_bp = Blueprint("product", __name__)
+
+
+def _registered_operational_keys(service):
+    return [service.operational_key(factory) for factory in service.list_factories()]
 
 @product_bp.route("/product/production_selection")
 @login_required
@@ -16,12 +22,15 @@ def production_selection():
     factories = service.get_accessible_factories(g.current_user, "product")
     if not factories:
         abort(403)
-    create_product_metadata(parent_path, product_path,"Factories", ".json")
-    product_data = load_json(product_path+".json")
-    allowed = {service.operational_key(factory) for factory in factories}
-    if isinstance(product_data, dict) and isinstance(product_data.get("Factory"), dict):
-        indexes = [key for key, value in product_data["Factory"].items() if value in allowed]
-        product_data = {column: {str(i): values[key] for i, key in enumerate(indexes)} for column, values in product_data.items()}
+    operational_to_id = {service.operational_key(factory): factory["id"] for factory in factories}
+    product_data = product_catalog_document(
+        Path(parent_path) / "Factories", operational_to_id,
+    )
+    # Browser forms submit canonical registry IDs; operational keys never act
+    # as authorization identities.
+    product_data["Factory"] = {
+        index: operational_to_id[value] for index, value in product_data["Factory"].items()
+    }
     return render_template("product/production_selection.html", 
                            table_json = product_data)
 
@@ -34,8 +43,8 @@ def product_options():
     factories = service.get_accessible_factories(g.current_user, "product")
     if not factories:
         abort(403)
-    __meta_data = load_json(f"{parent_path}\\Factories\\__metadata.json")
-    raw_hierarchy = __meta_data["product_hierarchy"]
+    operational_to_id = {service.operational_key(factory): factory["id"] for factory in factories}
+    raw_hierarchy = build_product_hierarchy(Path(parent_path) / "Factories", operational_to_id)
     product_hierarchy = {}
     categories = set()
     subcategories = set()
@@ -44,7 +53,7 @@ def product_options():
         product_hierarchy[factory["id"]] = hierarchy
         categories.update(hierarchy)
         for children in hierarchy.values():
-            if isinstance(children, dict):
+            if isinstance(children, list):
                 subcategories.update(children)
 
 
@@ -73,7 +82,7 @@ def add_product():
         factory = FactoryService(get_profile_store()).operational_key(factory_record)
         product_adder(product_name, factory, category, subcategory)
         capacity_writer(product_name, factory, category, subcategory, capacity)
-        directory_tracer(f"{parent_path}\\Factories")
+        directory_tracer(Path(parent_path) / "Factories", factory_keys=_registered_operational_keys(FactoryService(get_profile_store())))
         product_options()
         category_weights_updater(factory, category)
         return jsonify({"status": "ok"})
@@ -100,7 +109,7 @@ def add_category():
         factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "product", "WRITE")
         factory = FactoryService(get_profile_store()).operational_key(factory_record)
         category_adder(factory, category_name)
-        directory_tracer(f"{parent_path}\\Factories")
+        directory_tracer(Path(parent_path) / "Factories", factory_keys=_registered_operational_keys(FactoryService(get_profile_store())))
         product_options()
         return jsonify({"status": "ok", "message": f"Category '{category_name}' added successfully."})
     except FactoryNotFoundError as e:
@@ -129,7 +138,7 @@ def add_subcategory():
         factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "product", "WRITE")
         factory = FactoryService(get_profile_store()).operational_key(factory_record)
         subcategory_adder(factory, category, subcategory_name)
-        directory_tracer(f"{parent_path}\\Factories")
+        directory_tracer(Path(parent_path) / "Factories", factory_keys=_registered_operational_keys(FactoryService(get_profile_store())))
         product_options()
         return jsonify({"status": "ok", "message": f"Subcategory '{subcategory_name}' added successfully."})
     except FactoryNotFoundError as e:

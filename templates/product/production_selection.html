@@ -222,7 +222,7 @@
 
 <script>
 // JSON data passed from Flask
-const rawData = {{ table_json | safe }};
+const rawData = {{ table_json | tojson }};
 
 const DATA_DISPLAY_LABELS = {
     "DinMohamadpour": "کارخانه دین‌محمدپور",
@@ -907,7 +907,7 @@ function renderTable() {
                 <td>${escapeHtml(String(displayDataValue(row.Factory)))}</td>
                 <td>${escapeHtml(String(displayDataValue(row.Category)))}</td>
                 <td>${escapeHtml(String(displayDataValue(row.Subcategory)))}</td>
-                <td>${escapeHtml(String(row.Capacity || ''))}</td>
+                <td>${row.Capacity === null || row.Capacity === undefined || row.Capacity === '' ? 'ثبت نشده' : escapeHtml(String(row.Capacity))}</td>
                 <td>
                     <form method="POST" action="/product/${encodeURIComponent(row.Product_Name)}" style="margin:0;">
                         <input type="hidden" name="factory" value="${escapeHtml(String(row.Factory))}">
