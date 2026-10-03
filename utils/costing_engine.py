@@ -328,6 +328,8 @@ class CostInputLoader:
         factory = self.factory_service.require_access(factory_id, user, module)
         operational_key = self.factory_service.operational_key(factory)
         factory_root = self._inside(self.data_root / "Factories" / operational_key)
+        from utils.factory_configuration import ensure_factory_configuration_v2
+        ensure_factory_configuration_v2(factory_id, operational_key, data_root=self.data_root, persist=True)
         if identity.factory_id != factory_id:
             raise CostInputError(CostState.INVALID_INPUT, "FACTORY_ID_MISMATCH", "identity factory does not match authorized factory")
         period, approved_sources = self._period_binding(factory_id, period_id)
@@ -446,8 +448,11 @@ class CostInputLoader:
         if factory is None:
             raise CostInputError(CostState.MISSING_INPUT, "FACTORY_NOT_FOUND",
                                  "factory is absent from the canonical registry")
+        operational_key = self.factory_service.operational_key(factory)
+        from utils.factory_configuration import ensure_factory_configuration_v2
+        ensure_factory_configuration_v2(factory_id, operational_key, data_root=self.data_root, persist=True)
         period, approved_sources = self._period_binding(factory_id, period_id)
-        paths = self._source_paths(self.factory_service.operational_key(factory), identity)
+        paths = self._source_paths(operational_key, identity)
         return self._diagnostic(period, approved_sources, paths)
 
     def _source_paths(self, operational_key: str,
@@ -465,11 +470,11 @@ class CostInputLoader:
         paths: dict[str, Path | tuple[Path, ...]] = {
             "materials": self._inside(self.data_root / "Overall" / "material_costs.json"),
             "bom": bom_path,
-            "weights": self._inside(factory_root / "category_weights.json"),
-            "predictions": self._inside(factory_root / "ProductionPrediction.json"),
+            "weights": self._inside(factory_root / "configuration" / "category_weights.json"),
+            "predictions": self._inside(factory_root / "configuration" / "production_prediction.json"),
         }
         for pool_id in FACTORY_POOL_IDS:
-            paths[f"pool:{pool_id}"] = self._inside(factory_root / f"Factory_Data_{pool_id}.json")
+            paths[f"pool:{pool_id}"] = self._inside(factory_root / "configuration" / "cost_pools" / f"{pool_id}.json")
         return paths
 
     def _display_path(self, path: Path) -> str:
@@ -514,6 +519,14 @@ class CostInputLoader:
                     resolution["canonicalization_status"] = "AUTO_MIGRATED"
                     resolution["legacy_source"] = migration.get("source")
                     resolution["calculation_ready"] = migration.get("status") == "READY"
+                manifest_path = expected.parents[1] / "manifest.json" if expected.parent.name == "cost_pools" else expected.parent / "manifest.json"
+                if manifest_path.is_file():
+                    try:
+                        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                        resolution["configuration_schema_version"] = manifest.get("schema_version")
+                        resolution["configuration_migration_status"] = manifest.get("migration_status")
+                    except (OSError, json.JSONDecodeError):
+                        pass
             resolutions.append(resolution)
         resolved = [item for item in resolutions if item["resolution_status"] == "AVAILABLE"]
         missing = [item for item in resolutions if item["resolution_status"] == "MISSING"]

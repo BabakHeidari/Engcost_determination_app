@@ -16,6 +16,9 @@ from utils.module_registry import MODULE_REGISTRY
 from utils.profile_authorization import first_accessible_endpoint, get_effective_level, is_top_level_admin
 from utils.localization import DEFAULT_DIRECTION, DEFAULT_LANGUAGE, DEFAULT_LOCALE, display_value, format_jalali_date, format_jalali_datetime, format_persian_digits, parse_jalali_input, t
 from utils.demo_data import persian_demo_enabled
+from utils.factory_configuration import ensure_factory_configuration_v2
+from utils.factory_service import FactoryService
+from utils.auth import get_profile_store
 
 
 app = Flask(__name__)
@@ -48,6 +51,18 @@ app.register_blueprint(general_parameters_bp)
 app.register_blueprint(factory_parameters_bp)
 app.register_blueprint(cost_calculation_bp, url_prefix="/cost")
 app.register_blueprint(profile_bp)
+
+# Deployment-time, one-shot migration.  Each factory is isolated and lazy
+# boundary checks remain in place for workers that start concurrently.
+for _factory in FactoryService(get_profile_store()).list_factories():
+    try:
+        ensure_factory_configuration_v2(
+            _factory["id"],
+            FactoryService(get_profile_store()).operational_key(_factory),
+            persist=True,
+        )
+    except (OSError, ValueError) as exc:
+        warnings.warn(f"Factory Configuration V2 migration failed for {_factory['id']}: {exc}", RuntimeWarning)
 
 
 def _expects_json_error():
