@@ -71,6 +71,22 @@ def _source_type(path: Path, factory_root: Path) -> str:
     return "FACTORY_PARAMETERS"
 
 
+def _logical_source(path: Path, factory_root: Path) -> str | None:
+    """Name a discovered file using the same vocabulary as CostInputLoader."""
+    if path.name == "material_costs.json":
+        return "materials"
+    if path.name == "ProductionPrediction.json":
+        return "predictions"
+    if path.name == "category_weights.json":
+        return "weights"
+    if path.name.startswith("Factory_Data_"):
+        pool = path.stem.removeprefix("Factory_Data_")
+        return f"pool:{pool}" if pool in FACTORY_POOL_IDS else None
+    if factory_root in path.parents and len(path.relative_to(factory_root).parts) == 3:
+        return "bom"
+    return None
+
+
 def _write_document(path: Path, document: dict):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(dir=path.parent, prefix=".planning-period-", text=True)
@@ -121,7 +137,7 @@ def discover_initial_period(factory_service: FactoryService, factory_id: str, da
     paths = [root / "Overall" / "material_costs.json"]
     if factory_root.is_dir():
         paths.extend(sorted(path for path in factory_root.rglob("*.json") if not path.name.startswith("_")))
-    evidence, readable_sources = [], 0
+    evidence, readable_sources, source_metadata = [], 0, []
     for path in paths:
         try:
             source = json.loads(path.read_text(encoding="utf-8"))
@@ -132,6 +148,12 @@ def discover_initial_period(factory_service: FactoryService, factory_id: str, da
         data = source.get("data")
         if isinstance(data, dict) and any(isinstance(value, list) and value for value in data.values()):
             readable_sources += 1
+            logical_source = _logical_source(path, factory_root)
+            if logical_source:
+                source_metadata.append({
+                    "source_name": logical_source,
+                    "location": str(Path(root.name) / path.relative_to(root)),
+                })
         for parsed, identifier, raw in _dates(source):
             evidence.append({"date": parsed.isoformat(), "source_type": _source_type(path, factory_root),
                              "source": path.name, "source_identifier": identifier, "raw_value": raw,
@@ -154,7 +176,8 @@ def discover_initial_period(factory_service: FactoryService, factory_id: str, da
         "approved_at": now.isoformat(), "creation_reason": "FIRST_FACTORY_COSTING_INITIALIZATION",
         "date_origin": date_origin, "end_date_origin": "SYSTEM_INITIALIZATION_BOUNDARY",
         "discovery_status": discovery_status, "created_at": now.isoformat(),
-        "source_evidence": evidence, "sources": sorted(REQUIRED_SOURCES),
+        "source_evidence": evidence, "source_metadata": source_metadata,
+        "sources": sorted(REQUIRED_SOURCES),
     }
     document["bindings"].append(initial)
     if persist:

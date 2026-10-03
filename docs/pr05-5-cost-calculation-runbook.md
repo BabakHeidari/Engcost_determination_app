@@ -147,6 +147,24 @@ active، approved، approval owner و نتیجه هر شرط موتور را گ�
 اگر فقط `start_date`/`end_date` وجود داشته باشد، schema با loader سازگار نیست؛
 فیلدهای canonical runtime در قرارداد فعلی `start` و `end` هستند.
 
+### تشخیص تفصیلی منابع
+
+برای مقایسه فهرست `sources` دوره فعال با مسیرهایی که `CostInputLoader` واقعاً
+حل می‌کند، فرمان فقط‌خواندنی زیر را اجرا کنید:
+
+```bash
+python scripts/diagnose_costing_sources.py --factory-id CANONICAL_ID \
+  --category CATEGORY --subcategory SUBCATEGORY --product PRODUCT
+```
+
+گزینه‌های هویت محصول برای تشخیص مسیر دقیق BOM هستند؛ بدون آن‌ها، فرمان همه
+BOMهای موجود کارخانه را در برابر الگوی مورد انتظار گزارش می‌کند. خروجی شامل
+دوره فعال، منابع ثبت‌شده، نام منابع شناخته‌شده loader، منابع resolved و missing
+است. برای هر منبع، `expected_location`، وضعیت `AVAILABLE`/`MISSING`، فایل پیدا
+شده و علت ثبت می‌شود. این فرمان هیچ منبعی نمی‌سازد، مقدار جایگزین نمی‌گذارد و
+binding را تغییر نمی‌دهد. پاسخ `SOURCE_UNAVAILABLE` API نیز همین تشخیص را به
+همراه نام منبع گمشده، مسیر مورد انتظار و منابع در دسترس برمی‌گرداند.
+
 ## قبل و بعد
 
 - **قبل:** انتخاب ردیف دارای operational key به 404 می‌رسید؛ 422 و network هر

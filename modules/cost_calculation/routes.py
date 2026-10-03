@@ -27,7 +27,7 @@ IDENTITY_FIELDS = ("Factory", "Category", "Subcategory", "Product_Name")
 ERROR_MESSAGES = {
     "PERIOD_NOT_BOUND": "دوره برنامه‌ریزی برای این کارخانه پیکربندی یا توسط مالک تأیید نشده است.",
     "UNBOUND_LEGACY_SOURCE": "همه منابع لازم برای دوره برنامه‌ریزی توسط مالک تأیید نشده‌اند.",
-    "SOURCE_UNAVAILABLE": "یکی از منابع داده تأییدشده در دسترس نیست.",
+    "SOURCE_UNAVAILABLE": "منبع مورد نیاز برای محاسبه پیدا نشد.",
     "SOURCE_PARSE_ERROR": "ساختار یکی از منابع داده تأییدشده قابل خواندن نیست.",
     "INVALID_SOURCE_SCHEMA": "ساختار یکی از منابع داده کامل یا معتبر نیست.",
     "COLUMN_LENGTH_MISMATCH": "ستون‌های یکی از منابع داده هم‌اندازه نیستند.",
@@ -62,8 +62,13 @@ def _typed_error(exc):
     message = ERROR_MESSAGES.get(exc.detail.code, "ورودی‌های لازم برای محاسبه هزینه کامل یا معتبر نیستند.")
     detail = {"code": exc.detail.code, "message": message}
     if exc.detail.source:
-        # A logical source name is useful; local paths are deliberately hidden.
-        detail["source"] = Path(exc.detail.source).name
+        detail["expected_path"] = exc.detail.source
+    if exc.diagnostic:
+        missing = exc.diagnostic.get("missing_sources", [])
+        if missing:
+            detail["missing_source"] = missing[0]["source_name"]
+        detail["available_sources"] = exc.diagnostic.get("available_sources", [])
+        detail["source_diagnostic"] = exc.diagnostic
     return {"state": exc.state.value, "error": detail, "errors": [detail]}
 
 

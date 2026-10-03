@@ -171,6 +171,9 @@ def test_fx_share_and_prediction_changes_reach_the_result():
 
 
 class _FactoryService:
+    def get_factory(self, factory_id):
+        return {"id": factory_id} if factory_id == "factory-1" else None
+
     def require_access(self, factory_id, user, module):
         assert factory_id == "factory-1"
         return {"id": factory_id}
@@ -252,6 +255,42 @@ def test_loader_reports_parse_failure_instead_of_zero(tmp_path):
         CostInputLoader(_FactoryService(), data_root=data, period_bindings_path=binding).load("factory-1", {}, IDENTITY_A, "P")
     assert caught.value.state is CostState.INVALID_INPUT
     assert caught.value.detail.code == "SOURCE_PARSE_ERROR"
+
+
+def test_source_diagnostic_reports_all_existing_loader_sources(tmp_path):
+    data, binding = _fixture_tree(tmp_path)
+    loader = CostInputLoader(_FactoryService(), data_root=data, period_bindings_path=binding)
+
+    diagnostic = loader.diagnose_sources("factory-1", "P", IDENTITY_A)
+    inputs = loader.load("factory-1", {}, IDENTITY_A, "P")
+
+    assert diagnostic["active_period"]["period_id"] == "P"
+    assert diagnostic["missing_sources"] == []
+    assert diagnostic["required_sources"] == diagnostic["loader_sources"]
+    assert len(diagnostic["resolved_sources"]) == len(diagnostic["required_sources"])
+    assert inputs.bom_lines
+
+
+def test_missing_source_has_exact_resolution_diagnostic_and_never_falls_back(tmp_path):
+    data, binding = _fixture_tree(tmp_path)
+    missing_path = data / "Factories" / "operational" / "Factory_Data_Payroll.json"
+    missing_path.unlink()
+    loader = CostInputLoader(_FactoryService(), data_root=data, period_bindings_path=binding)
+
+    diagnostic = loader.diagnose_sources("factory-1", "P", IDENTITY_A)
+    payroll = next(item for item in diagnostic["missing_sources"]
+                   if item["source_name"] == "pool:Payroll")
+    assert payroll == {
+        "source_name": "pool:Payroll",
+        "expected_location": "Data/Factories/operational/Factory_Data_Payroll.json",
+        "resolution_status": "MISSING",
+        "actual_file_found": None,
+        "reason": "file not found",
+    }
+    with pytest.raises(CostInputError) as caught:
+        loader.load("factory-1", {}, IDENTITY_A, "P")
+    assert caught.value.detail.code == "SOURCE_UNAVAILABLE"
+    assert caught.value.diagnostic == diagnostic
 
 
 def test_loader_preserves_repeated_material_rows_with_stable_local_ids(tmp_path):
