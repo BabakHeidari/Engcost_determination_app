@@ -367,12 +367,14 @@ class CostInputLoader:
                 )
 
         incomplete = [item for item in diagnostic["source_resolutions"]
-                      if item.get("migration_status") == "NEEDS_INPUT"]
+                      if item.get("migration_status") in {"NEEDS_INPUT", "INVALID_LEGACY_SOURCE"}]
         if incomplete:
             first = incomplete[0]
+            invalid = first.get("migration_status") == "INVALID_LEGACY_SOURCE"
             raise CostInputError(
-                CostState.MISSING_INPUT, "LEGACY_SOURCE_NEEDS_INPUT",
-                "generated canonical source requires business input",
+                CostState.INVALID_INPUT if invalid else CostState.MISSING_INPUT,
+                "INVALID_LEGACY_SOURCE" if invalid else "LEGACY_SOURCE_NEEDS_INPUT",
+                "legacy source is invalid" if invalid else "generated canonical source requires business input",
                 first["expected_location"], diagnostic,
             )
 

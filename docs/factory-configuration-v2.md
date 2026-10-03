@@ -23,3 +23,13 @@ python scripts/migrate_factory_configuration_v2.py --all-factories
 ```
 
 Add `--write` to mutate data manually.
+
+## Cross-platform migration lock
+
+Migration uses an OS-level inter-process lock: `flock` on POSIX and a one-byte
+`msvcrt.locking` range on Windows. Platform modules are loaded lazily, and the
+lock file contains no business state. On Windows, smoke-test with `python app.py`:
+the application should start without an `fcntl` import error, complete V2
+migration, and load `/factory_parameters/<factory>` normally. Atomic directory
+replacement assumes a local filesystem with normal `os.replace` semantics;
+network filesystems should be validated for the deployment environment.

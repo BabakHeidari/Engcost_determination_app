@@ -5,10 +5,9 @@ all reads and writes in this module use ``configuration/`` exclusively.
 """
 from __future__ import annotations
 
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
-import fcntl
 import hashlib
 import json
 import os
@@ -19,6 +18,7 @@ import tempfile
 from typing import Any
 
 from utils.paths import parent_path
+from utils.file_lock import interprocess_file_lock
 
 
 POOL_IDS = (
@@ -109,14 +109,9 @@ def _pool_document(pool_id: str, rows: list[dict], status: str, source: str | No
     }
 
 
-@contextmanager
 def _factory_lock(factory_root: Path):
-    factory_root.mkdir(parents=True, exist_ok=True)
-    lock_path = factory_root / ".factory-configuration-v2.lock"
-    with lock_path.open("a+", encoding="utf-8") as lock:
-        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        yield
-        fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+    """Serialize the entire inspect/migrate/activate transaction."""
+    return interprocess_file_lock(factory_root / ".factory-configuration-v2.lock")
 
 
 def _legacy_summary(factory_root: Path) -> tuple[dict[str, Any], Path]:
