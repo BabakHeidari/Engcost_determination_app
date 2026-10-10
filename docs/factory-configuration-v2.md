@@ -6,6 +6,13 @@ The directory contains `manifest.json`, `cost_structure.json`, six files under
 The fixed root is `cost_structure`, fixed pools are depth 2, and cost items are
 terminal depth 3 records with stable IDs. Pool totals and percentages are derived.
 
+[PR-08 Dashboard sensitivity](pr08-dashboard-sensitivity-api.md) reads only an
+already installed V2 configuration through the read-only costing loader. Its six
+pool parameters simulate whole-factory period amounts in request memory; they do
+not edit V2 totals or terminal items. Item-level sensitivity is unsupported until
+an approved mapping and semantics exist. Analytical requests never activate
+migration or create configuration, lock, backup, or cache artifacts.
+
 Migration first prefers a valid `Factory_Data_<Pool>.json`. If absent, one exact
 `Factory_Data.json` match becomes `LegacyMigratedTotal` (including explicit zero).
 If neither exists, the pool is `NEEDS_INPUT`. Detailed data wins over a conflicting

@@ -11,6 +11,8 @@
 | `GET /dashboard` | `dashboard` | GLOBAL؛ فهرست factory جداگانه فیلتر می‌شود | READ |
 | `GET /api/cost_analysis` بدون factory | `dashboard` | GLOBAL | READ |
 | `GET /api/cost_analysis?factory=<id>` | `dashboard` | FACTORY از query | READ |
+| `GET /api/dashboard/sensitivity/parameters` | `dashboard` + گروه پارامتر مجاز | FACTORY canonical از query؛ عمومی GLOBAL و کارخانه‌ای همان FACTORY | Dashboard READ همان کارخانه؛ listing عمومی فقط با general_parameters READ و کارخانه‌ای فقط با factory_parameters READ همان کارخانه |
+| `POST /api/dashboard/sensitivity/scenario` | `dashboard` + گروه override مجاز | FACTORY canonical از JSON؛ عمومی GLOBAL و کارخانه‌ای همان FACTORY | Dashboard READ همان کارخانه + READ هر گروه استفاده‌شده؛ بررسی دوباره در POST؛ MODIFY لازم نیست و سناریو write ندارد |
 | `GET /general_parameters/` | `general_parameters` | GLOBAL | READ |
 | `POST /save_materials` | `general_parameters` | GLOBAL | MODIFY؛ جدول موجود را ویرایش می‌کند |
 | `GET /factory_parameters/` | `factory_parameters` | FACTORY؛ فقط subset مجاز | READ حداقل در یک کارخانه |
@@ -41,3 +43,8 @@ schema و migration تغییر نکرده‌اند و هیچ منبع writable �
 قفل، backup، validation و atomic replacement `ProfileDataStore` دست‌نخورده است؛
 فرمول هزینه نیز تغییر نکرده است. UX مدیر بصری فاز 7.1 و انتشار پویای کارخانه فاز
 6.8 حفظ شده‌اند. Phase 9 در این تغییر آغاز نشده است.
+
+قرارداد کامل [PR-08 / DASH-5](pr08-dashboard-sensitivity-api.md) محدودیت انتخاب
+تک‌پیکربندی، registry متعلق به سرور، redaction پاسخ و نبود write را ثبت می‌کند.
+مجوز یک گروه الزاماً به گروه دیگر نیاز ندارد و roleهای سطح بالا همچنان از
+سیاست مرکزی implicit privilege می‌گیرند. رابط حساسیت برای PR-09 غیرفعال می‌ماند.

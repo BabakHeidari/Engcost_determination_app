@@ -3,7 +3,9 @@
 `GET /api/cost_analysis` از ورودی‌های واقعی نصب‌شده و همان
 `CostInputLoader` و `calculate_cost` مصرف‌شده در Cost Calculation استفاده
 می‌کند. این برش شامل سرویس backend، قرارداد پاسخ و آزمون‌های API است؛ تکمیل
-صفحه داشبورد، نمودارها و CSV در PR-07 و حساسیت در مراحل بعدی قرار دارند.
+صفحه داشبورد، نمودارها و CSV در [PR-07](pr07-dashboard-cost-analysis-ui.md) و
+registry/API حساسیت تک‌پیکربندی در [PR-08](pr08-dashboard-sensitivity-api.md)
+قرار دارند. قرارداد GET این سند مستقل و بدون تغییر باقی می‌ماند.
 فرمول `cost-v1-owner-approved-2026-09-27` و مصوبات G1–G4 تغییر نمی‌کنند.
 
 ## درخواست و مجوز
