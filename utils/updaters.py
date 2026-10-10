@@ -9,6 +9,7 @@ import os
 from shutil import copy2
 from utils.xlsxTojson import xlsx_to_json_convertor, to_json
 from utils.load_data import load_json
+from utils.product_catalog import build_product_hierarchy, product_catalog_document
 
 
 def modify_summery(factory):
@@ -216,244 +217,52 @@ def category_weights_updater(factory, category):
 
 
 
-def directory_tracer(root_path, output_metadata=True, return_data=True, verbose=False):
-    """
-    Analyzes directory structure and creates metadata JSON with hierarchy.
-    
-    This function traverses the directory structure and provides:
-    - First, second, and third level folders separately
-    - Parent relationships for each folder
-    - JSON metadata file with complete hierarchy
-    
-    Args:
-        root_path (str): Root directory path to analyze
-        output_metadata (bool): Whether to save __metadata.json file (default: True)
-        return_data (bool): Whether to return the metadata dictionary (default: True)
-        verbose (bool): Whether to print analysis summary (default: False)
-    
-    Returns:
-        dict: Dictionary containing:
-            - structure: Hierarchical directory structure
-            - level1: List of first level folders
-            - level2: List of second level folders  
-            - level3: List of third level folders
-            - parents: Parent relationships dictionary
-            - metadata_file: Path to saved metadata file (if output_metadata=True)
-    """
-    
+def directory_tracer(root_path, output_metadata=True, return_data=True, verbose=False, factory_keys=None):
+    """Build product hierarchy metadata from semantic product namespaces."""
     root_path = Path(root_path).resolve()
-    
-    # Validate root path
-    if not root_path.exists():
-        raise FileNotFoundError(f"Directory does not exist: {root_path}")
-    
     if not root_path.is_dir():
-        raise NotADirectoryError(f"Path is not a directory: {root_path}")
-    
-    # Initialize data structures
-    structure = {}
-    level1_folders = []
-    level2_folders = []
-    level3_folders = []
-    folder_parents = {}
-    
-    # Traverse directory structure
-    for item in sorted(root_path.iterdir()):
-        if item.is_dir():
-            # Level 1
-            level1_folders.append(item.name)
-            structure[item.name] = {}
-            folder_parents[item.name] = root_path.name
-            
-            # Level 2
-            for subitem in sorted(item.iterdir()):
-                if subitem.is_dir():
-                    level2_folders.append(subitem.name)
-                    structure[item.name][subitem.name] = []
-                    folder_parents[subitem.name] = item.name
-                    
-                    # Level 3
-                    for subsubitem in sorted(subitem.iterdir()):
-                        if subsubitem.is_dir():
-                            level3_folders.append(subsubitem.name)
-                            structure[item.name][subitem.name].append(subsubitem.name)
-                            folder_parents[subsubitem.name] = subitem.name
-    
-    # Prepare metadata
+        raise FileNotFoundError(f"Directory does not exist: {root_path}")
+    structure = build_product_hierarchy(root_path, factory_keys)
+    level1 = list(structure)
+    level2 = [category for categories in structure.values() for category in categories]
+    level3 = [subcategory for categories in structure.values() for children in categories.values() for subcategory in children]
+    parents = {factory: root_path.name for factory in structure}
+    for factory, categories in structure.items():
+        for category, subcategories in categories.items():
+            parents[category] = factory
+            parents.update({subcategory: category for subcategory in subcategories})
     metadata = {
-        "root_directory": str(root_path),
-        "analysis_date": datetime.now().isoformat(),
+        "root_directory": str(root_path), "analysis_date": datetime.now().isoformat(),
         "product_hierarchy": structure,
-        "folders_by_level": {
-            "level_1": sorted(level1_folders),
-            "level_2": sorted(level2_folders),
-            "level_3": sorted(level3_folders)
-        },
-        "parent_relationships": folder_parents,
-        "statistics": {
-            "total_folders": len(level1_folders) + len(level2_folders) + len(level3_folders),
-            "level1_count": len(level1_folders),
-            "level2_count": len(level2_folders),
-            "level3_count": len(level3_folders)
-        }
+        "folders_by_level": {"level_1": sorted(level1), "level_2": sorted(level2), "level_3": sorted(level3)},
+        "parent_relationships": parents,
+        "statistics": {"total_folders": len(level1) + len(level2) + len(level3),
+                       "level1_count": len(level1), "level2_count": len(level2), "level3_count": len(level3)},
     }
-    
-    # Save metadata to JSON file
-    metadata_file = None
-    if output_metadata:
-        metadata_file = root_path / "__metadata.json"
-        with open(metadata_file, 'w', encoding='utf-8') as f:
-            json.dump(metadata, f, indent=2, ensure_ascii=False)
-        if verbose:
-            print(f"✓ Metadata saved to: {metadata_file}")
-    
-    # Display summary if verbose
+    metadata_file = root_path / "__metadata.json" if output_metadata else None
+    if metadata_file:
+        metadata_file.write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
     if verbose:
-        print("\n" + "="*60)
-        print("DIRECTORY STRUCTURE ANALYSIS")
-        print("="*60)
-        print(f"\n📁 Root Directory: {root_path}")
-        print(f"\n📊 Statistics:")
-        print(f"   Total folders: {metadata['statistics']['total_folders']}")
-        print(f"   Level 1 folders: {metadata['statistics']['level1_count']}")
-        print(f"   Level 2 folders: {metadata['statistics']['level2_count']}")
-        print(f"   Level 3 folders: {metadata['statistics']['level3_count']}")
-        
-        print("\n📁 First Level Folders:")
-        for folder in metadata["folders_by_level"]["level_1"]:
-            print(f"   ├── {folder}")
-        
-        if metadata["folders_by_level"]["level_2"]:
-            print("\n📁 Second Level Folders (with parents):")
-            for folder in metadata["folders_by_level"]["level_2"]:
-                parent = folder_parents.get(folder, "Unknown")
-                print(f"   ├── {folder} → parent: {parent}")
-        
-        if metadata["folders_by_level"]["level_3"]:
-            print("\n📁 Third Level Folders (with parents):")
-            for folder in metadata["folders_by_level"]["level_3"]:
-                parent = folder_parents.get(folder, "Unknown")
-                print(f"   ├── {folder} → parent: {parent}")
-        
-        print("\n" + "="*60)
-        print("HIERARCHY VIEW:")
-        print("="*60)
-        
-        for parent, children in structure.items():
-            print(f"\n📂 {parent}/")
-            if isinstance(children, dict):
-                for idx, (child, grandchildren) in enumerate(children.items()):
-                    is_last = idx == len(children) - 1
-                    prefix = "   └──" if is_last else "   ├──"
-                    print(f"{prefix} 📁 {child}/")
-                    
-                    if grandchildren:
-                        for idx2, grandchild in enumerate(grandchildren):
-                            is_last_child = idx2 == len(grandchildren) - 1
-                            child_prefix = "       └──" if is_last_child else "       ├──"
-                            print(f"{child_prefix} 📁 {grandchild}/")
-        
-        print("="*60 + "\n")
-    
-    # Return data if requested
+        print(f"Product hierarchy contains {len(level1)} factories and excludes system namespaces.")
     if return_data:
-        result = {
-            "structure": structure,
-            "level1": level1_folders,
-            "level2": level2_folders,
-            "level3": level3_folders,
-            "parents": folder_parents,
-            "metadata": metadata,
-            "metadata_file": str(metadata_file) if metadata_file else None
-        }
-        return result
-    
-    print("directory_tracer done its job.")
+        return {"structure": structure, "level1": level1, "level2": level2, "level3": level3,
+                "parents": parents, "metadata": metadata,
+                "metadata_file": str(metadata_file) if metadata_file else None}
     return None
 
 
 # Alternative: Direct function that produces exactly the format you showed
-def create_product_metadata(parent_path, output_path, 
-                                            factories_folder="Factories", 
-                                            file_extension=".json",
-                                            verbose=False):
-    """
-    Creates product metadata in column-oriented JSON format.
-    """
-    import json
-    from pathlib import Path
-    import os
-    
-    parent_path = Path(parent_path)
-    output_path = Path(output_path)
-    factories_dir = parent_path / factories_folder
-    
-    if not factories_dir.exists():
+def create_product_metadata(parent_path, output_path, factories_folder="Factories",
+                            file_extension=".json", verbose=False, factory_keys=None):
+    """Regenerate ProductsLater using canonical semantic product discovery."""
+    factories_dir = Path(parent_path) / factories_folder
+    if not factories_dir.is_dir():
         raise FileNotFoundError(f"Directory not found: {factories_dir}")
-    
-    # Collect data
-    products = []
-    factories = []
-    categories = []
-    subcategories = []
-    capacities = []
-    
-    for root, dirs, files in os.walk(factories_dir):
-        for file in files:
-            if file.endswith(file_extension):
-                rel_path = Path(root).relative_to(factories_dir)
-                depth = len(rel_path.parts) if rel_path != Path('.') else 0
-                
-                if depth == 3 and not file.replace(".json", "").endswith("_meta"):
-
-                    path_parts = Path(root).parts
-                    
-                    try:
-                        factories_idx = path_parts.index(factories_folder)
-                    except ValueError:
-                        factories_idx = -1
-                    
-                    product_name = file.replace(file_extension, "")
-                    factory_name = path_parts[factories_idx + 1] if factories_idx >= 0 and len(path_parts) > factories_idx + 1 else ""
-                    category_name = path_parts[factories_idx + 2] if factories_idx >= 0 and len(path_parts) > factories_idx + 2 else ""
-                    subcategory_name = path_parts[factories_idx + 3] if factories_idx >= 0 and len(path_parts) > factories_idx + 3 else ""
-                    # print(rel_path, file)
-                    # try:
-                    capacity = capacity_reader(file.replace(".json", ""), rel_path)
-                    # except:
-                        # capacity_writer(product_name, factory_name, category_name, subcategory_name, 50)
-                        # capacity = capacity_reader(file.replace(".json", ""), rel_path)
-
-
-
-                    products.append(product_name)
-                    factories.append(factory_name)
-                    categories.append(category_name)
-                    subcategories.append(subcategory_name)
-                    capacities.append(capacity)
-                    
-                    if verbose:
-                        print(f"✓ Added: {product_name} -> {factory_name}/{category_name}/{subcategory_name} with capacity {capacity}.")
-    
-    # Create column-oriented structure
-    column_oriented_data = {
-        "Product_Name": {str(i): products[i] for i in range(len(products))},
-        "Factory": {str(i): factories[i] for i in range(len(factories))},
-        "Category": {str(i): categories[i] for i in range(len(categories))},
-        "Subcategory": {str(i): subcategories[i] for i in range(len(subcategories))},
-        "Capacity": {str(i): capacities[i] for i in range(len(capacities))}
-    }
-    
-    # Save to JSON
-    json_path = f"{output_path}.json"
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(column_oriented_data, f, indent=2, ensure_ascii=False)
-    
+    result = product_catalog_document(factories_dir, factory_keys)
+    Path(f"{output_path}.json").write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
     if verbose:
-        print(f"\n✓ Saved column-oriented metadata to: {json_path}")
-        print(f"   Total products: {len(products)}")
-    
-    return column_oriented_data
+        print(f"Saved {len(result['Product_Name'])} products to {output_path}.json")
+    return result
 
 
 def capacity_reader(prd_name, rel_path):

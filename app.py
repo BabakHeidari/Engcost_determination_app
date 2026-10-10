@@ -1,4 +1,5 @@
 import os
+import json
 import secrets
 import warnings
 
@@ -16,6 +17,10 @@ from utils.module_registry import MODULE_REGISTRY
 from utils.profile_authorization import first_accessible_endpoint, get_effective_level, is_top_level_admin
 from utils.localization import DEFAULT_DIRECTION, DEFAULT_LANGUAGE, DEFAULT_LOCALE, display_value, format_jalali_date, format_jalali_datetime, format_persian_digits, parse_jalali_input, t
 from utils.demo_data import persian_demo_enabled
+from utils.factory_configuration import FactoryConfigurationError, ensure_factory_configuration_v2
+from utils.file_lock import FileLockTimeout
+from utils.factory_service import FactoryService
+from utils.auth import get_profile_store
 
 
 app = Flask(__name__)
@@ -48,6 +53,31 @@ app.register_blueprint(general_parameters_bp)
 app.register_blueprint(factory_parameters_bp)
 app.register_blueprint(cost_calculation_bp, url_prefix="/cost")
 app.register_blueprint(profile_bp)
+
+def initialize_factory_configuration_v2(flask_app):
+    """Proactively migrate registered factories inside a Flask app context.
+
+    Manifest checks and the inter-process lock remain the correctness mechanism
+    when a development reloader or multiple workers initialize concurrently.
+    """
+    with flask_app.app_context():
+        store = get_profile_store()
+        service = FactoryService(store)
+        for factory in service.list_factories():
+            try:
+                ensure_factory_configuration_v2(
+                    factory["id"], service.operational_key(factory), persist=True,
+                )
+            except (FactoryConfigurationError, FileLockTimeout, OSError, json.JSONDecodeError) as exc:
+                warnings.warn(
+                    f"Factory Configuration V2 migration failed for {factory['id']}: {exc}",
+                    RuntimeWarning,
+                )
+
+
+# Run only after the Flask object and its configuration are ready. Lazy checks
+# at Factory Parameters and Cost Calculation boundaries remain safety nets.
+initialize_factory_configuration_v2(app)
 
 
 def _expects_json_error():

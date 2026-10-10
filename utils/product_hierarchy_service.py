@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from utils.paths import parent_path
+from utils.product_catalog import build_product_catalog
 
 
 ALL = "__ALL__"
@@ -103,27 +104,21 @@ class ProductHierarchyService:
 
     def _products(self, operational_key, hierarchy, categories, subcategories):
         result = []
-        for category in categories:
-            for subcategory in hierarchy[category]:
-                if subcategory not in subcategories:
-                    continue
-                directory = self.factories_root / operational_key / category / subcategory
-                try:
-                    paths = sorted(directory.glob("*.json"), key=lambda path: path.stem.casefold())
-                except OSError as exc:
-                    raise HierarchyMetadataError("خواندن پیکربندی محصولات ممکن نیست.") from exc
-                for path in paths:
-                    if path.stem.endswith("_meta"):
-                        continue
-                    identity = [operational_key, category, subcategory, path.stem]
+        try:
+            products = build_product_catalog(self.factories_root, [operational_key])
+        except OSError as exc:
+            raise HierarchyMetadataError("خواندن پیکربندی محصولات ممکن نیست.") from exc
+        for item in products:
+            if item.category in categories and item.subcategory in subcategories:
+                    identity = [operational_key, item.category, item.subcategory, item.product]
                     encoded = base64.urlsafe_b64encode(
                         json.dumps(identity, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
                     ).decode("ascii").rstrip("=")
                     result.append({
                         "id": encoded,
-                        "label": path.stem,
-                        "category": category,
-                        "subcategory": subcategory,
+                        "label": item.product,
+                        "category": item.category,
+                        "subcategory": item.subcategory,
                     })
         return sorted(result, key=lambda item: (item["label"].casefold(), item["category"].casefold(), item["subcategory"].casefold()))
 

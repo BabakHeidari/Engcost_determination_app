@@ -202,7 +202,9 @@ def _fixture_tree(tmp_path):
     _write(factory / "category_weights.json", {"data": {"category": ["category"], "selling_share_of_category": [50]}})
     _write(factory / "ProductionPrediction.json", {"data": {"Product Name": ["A", "B"], "Predicted Production": [10, 10]}})
     for pool_id in FACTORY_POOL_IDS:
-        _write(factory / f"Factory_Data_{pool_id}.json", {"data": {"cost": [1000 if pool_id == "Payroll" else 0]}})
+        _write(factory / f"Factory_Data_{pool_id}.json", {"data": {
+            "subject": [f"{pool_id} item"], "cost": [1000 if pool_id == "Payroll" else 0],
+        }})
     sources = ["materials", "bom", "weights", "predictions", *(f"pool:{item}" for item in FACTORY_POOL_IDS)]
     binding = tmp_path / "bindings.json"
     _write(binding, {"bindings": [{"factory_id": "factory-1", "period_id": "P", "active": True,
@@ -228,7 +230,10 @@ def test_loader_g3_binding_provenance_current_price_and_no_writes(tmp_path):
     assert result.driver_components[1].per_unit_contribution == Decimal("100")
     assert all(item.actual_as_of is None for item in result.source_metadata)
     assert all(item.owner_assigned_baseline == date(2026, 9, 27) for item in result.source_metadata)
-    assert _hashes(tmp_path) == before
+    # Automatic V2 activation adds canonical files but never mutates a legacy
+    # input or its owner-approved period binding.
+    after = _hashes(tmp_path)
+    assert all(after[path] == fingerprint for path, fingerprint in before.items())
 
 
 def test_loader_does_not_reuse_binding_for_another_period(tmp_path):
@@ -254,7 +259,7 @@ def test_loader_reports_parse_failure_instead_of_zero(tmp_path):
     with pytest.raises(CostInputError) as caught:
         CostInputLoader(_FactoryService(), data_root=data, period_bindings_path=binding).load("factory-1", {}, IDENTITY_A, "P")
     assert caught.value.state is CostState.INVALID_INPUT
-    assert caught.value.detail.code == "SOURCE_PARSE_ERROR"
+    assert caught.value.detail.code == "INVALID_LEGACY_SOURCE"
 
 
 def test_source_diagnostic_reports_all_existing_loader_sources(tmp_path):
@@ -271,27 +276,22 @@ def test_source_diagnostic_reports_all_existing_loader_sources(tmp_path):
     assert inputs.bom_lines
 
 
-def test_missing_source_has_exact_resolution_diagnostic_and_never_falls_back(tmp_path):
+def test_missing_source_has_canonical_needs_input_diagnostic_and_never_becomes_zero(tmp_path):
     data, binding = _fixture_tree(tmp_path)
     missing_path = data / "Factories" / "operational" / "Factory_Data_Payroll.json"
     missing_path.unlink()
     loader = CostInputLoader(_FactoryService(), data_root=data, period_bindings_path=binding)
 
     diagnostic = loader.diagnose_sources("factory-1", "P", IDENTITY_A)
-    payroll = next(item for item in diagnostic["missing_sources"]
+    payroll = next(item for item in diagnostic["source_resolutions"]
                    if item["source_name"] == "pool:Payroll")
-    assert payroll == {
-        "source_name": "pool:Payroll",
-        "expected_location": "Data/Factories/operational/Factory_Data_Payroll.json",
-        "resolution_status": "MISSING",
-        "actual_file_found": None,
-        "reason": "file not found",
-    }
+    assert payroll["expected_location"] == "Data/Factories/operational/configuration/cost_pools/Payroll.json"
+    assert payroll["resolution_status"] == "AVAILABLE"
+    assert payroll["migration_status"] == "NEEDS_INPUT"
     with pytest.raises(CostInputError) as caught:
         loader.load("factory-1", {}, IDENTITY_A, "P")
-    assert caught.value.detail.code == "SOURCE_UNAVAILABLE"
+    assert caught.value.detail.code == "LEGACY_SOURCE_NEEDS_INPUT"
     assert caught.value.diagnostic["source_resolutions"] == diagnostic["source_resolutions"]
-    assert "pool:Payroll" in caught.value.diagnostic["legacy_migration"]["unrecoverable"]
 
 
 def test_loader_preserves_repeated_material_rows_with_stable_local_ids(tmp_path):
