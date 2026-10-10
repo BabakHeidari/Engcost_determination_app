@@ -98,7 +98,10 @@ def normalize_digits(value):
     return str(value).translate(_LATIN_DIGITS)
 
 def _div(a, b):
-    return a // b
+    # The Julian-day algorithm requires signed division truncated toward zero.
+    # Python's // floors negative month offsets and can advance a whole year.
+    quotient = abs(a) // abs(b)
+    return -quotient if (a < 0) != (b < 0) else quotient
 
 def _gregorian_to_jdn(gy, gm, gd):
     return (_div((gy + _div(gm - 8, 6) + 100100) * 1461, 4)

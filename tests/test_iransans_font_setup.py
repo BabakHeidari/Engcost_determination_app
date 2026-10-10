@@ -26,10 +26,11 @@ class IranSansFontSetupTests(unittest.TestCase):
         self.assertIn('"SF Mono", "Cascadia Code", "Consolas", "Liberation Mono", monospace', css)
 
     def test_dashboard_charts_use_shared_font_variable(self):
-        dashboard = (ROOT / "templates/dashboard/dashboard.html").read_text(encoding="utf-8")
-        self.assertIn("APP_FONT_FAMILY", dashboard)
-        self.assertIn("textStyle: { fontFamily: APP_FONT_FAMILY }", dashboard)
-        self.assertIn("fontFamily: APP_FONT_FAMILY", dashboard)
+        template = (ROOT / "templates/dashboard/dashboard.html").read_text(encoding="utf-8")
+        self.assertIn("js/dashboard-report.js", template)
+        dashboard = (ROOT / "static/js/dashboard-report.js").read_text(encoding="utf-8")
+        self.assertIn("--app-font-family", dashboard)
+        self.assertIn("textStyle: { fontFamily: font }", dashboard)
 
     def test_documentation_lists_expected_font_files(self):
         doc = (ROOT / "docs/persian-data-localization.md").read_text(encoding="utf-8")

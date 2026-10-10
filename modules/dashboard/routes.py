@@ -6,6 +6,7 @@ from flask import Blueprint, abort, current_app, g, render_template, jsonify, re
 from utils.auth import get_profile_store, login_required
 from utils.costing_engine import CostInputError
 from utils.dashboard_analysis import DashboardAnalysisService, empty_report, safe_issue, serialize
+from utils.dashboard_periods import DashboardPeriodMetadata
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.product_hierarchy_service import HierarchyMetadataError, HierarchySelectionError, ProductHierarchyService
 
@@ -15,11 +16,21 @@ LOGGER = logging.getLogger(__name__)
 @dashboard_bp.route("/dashboard")
 @login_required
 def dashboard():
-    factories = FactoryService(get_profile_store()).get_accessible_factories(g.current_user, "dashboard")
+    service = FactoryService(get_profile_store())
+    factories = service.get_accessible_factories(g.current_user, "dashboard")
     if not factories:
         abort(403)
+    loader_options = {}
+    if current_app.config.get("COSTING_DATA_ROOT"):
+        loader_options["data_root"] = Path(current_app.config["COSTING_DATA_ROOT"])
+    if current_app.config.get("COSTING_PERIOD_BINDINGS_FILE"):
+        loader_options["period_bindings_path"] = Path(current_app.config["COSTING_PERIOD_BINDINGS_FILE"])
+    metadata = DashboardPeriodMetadata(service, **loader_options)
     return render_template("dashboard/dashboard.html",
-                           filter_options={"factories": factories})
+                           filter_options={"factories": factories,
+                                           "periods_by_factory": {
+                                               factory["id"]: metadata.for_factory(factory["id"], g.current_user)
+                                               for factory in factories}})
 
 
 @dashboard_bp.route("/api/dashboard/filter-options")

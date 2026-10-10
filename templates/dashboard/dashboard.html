@@ -1,331 +1,51 @@
 {% extends "base.html" %}
-
+{% block title %}تحلیل هزینه | سامانه تعیین بهای تمام‌شده{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
 {% block content %}
-<button class="btn btn-secondary mb-3" onclick="history.back()">بازگشت</button>
-<div class="dashboard-page">
-
-    <h3 class="mb-4">داشبورد هزینه ساخت باتری</h3>
-
-    <!-- Analysis Tabs -->
-    <ul class="nav nav-tabs mb-4" id="analysisTab" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link" id="cost-tab" data-toggle="tab" href="#cost" role="tab">
-                💰 تحلیل هزینه
-            </a>
-        </li>
-        <!-- <li class="nav-item">
-            <a class="nav-link" id="sensitivity-tab" data-toggle="tab" href="#sensitivity" role="tab">
-                📈 تحلیل حساسیت
-            </a>
-        </li> -->
-    </ul>
-
-    <div class="tab-content">
-        <!-- تحلیل هزینه Tab -->
-        <div class="tab-pane fade show active" id="cost" role="tabpanel">
-            
-            <!-- Filter Card -->
-            <div class="filter-card">
-                <h5>فیلتر داده‌ها</h5>
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <label for="factorySelect">کارخانه</label>
-                        <select id="factorySelect" class="form-control">
-                            <option value="">یک کارخانه را انتخاب کنید</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="categorySelect">دسته</label>
-                        <select id="categorySelect" class="form-control" disabled>
-                            <!-- populated dynamically -->
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="subcategorySelect">زیردسته</label>
-                        <select id="subcategorySelect" class="form-control" disabled>
-                            <!-- populated based on factory & category -->
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="productSelect">محصول</label>
-                        <select id="productSelect" class="form-control" disabled>
-                            <!-- populated based on subcategory -->
-                        </select>
-                    </div>
-                </div>
-                <div id="filterStatus" class="alert alert-secondary" role="status" aria-live="polite">ابتدا یک کارخانه را انتخاب کنید.</div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <button id="analyzeBtn" class="btn btn-primary" disabled title="محاسبه هزینه در این نسخه فعال نیست">
-                        <i class="fas fa-search"></i> تحلیل هزینه
-                    </button>
-                    <button id="downloadCsvBtn" class="btn btn-success" disabled>
-                        <i class="fas fa-download"></i> دانلود CSV
-                    </button>
-                </div>
-            </div>
-
-            <!-- Dashboard Area (hidden until data loads) -->
-            <div id="costDashboard" style="display: none;">
-                <div class="kpi-grid mt-4">
-                    <div class="dash-card">
-                        <h6>کل هزینه</h6>
-                        <p id="totalCost">--</p>
-                    </div>
-                    <div class="dash-card">
-                        <h6>میانگین هزینه / محصول</h6>
-                        <p id="avgCost">--</p>
-                    </div>
-                    <div class="dash-card">
-                        <h6>تعداد محصولات</h6>
-                        <p id="productCount">--</p>
-                    </div>
-                    <div class="dash-card">
-                        <h6>مهم‌ترین عامل هزینه</h6>
-                        <p id="topDriver">--</p>
-                    </div>
-                </div>
-
-                <div class="charts mt-4">
-                    <div class="chart-box">
-                        <div id="categoryBarChart" class="chart"></div>
-                    </div>
-                    <div class="chart-box">
-                        <div id="subcategoryPieChart" class="chart"></div>
-                    </div>
-                </div>
-
-                <div class="table-responsive mt-4">
-                    <h5>ریز تفکیک هزینه</h5>
-                    <table class="table table-striped table-hover" id="detailTable">
-                        <thead>
-                            <tr>
-                                <th>کارخانه</th>
-                                <th>دسته</th>
-                                <th>زیردسته</th>
-                                <th>محصول</th>
-                                <th>هزینه (ریال)</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Placeholder when no data -->
-            <div id="noDataPlaceholder" class="text-center py-5 text-muted">
-                <i class="fas fa-chart-bar fa-3x mb-3"></i>
-                <h5>در این نسخه فقط انتخاب امن دامنه فعال است؛ محاسبه هزینه در مرحله بعد پیاده‌سازی می‌شود.</h5>
-            </div>
-        </div>
-
-        <!-- تحلیل حساسیت Tab (placeholder for next phase) -->
-        <div class="tab-pane fade" id="sensitivity" role="tabpanel">
-            <div class="text-center py-5 text-muted">
-                <i class="fas fa-sliders-h fa-3x mb-3"></i>
-                <h4>تحلیل حساسیت</h4>
-                <p>این بخش در مرحله بعد پیاده‌سازی می‌شود و امکان اجرای سناریوهای فرضی روی عوامل هزینه را فراهم می‌کند.</p>
-            </div>
-        </div>
+<div class="dashboard-page" dir="rtl">
+    <div class="dashboard-heading">
+        <div><p class="text-muted mb-1">داشبورد هزینه ساخت</p><h1 class="h3">تحلیل هزینه</h1></div>
+        <button class="btn btn-outline-secondary" type="button" onclick="history.back()">بازگشت</button>
     </div>
+    <ul class="nav nav-tabs mb-4" role="tablist" aria-label="تحلیل‌ها">
+        <li class="nav-item"><button class="nav-link active" id="cost-tab" type="button" role="tab" aria-selected="true" aria-controls="cost">تحلیل هزینه</button></li>
+        <li class="nav-item"><button class="nav-link disabled" type="button" role="tab" aria-selected="false" disabled>حساسیت — در دست توسعه</button></li>
+    </ul>
+    <section id="cost" role="tabpanel" aria-labelledby="cost-tab">
+        <form id="analysisForm" class="filter-card" novalidate>
+            <h2 class="h5">انتخاب دامنه و دوره</h2>
+            <p class="text-muted">یک کارخانه و هر سه سطح را صریح انتخاب کنید. «همه» فقط شامل اعضای همان دامنه است.</p>
+            <div class="row">
+                <div class="col-md-3 mb-3"><label for="factorySelect">کارخانه</label><select id="factorySelect" class="form-select"><option value="">یک کارخانه را انتخاب کنید</option></select></div>
+                <div class="col-md-3 mb-3"><label for="categorySelect">دسته</label><select id="categorySelect" class="form-select" disabled><option value="">ابتدا کارخانه را انتخاب کنید</option></select></div>
+                <div class="col-md-3 mb-3"><label for="subcategorySelect">زیردسته</label><select id="subcategorySelect" class="form-select" disabled><option value="">ابتدا دسته را انتخاب کنید</option></select></div>
+                <div class="col-md-3 mb-3"><label for="productSelect">محصول</label><select id="productSelect" class="form-select" disabled><option value="">ابتدا زیردسته را انتخاب کنید</option></select></div>
+            </div>
+            <div id="filterStatus" class="alert alert-secondary" role="status" aria-live="polite">ابتدا یک کارخانه را انتخاب کنید.</div>
+            <button id="retryHierarchyBtn" class="btn btn-outline-secondary mb-3" type="button" hidden>دریافت دوباره گزینه‌ها</button>
+            <div class="row">
+                <div class="col-md-6 mb-3"><label for="periodSelect">دوره ثبت‌شده</label><select id="periodSelect" class="form-select" disabled aria-describedby="periodHint periodStatus"><option value="">ابتدا کارخانه را انتخاب کنید</option></select></div>
+                <div class="col-md-3 mb-3"><label for="startDate">شروع دوره (جلالی)</label><input id="startDate" class="form-control date-input" type="text" placeholder="۱۴۰۵/۰۷/۰۹" disabled inputmode="numeric" autocomplete="off" aria-describedby="periodHint periodStatus"></div>
+                <div class="col-md-3 mb-3"><label for="endDate">پایان دوره (جلالی)</label><input id="endDate" class="form-control date-input" type="text" placeholder="۱۴۰۵/۱۰/۱۰" disabled inputmode="numeric" autocomplete="off" aria-describedby="periodHint periodStatus"></div>
+            </div>
+            <p id="periodHint" class="text-muted small">تاریخ‌ها باید دقیقاً برابر مرزهای دوره ثبت‌شده باشند؛ خالی گذاشتن هر دو، مرز همان دوره را استفاده می‌کند. انتخاب بازه دلخواه، دوره یا سابقه تاریخی ایجاد نمی‌کند.</p>
+            <div id="periodStatus" class="alert alert-secondary" role="status" aria-live="polite">دوره پس از انتخاب کارخانه نمایش داده می‌شود.</div>
+            <div class="dashboard-actions">
+                <button id="analyzeBtn" class="btn btn-primary" type="submit" disabled>تحلیل هزینه</button>
+                <button id="downloadCsvBtn" class="btn btn-outline-success" type="button" disabled>دریافت CSV همین گزارش</button>
+            </div>
+        </form>
+        <div id="analysisStatus" class="alert alert-secondary mt-4" role="status" aria-live="polite" aria-atomic="true">پس از تکمیل انتخاب‌ها، تحلیل هزینه را اجرا کنید.</div>
+        <div id="costDashboard" hidden aria-label="گزارش تحلیل هزینه"></div>
+        <div id="noDataPlaceholder" class="text-center py-5 text-muted"><p>گزارشی اجرا نشده است.</p><p class="small">گزارش فقط از منابع نصب‌شده و مجاز همین کارخانه محاسبه می‌شود.</p></div>
+    </section>
 </div>
-
-<!-- Styles -->
-<style>
-.dashboard-page {
-    background: #f4f6f8;
-    padding: 24px;
-    border-radius: 12px;
-}
-
-.filter-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-}
-
-.dash-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.dash-card h6 {
-    color: #666;
-    font-size: 14px;
-    margin-bottom: 8px;
-}
-
-.dash-card p {
-    font-size: 24px;
-    font-weight: bold;
-    margin: 0;
-}
-
-.charts {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 16px;
-}
-
-.chart-box {
-    background: white;
-    padding: 16px;
-    border-radius: 12px;
-    height: 400px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.chart {
-    width: 100%;
-    height: 100%;
-}
-
-.table {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-@media (max-width: 768px) {
-    .kpi-grid,
-    .charts {
-        grid-template-columns: 1fr;
-    }
-    .filter-card .row > div {
-        margin-bottom: 10px;
-    }
-}
-</style>
-
-<!-- External libraries -->
+{% endblock %}
+{% block extra_js %}
+<script id="dashboardOptions" type="application/json">{{ filter_options|tojson }}</script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-
-<script>
-const filterOptions = {{ filter_options|tojson }};
-const ALL = '__ALL__';
-const factorySelect = document.getElementById('factorySelect');
-const categorySelect = document.getElementById('categorySelect');
-const subcategorySelect = document.getElementById('subcategorySelect');
-const productSelect = document.getElementById('productSelect');
-const filterStatus = document.getElementById('filterStatus');
-const APP_FONT_FAMILY = getComputedStyle(document.documentElement).getPropertyValue('--app-font-family').trim() || 'IRANSansX, Tahoma, sans-serif';
-// Retained as the shared presentation contract for the currently inactive charts.
-const DASHBOARD_CHART_STYLE = {textStyle: { fontFamily: APP_FONT_FAMILY }, fontFamily: APP_FONT_FAMILY};
-let requestSequence = 0;
-let activeRequest = null;
-
-function option(value, label) {
-    const node = document.createElement('option');
-    node.value = value;
-    node.textContent = label;
-    return node;
-}
-
-function setStatus(state, message) {
-    filterStatus.dataset.state = state;
-    filterStatus.textContent = message;
-    filterStatus.className = state === 'OK' ? 'alert alert-success' :
-        (state === 'LOADING' ? 'alert alert-info' : 'alert alert-warning');
-}
-
-function resetSelect(select, placeholder, disabled = true) {
-    select.replaceChildren(option('', placeholder));
-    select.disabled = disabled;
-}
-
-function fillSelect(select, options, placeholder, previous) {
-    const nodes = [option('', placeholder), option(ALL, 'همه')];
-    options.forEach(item => nodes.push(option(item.id, item.label)));
-    select.replaceChildren(...nodes);
-    select.disabled = false;
-    if ([ALL, ...options.map(item => item.id)].includes(previous)) select.value = previous;
-}
-
-function resetChildren(from) {
-    if (from <= 0) resetSelect(categorySelect, 'ابتدا کارخانه را انتخاب کنید');
-    if (from <= 1) resetSelect(subcategorySelect, 'ابتدا دسته را انتخاب کنید');
-    if (from <= 2) resetSelect(productSelect, 'ابتدا زیردسته را انتخاب کنید');
-}
-
-function paramsForCurrentSelection() {
-    const params = new URLSearchParams({factory: factorySelect.value});
-    if (categorySelect.value) params.set('category', categorySelect.value);
-    if (subcategorySelect.value) params.set('subcategory', subcategorySelect.value);
-    if (productSelect.value) params.set('product', productSelect.value);
-    return params;
-}
-
-async function refreshHierarchy(level) {
-    if (!factorySelect.value) {
-        requestSequence += 1;
-        if (activeRequest) activeRequest.abort();
-        resetChildren(0);
-        setStatus('NOT_SELECTED', 'ابتدا یک کارخانه را انتخاب کنید.');
-        return;
-    }
-    const sequence = ++requestSequence;
-    if (activeRequest) activeRequest.abort();
-    activeRequest = new AbortController();
-    const previous = {
-        category: categorySelect.value,
-        subcategory: subcategorySelect.value,
-        product: productSelect.value,
-    };
-    if (level <= 1) resetChildren(level);
-    [categorySelect, subcategorySelect, productSelect].forEach(select => { select.disabled = true; });
-    setStatus('LOADING', 'در حال دریافت گزینه‌های مجاز…');
-    try {
-        const response = await fetch(`/api/dashboard/filter-options?${paramsForCurrentSelection()}`, {
-            headers: {'Accept': 'application/json'}, signal: activeRequest.signal,
-        });
-        const data = await response.json();
-        if (sequence !== requestSequence) return;
-        if (!response.ok) {
-            resetChildren(0);
-            setStatus(data.state || 'UNAVAILABLE', data.message || 'دریافت گزینه‌ها ممکن نیست.');
-            return;
-        }
-        fillSelect(categorySelect, data.options.categories, 'یک دسته را انتخاب کنید', previous.category);
-        if (categorySelect.value) {
-            fillSelect(subcategorySelect, data.options.subcategories, 'یک زیردسته را انتخاب کنید', previous.subcategory);
-        } else resetSelect(subcategorySelect, 'ابتدا دسته را انتخاب کنید');
-        if (subcategorySelect.value) {
-            fillSelect(productSelect, data.options.products, 'یک محصول را انتخاب کنید', previous.product);
-        } else resetSelect(productSelect, 'ابتدا زیردسته را انتخاب کنید');
-        const messages = {
-            OK: 'گزینه‌های مجاز به‌روزرسانی شد.',
-            NO_MATCH: 'برای دامنه انتخاب‌شده موردی یافت نشد.',
-            UNCONFIGURED: 'برای این کارخانه سلسله‌مراتب محصول پیکربندی نشده است.',
-        };
-        setStatus(data.state, messages[data.state] || data.message || 'وضعیت داده نامشخص است.');
-    } catch (error) {
-        if (error.name !== 'AbortError' && sequence === requestSequence) {
-            resetChildren(0);
-            setStatus('UNAVAILABLE', 'ارتباط برای دریافت گزینه‌ها ناموفق بود.');
-        }
-    }
-}
-
-filterOptions.factories.forEach(factory => {
-    factorySelect.appendChild(option(factory.id, `${factory.name} (${factory.code})`));
-});
-if (!filterOptions.factories.length) {
-    factorySelect.disabled = true;
-    setStatus('FORBIDDEN', 'هیچ کارخانه مجازی برای این حساب وجود ندارد.');
-}
-resetChildren(0);
-factorySelect.addEventListener('change', () => refreshHierarchy(0));
-categorySelect.addEventListener('change', () => refreshHierarchy(1));
-subcategorySelect.addEventListener('change', () => refreshHierarchy(2));
-productSelect.addEventListener('change', () => refreshHierarchy(3));
-</script>
+<script src="{{ url_for('static', filename='js/dashboard-report.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard-analysis.js') }}"></script>
 {% endblock %}

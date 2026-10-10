@@ -1,6 +1,7 @@
 import pytest
 
 from utils.localization import (
+    _div,
     format_jalali_date,
     format_jalali_datetime,
     format_jalali_range,
@@ -42,3 +43,43 @@ def test_null_invalid_and_range_fallbacks():
 def test_no_timezone_day_shift_for_naive_iso_values():
     assert gregorian_to_jalali(2026, 3, 20) == (1404, 12, 29)
     assert gregorian_to_jalali(2026, 3, 21) == (1405, 1, 1)
+
+
+@pytest.mark.parametrize("canonical, jalali", [
+    ("2026-01-01", (1404, 10, 11)),
+    ("2026-02-01", (1404, 11, 12)),
+    ("2026-03-01", (1404, 12, 10)),
+    ("2026-04-01", (1405, 1, 12)),
+    ("2026-05-01", (1405, 2, 11)),
+    ("2026-06-01", (1405, 3, 11)),
+    ("2026-07-01", (1405, 4, 10)),
+    ("2026-08-01", (1405, 5, 10)),
+    ("2026-09-01", (1405, 6, 10)),
+    ("2026-10-01", (1405, 7, 9)),
+    ("2026-11-01", (1405, 8, 10)),
+    ("2026-12-01", (1405, 9, 10)),
+    ("2026-12-31", (1405, 10, 10)),
+])
+def test_dates_throughout_year_and_period_bounds_round_trip(canonical, jalali):
+    gregorian = tuple(map(int, canonical.split("-")))
+    assert gregorian_to_jalali(*gregorian) == jalali
+    assert jalali_to_gregorian(*jalali) == gregorian
+    assert parse_jalali_input(format_jalali_date(canonical)) == canonical
+
+
+@pytest.mark.parametrize("a,b,expected", [
+    (-7, 6, -1), (-1, 6, 0), (7, -6, -1), (-7, -6, 1),
+    (10 ** 100 + 2, 3, (10 ** 100 + 2) // 3),
+    (-(10 ** 100 + 2), 3, -((10 ** 100 + 2) // 3)),
+])
+def test_signed_integer_division_truncates_without_float_precision_loss(a, b, expected):
+    assert _div(a, b) == expected
+
+
+@pytest.mark.parametrize("offset", ["Z", "+03:30", "-12:00"])
+def test_date_only_and_timezone_values_preserve_supplied_calendar_day(offset):
+    # Backend formatting reads the supplied date's fields and never applies
+    # host timezone conversion to the installed date-only period boundaries.
+    assert format_jalali_date("2026-10-01") == "۱۴۰۵/۰۷/۰۹"
+    assert format_jalali_date(f"2026-10-01T00:00:00{offset}") == "۱۴۰۵/۰۷/۰۹"
+    assert format_jalali_datetime(f"2026-10-01T00:00:00{offset}") == "۱۴۰۵/۰۷/۰۹ - ۰۰:۰۰"

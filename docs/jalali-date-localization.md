@@ -8,6 +8,16 @@ The application uses a single local conversion layer and does not call external 
 - Frontend helpers live in `static/js/jalali-date.js` and are loaded by `templates/base.html` before page scripts.
 - The implementation uses the standard Julian-day conversion algorithm for Gregorian ⇄ Jalali conversion, keeping the project dependency-free and UTF-8 text-only.
 
+PR-07 period controls exposed a signed-division defect in both shared helpers:
+flooring the algorithm's negative month offsets rendered `2026-10-01` as the
+invalid `1405/19/14` and `2026-12-31` as `1405/22/15`. The Julian-day algorithm
+requires division truncated toward zero. Python now uses exact signed integer
+division and JavaScript uses `Math.trunc`; the corrected dates are
+`۱۴۰۵/۰۷/۰۹` and `۱۴۰۵/۱۰/۱۰`. Tests cover every month, date round trips,
+installed period boundaries, leap dates, and preservation of supplied calendar
+days across offsets. Canonical dates, period policy, and historical storage
+remain unchanged.
+
 ## Canonical/internal policy
 
 Internal storage, JSON keys, API payloads, sorting, calculations, filenames, IDs, form field names, and database-facing values remain in the existing canonical Gregorian/ISO format. The Jalali layer is presentation-boundary only.
@@ -24,7 +34,7 @@ Stored timestamps such as `last_modification_date` continue to be created with `
 - Reusable backend Jinja filters: `jalali_date` and `jalali_datetime`.
 - Reusable frontend object: `window.JalaliDate`.
 
-The active dashboard and cost CSV exports currently do not include human-readable date values in rows or headings. Their generated filenames intentionally keep machine-safe Gregorian timestamp components.
+The active Dashboard shows installed period boundaries with Jalali dates and exports separate Jalali display columns alongside canonical ISO date fields. CSV filenames intentionally keep machine-safe Gregorian timestamp components.
 
 ## Input conversion flow
 

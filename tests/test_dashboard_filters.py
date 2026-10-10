@@ -110,7 +110,9 @@ def test_filter_endpoint_requires_factory_validates_parent_and_admin_sees_active
 
 
 def test_dashboard_frontend_uses_safe_dom_and_stale_response_guards():
-    source = Path("templates/dashboard/dashboard.html").read_text(encoding="utf-8")
+    template = Path("templates/dashboard/dashboard.html").read_text(encoding="utf-8")
+    assert "js/dashboard-analysis.js" in template
+    source = Path("static/js/dashboard-analysis.js").read_text(encoding="utf-8")
     assert "/api/filter_options" not in source
     assert "/api/dashboard/filter-options" in source
     assert "node.textContent = label" in source
