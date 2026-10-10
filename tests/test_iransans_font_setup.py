@@ -28,9 +28,10 @@ class IranSansFontSetupTests(unittest.TestCase):
     def test_dashboard_charts_use_shared_font_variable(self):
         template = (ROOT / "templates/dashboard/dashboard.html").read_text(encoding="utf-8")
         self.assertIn("js/dashboard-report.js", template)
-        dashboard = (ROOT / "static/js/dashboard-report.js").read_text(encoding="utf-8")
+        self.assertIn("js/dashboard-charts.js", template)
+        dashboard = (ROOT / "static/js/dashboard-charts.js").read_text(encoding="utf-8")
         self.assertIn("--app-font-family", dashboard)
-        self.assertIn("textStyle: { fontFamily: font }", dashboard)
+        self.assertRegex(dashboard, r"textStyle:\s*\{\s*fontFamily:\s*font\b")
 
     def test_documentation_lists_expected_font_files(self):
         doc = (ROOT / "docs/persian-data-localization.md").read_text(encoding="utf-8")

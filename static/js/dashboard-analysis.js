@@ -40,9 +40,8 @@
         delete element.dataset.httpStatus;
         element.dataset.state = state;
         element.textContent = message;
-        element.className = 'alert ' + (state === 'OK' ? 'alert-success' :
-            state === 'LOADING' ? 'alert-info' : state === 'NOT_SELECTED' ? 'alert-secondary' : 'alert-warning');
-        if (element.id === 'analysisStatus') element.classList.add('mt-4');
+        element.className = 'dashboard-status ' + (state === 'OK' ? 'is-success' :
+            state === 'LOADING' ? 'is-loading' : state === 'NOT_SELECTED' ? 'is-neutral' : 'is-warning');
         if (element.id === 'filterStatus') byId('retryHierarchyBtn').hidden =
             ['OK', 'NO_MATCH', 'UNCONFIGURED', 'NOT_SELECTED', 'LOADING'].includes(state) || !factorySelect.value;
     }

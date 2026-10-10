@@ -6,46 +6,43 @@
 {% block content %}
 <div class="dashboard-page" dir="rtl">
     <div class="dashboard-heading">
-        <div><p class="text-muted mb-1">داشبورد هزینه ساخت</p><h1 class="h3">تحلیل هزینه</h1></div>
-        <button class="btn btn-outline-secondary" type="button" onclick="history.back()">بازگشت</button>
+        <div><p class="dashboard-eyebrow">داشبورد هزینه ساخت</p><h1>تحلیل هزینه</h1></div>
+        <button class="btn btn-outline-secondary btn-sm" type="button" onclick="history.back()">بازگشت</button>
     </div>
-    <ul class="nav nav-tabs mb-4" role="tablist" aria-label="تحلیل‌ها">
+    <ul class="nav nav-tabs dashboard-tabs" role="tablist" aria-label="تحلیل‌ها">
         <li class="nav-item"><button class="nav-link active" id="cost-tab" type="button" role="tab" aria-selected="true" aria-controls="cost">تحلیل هزینه</button></li>
         <li class="nav-item"><button class="nav-link disabled" type="button" role="tab" aria-selected="false" disabled>حساسیت — در دست توسعه</button></li>
     </ul>
     <section id="cost" role="tabpanel" aria-labelledby="cost-tab">
         <form id="analysisForm" class="filter-card" novalidate>
-            <h2 class="h5">انتخاب دامنه و دوره</h2>
-            <p class="text-muted">یک کارخانه و هر سه سطح را صریح انتخاب کنید. «همه» فقط شامل اعضای همان دامنه است.</p>
-            <div class="row">
-                <div class="col-md-3 mb-3"><label for="factorySelect">کارخانه</label><select id="factorySelect" class="form-select"><option value="">یک کارخانه را انتخاب کنید</option></select></div>
-                <div class="col-md-3 mb-3"><label for="categorySelect">دسته</label><select id="categorySelect" class="form-select" disabled><option value="">ابتدا کارخانه را انتخاب کنید</option></select></div>
-                <div class="col-md-3 mb-3"><label for="subcategorySelect">زیردسته</label><select id="subcategorySelect" class="form-select" disabled><option value="">ابتدا دسته را انتخاب کنید</option></select></div>
-                <div class="col-md-3 mb-3"><label for="productSelect">محصول</label><select id="productSelect" class="form-select" disabled><option value="">ابتدا زیردسته را انتخاب کنید</option></select></div>
+            <div class="selection-heading"><h2>دامنه و دوره تحلیل</h2><span>«همه» شامل اعضای همان دامنه است.</span></div>
+            <div class="selection-grid">
+                <div><label for="factorySelect">کارخانه</label><select id="factorySelect" class="form-select"><option value="">یک کارخانه را انتخاب کنید</option></select></div>
+                <div><label for="categorySelect">دسته</label><select id="categorySelect" class="form-select" disabled><option value="">ابتدا کارخانه را انتخاب کنید</option></select></div>
+                <div><label for="subcategorySelect">زیردسته</label><select id="subcategorySelect" class="form-select" disabled><option value="">ابتدا دسته را انتخاب کنید</option></select></div>
+                <div><label for="productSelect">محصول</label><select id="productSelect" class="form-select" disabled><option value="">ابتدا زیردسته را انتخاب کنید</option></select></div>
             </div>
-            <div id="filterStatus" class="alert alert-secondary" role="status" aria-live="polite">ابتدا یک کارخانه را انتخاب کنید.</div>
-            <button id="retryHierarchyBtn" class="btn btn-outline-secondary mb-3" type="button" hidden>دریافت دوباره گزینه‌ها</button>
-            <div class="row">
-                <div class="col-md-6 mb-3"><label for="periodSelect">دوره ثبت‌شده</label><select id="periodSelect" class="form-select" disabled aria-describedby="periodHint periodStatus"><option value="">ابتدا کارخانه را انتخاب کنید</option></select></div>
-                <div class="col-md-3 mb-3"><label for="startDate">شروع دوره (جلالی)</label><input id="startDate" class="form-control date-input" type="text" placeholder="۱۴۰۵/۰۷/۰۹" disabled inputmode="numeric" autocomplete="off" aria-describedby="periodHint periodStatus"></div>
-                <div class="col-md-3 mb-3"><label for="endDate">پایان دوره (جلالی)</label><input id="endDate" class="form-control date-input" type="text" placeholder="۱۴۰۵/۱۰/۱۰" disabled inputmode="numeric" autocomplete="off" aria-describedby="periodHint periodStatus"></div>
+            <div class="selection-feedback"><div id="filterStatus" class="dashboard-status is-neutral" role="status" aria-live="polite">ابتدا یک کارخانه را انتخاب کنید.</div><button id="retryHierarchyBtn" class="btn btn-outline-secondary btn-sm" type="button" hidden>دریافت دوباره گزینه‌ها</button></div>
+            <div class="selection-period-grid">
+                <div><label for="periodSelect">دوره ثبت‌شده</label><select id="periodSelect" class="form-select" disabled aria-describedby="periodHint periodStatus"><option value="">ابتدا کارخانه را انتخاب کنید</option></select></div>
+                <div><label for="startDate">شروع دوره (جلالی)</label><input id="startDate" class="form-control date-input" type="text" placeholder="۱۴۰۵/۰۷/۰۹" disabled inputmode="numeric" autocomplete="off" aria-describedby="periodHint periodStatus"></div>
+                <div><label for="endDate">پایان دوره (جلالی)</label><input id="endDate" class="form-control date-input" type="text" placeholder="۱۴۰۵/۱۰/۱۰" disabled inputmode="numeric" autocomplete="off" aria-describedby="periodHint periodStatus"></div>
             </div>
-            <p id="periodHint" class="text-muted small">تاریخ‌ها باید دقیقاً برابر مرزهای دوره ثبت‌شده باشند؛ خالی گذاشتن هر دو، مرز همان دوره را استفاده می‌کند. انتخاب بازه دلخواه، دوره یا سابقه تاریخی ایجاد نمی‌کند.</p>
-            <div id="periodStatus" class="alert alert-secondary" role="status" aria-live="polite">دوره پس از انتخاب کارخانه نمایش داده می‌شود.</div>
-            <div class="dashboard-actions">
-                <button id="analyzeBtn" class="btn btn-primary" type="submit" disabled>تحلیل هزینه</button>
-                <button id="downloadCsvBtn" class="btn btn-outline-success" type="button" disabled>دریافت CSV همین گزارش</button>
-            </div>
+            <div id="periodStatus" class="dashboard-status is-neutral" role="status" aria-live="polite">دوره پس از انتخاب کارخانه نمایش داده می‌شود.</div>
+            <div class="selection-footer"><p id="periodHint">تاریخ‌ها برابر مرزهای دوره ثبت‌شده‌اند. خالی گذاشتن هر دو، همان دوره را استفاده می‌کند؛ بازه دلخواه یا سابقه تاریخی ایجاد نمی‌شود.</p><div id="selectionActions" class="dashboard-actions"><button id="analyzeBtn" class="btn btn-primary" type="submit" disabled>تحلیل هزینه</button><button id="downloadCsvBtn" class="btn btn-outline-success" type="button" disabled>دریافت CSV همین گزارش</button></div></div>
         </form>
-        <div id="analysisStatus" class="alert alert-secondary mt-4" role="status" aria-live="polite" aria-atomic="true">پس از تکمیل انتخاب‌ها، تحلیل هزینه را اجرا کنید.</div>
+        <div id="analysisStatus" class="dashboard-status is-neutral analysis-status" role="status" aria-live="polite" aria-atomic="true">پس از تکمیل انتخاب‌ها، تحلیل هزینه را اجرا کنید.</div>
         <div id="costDashboard" hidden aria-label="گزارش تحلیل هزینه"></div>
-        <div id="noDataPlaceholder" class="text-center py-5 text-muted"><p>گزارشی اجرا نشده است.</p><p class="small">گزارش فقط از منابع نصب‌شده و مجاز همین کارخانه محاسبه می‌شود.</p></div>
+        <div id="noDataPlaceholder" class="dashboard-empty"><span aria-hidden="true">▥</span><p>گزارشی اجرا نشده است.</p><p>دامنه و دوره را انتخاب کنید تا هزینه‌ها از منابع مجاز کارخانه محاسبه شوند.</p></div>
     </section>
 </div>
 {% endblock %}
 {% block extra_js %}
 <script id="dashboardOptions" type="application/json">{{ filter_options|tojson }}</script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard-numbers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard-table.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard-charts.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dashboard-report.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dashboard-analysis.js') }}"></script>
 {% endblock %}

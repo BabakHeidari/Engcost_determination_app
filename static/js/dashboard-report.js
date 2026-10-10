@@ -29,7 +29,7 @@
         configuration: 'پیکربندی کارخانه', period_binding: 'اتصال دوره'
     });
     const IDENTITY_FIELDS = ['factory_id', 'category', 'subcategory', 'product'];
-    const charts = new Map();
+    const views = new Map();
     const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
     const text = value => typeof value === 'string';
     const nullableText = value => value === null || text(value);
@@ -132,27 +132,12 @@
         return window.JalaliDate ? window.JalaliDate.toPersianDigits(value) : String(value);
     }
 
-    function formatDecimal(raw) {
-        if (raw === null) return 'در دسترس نیست';
-        const match = String(raw).match(/^([+-]?)(\d+)(?:\.(\d+))?$/);
-        if (!match) return 'در دسترس نیست';
-        const integer = match[2].replace(/\B(?=(\d{3})+(?!\d))/g, '٬');
-        return fa(match[1] + integer + (match[3] === undefined ? '' : '٫' + match[3]));
-    }
+    function formatDecimal(raw) { return window.DashboardNumbers.format(raw, { compact: false }); }
 
     function formatDate(raw) {
         if (!raw || !window.JalaliDate) return 'در دسترس نیست';
-        try {
-            if (window.JalaliDate.formatDateOnly) return window.JalaliDate.formatDateOnly(raw, 'در دسترس نیست');
-            // Calendar fields, rather than new Date(ISO), keep date-only bounds
-            // on the same day in every browser timezone.
-            const fields = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            if (!fields) return 'در دسترس نیست';
-            const parts = window.JalaliDate.gregorianToJalali(+fields[1], +fields[2], +fields[3]);
-            return fa(parts.map((part, index) => String(part).padStart(index ? 2 : 4, '0')).join('/'));
-        } catch (error) {
-            return 'در دسترس نیست';
-        }
+        try { return window.JalaliDate.formatDateOnly(raw, 'در دسترس نیست'); }
+        catch (error) { return 'در دسترس نیست'; }
     }
 
     function formatDateTime(raw) {
@@ -175,42 +160,32 @@
         return result;
     }
 
-    function amount(doc, raw, id, unavailable) {
-        const result = node(doc, 'span', raw === null && unavailable ? unavailable : formatDecimal(raw), 'report-number', id);
-        result.dir = 'ltr';
-        if (raw !== null) { result.dataset.raw = raw; result.title = raw; }
-        return result;
+    function amount(doc, raw, id, unit, options) {
+        return window.DashboardNumbers.value(doc, raw, { unit: unit || 'IRR/period', compact: true, id, ...options });
     }
 
     function table(doc, parent, id, caption, headers) {
-        const wrapper = node(doc, 'div', null, 'table-responsive');
-        const result = node(doc, 'table', null, 'table table-striped report-table', id);
+        const wrapper = node(doc, 'div', null, 'report-table-scroll');
+        const result = node(doc, 'table', null, 'table report-table', id);
         result.appendChild(node(doc, 'caption', caption));
         const head = node(doc, 'thead');
         const tr = node(doc, 'tr');
         headers.forEach(header => { const th = node(doc, 'th', header); th.scope = 'col'; tr.appendChild(th); });
         head.appendChild(tr);
         const body = node(doc, 'tbody');
-        result.appendChild(head); result.appendChild(body); wrapper.appendChild(result); parent.appendChild(wrapper);
+        result.append(head, body); wrapper.appendChild(result); parent.appendChild(wrapper);
         return body;
     }
 
     function cell(doc, row, content) {
         const td = node(doc, 'td');
-        if (content && typeof content === 'object' && content.nodeType) td.appendChild(content);
+        if (content && content.nodeType) td.appendChild(content);
         else td.textContent = content == null ? 'در دسترس نیست' : content;
         row.appendChild(td);
         return td;
     }
 
-    function identityText(value) {
-        return [value.factory_id, value.category, value.subcategory, value.product].join(' / ');
-    }
-
-    function unitText(unit) {
-        return { 'IRR/period': 'ریال / دوره', 'IRR/product': 'ریال / محصول', 'product/period': 'محصول / دوره' }[unit] || 'در دسترس نیست';
-    }
-
+    function identityText(value) { return IDENTITY_FIELDS.map(key => value[key]).join(' / '); }
     function sourceText(source) {
         if (source.startsWith('pool:') && driver(source.slice(5))) return 'مخزن ' + DRIVER_LABELS[source.slice(5)];
         return SOURCE_LABELS[source] || 'منبع ورودی';
@@ -218,12 +193,12 @@
 
     function section(doc, parent, title, id) {
         const result = node(doc, 'section', null, 'report-section', id);
-        result.appendChild(node(doc, 'h5', title)); parent.appendChild(result);
+        result.appendChild(node(doc, 'h3', title)); parent.appendChild(result);
         return result;
     }
 
-    function technical(doc, parent, title, id) {
-        const result = node(doc, 'details', null, 'report-technical', id);
+    function disclosure(doc, parent, title, id) {
+        const result = node(doc, 'details', null, 'report-disclosure', id);
         result.appendChild(node(doc, 'summary', title)); parent.appendChild(result);
         return result;
     }
@@ -231,7 +206,7 @@
     function appendMeta(doc, parent, label, value) {
         const paragraph = node(doc, 'p', null, 'report-secondary');
         paragraph.appendChild(node(doc, 'strong', label + ': '));
-        if (value && typeof value === 'object' && value.nodeType) paragraph.appendChild(value);
+        if (value && value.nodeType) paragraph.appendChild(value);
         else paragraph.appendChild(node(doc, 'span', value));
         parent.appendChild(paragraph);
     }
@@ -239,59 +214,20 @@
     function clear(root) {
         const target = resolveRoot(root);
         if (!target) return;
-        const active = charts.get(target) || [];
-        active.forEach(chart => { try { chart.dispose(); } catch (error) { /* Already disposed. */ } });
-        charts.delete(target);
+        const active = views.get(target);
+        if (active) { active.table.destroy(); active.charts.destroy(); }
+        views.delete(target);
+        const doc = target.ownerDocument;
+        window.DashboardNumbers.dispose(doc);
+        // Keep the controller's original button and its listener when relocating
+        // CSV between the selection panel and the accepted report toolbar.
+        const exportButton = doc.getElementById('downloadCsvBtn');
+        const actions = doc.getElementById('selectionActions');
+        if (exportButton && actions && target.contains(exportButton)) actions.appendChild(exportButton);
         target.replaceChildren();
         target.hidden = true;
         target.style.display = 'none';
         delete target.dataset.state;
-    }
-
-    function chartCoordinates(rows, valueKey) {
-        if (rows.some(row => row[valueKey] === null)) return null;
-        const values = rows.map(row => Number(row[valueKey]));
-        return values.every(Number.isFinite) ? values : null;
-    }
-
-    function renderChart(doc, card, target, rows, labels, valueKey, title, instances) {
-        const chartNode = node(doc, 'div', null, 'report-chart chart', target);
-        chartNode.setAttribute('role', 'img');
-        chartNode.setAttribute('aria-label', title + '؛ مقادیر دقیق در جدول همراه آمده است.');
-        card.appendChild(chartNode);
-        const note = node(doc, 'p', 'نمودار فقط مقایسه دیداری است؛ اعداد دقیق در جدول همراه آمده است.', 'report-chart-note');
-        card.appendChild(note);
-        const values = chartCoordinates(rows, valueKey);
-        if (!window.echarts || !rows.length || !values) {
-            chartNode.hidden = true;
-            note.textContent = !rows.length ? 'ردیف محاسبه‌شده‌ای برای نمودار موجود نیست.' :
-                'نمودار در دسترس نیست؛ جدول همراه تمام مقادیر دقیق را نشان می‌دهد.';
-            return;
-        }
-        try {
-            const chart = window.echarts.init(chartNode);
-            instances.push(chart);
-            const font = window.getComputedStyle(doc.documentElement).getPropertyValue('--app-font-family').trim() || 'IRANSansX, Tahoma, sans-serif';
-            chart.setOption({
-                textStyle: { fontFamily: font },
-                grid: { left: 30, right: 30, top: 18, bottom: 26, containLabel: true },
-                tooltip: {
-                    trigger: 'item', renderMode: 'richText', confine: true,
-                    textStyle: { fontFamily: font },
-                    // Rich-text mode draws on canvas; user labels never become HTML.
-                    formatter: params => {
-                        const index = params.dataIndex;
-                        return labels[index] + '\n' + formatDecimal(rows[index][valueKey]) + ' ' + unitText(rows[index].unit);
-                    }
-                },
-                xAxis: { type: 'value', axisLabel: { formatter: value => fa(String(value)) } },
-                yAxis: { type: 'category', inverse: true, data: labels, axisLabel: { width: 145, overflow: 'truncate' } },
-                series: [{ type: 'bar', data: values, itemStyle: { color: '#355c7d' }, barMaxWidth: 30 }]
-            });
-        } catch (error) {
-            chartNode.hidden = true;
-            note.textContent = 'نمودار در دسترس نیست؛ جدول همراه تمام مقادیر دقیق را نشان می‌دهد.';
-        }
     }
 
     function render(report, root) {
@@ -300,142 +236,144 @@
         if (!target) throw new Error('REPORT_CONTAINER_MISSING');
         clear(target);
         const doc = target.ownerDocument;
+        const numbers = window.DashboardNumbers;
         target.hidden = false; target.style.display = ''; target.dataset.state = report.state;
+        const cov = report.coverage;
 
-        const header = node(doc, 'div', null, 'report-header');
-        header.appendChild(node(doc, 'h4', 'گزارش تحلیل هزینه'));
-        if (report.scope) appendMeta(doc, header, 'کارخانه', report.scope.factory.name + ' (' + report.scope.factory.id + ')');
-        const period = node(doc, 'p', null, 'report-period', 'reportPeriod');
-        period.textContent = report.period ? 'دوره ' + report.period.id + '؛ ' + formatDate(report.period.start) + ' تا ' + formatDate(report.period.end) :
-            'دوره معتبر در پاسخ موجود نیست.';
-        header.appendChild(period);
-        appendMeta(doc, header, 'زمان اجرای محاسبه', formatDateTime(report.calculated_at));
-        target.appendChild(header);
+        const toolbar = node(doc, 'header', null, 'report-toolbar', 'reportToolbar');
+        const summary = node(doc, 'div', null, 'report-toolbar-summary');
+        const heading = node(doc, 'div', null, 'report-toolbar-heading');
+        heading.appendChild(node(doc, 'h2', 'نمای هزینه'));
+        heading.appendChild(node(doc, 'span', STATE_LABELS[report.state], 'report-status-badge ' +
+            (report.state === 'OK' ? 'is-ok' : 'is-excluded'), 'reportStatus'));
+        heading.lastElementChild.dataset.state = report.state;
+        summary.appendChild(heading);
+        const selection = report.scope ? report.scope.selection : null;
+        const selected = selection ? ['category', 'subcategory', 'product'].map(key => selection[key] === '__ALL__' ? 'همه' : selection[key] || '—') : [];
+        // Composite references are canonical keys. Use the selected row's human
+        // identity in the summary, never reinterpret or expose the encoded key.
+        if (selection && selection.product !== '__ALL__' && report.detail_rows.length === 1) selected[2] = report.detail_rows[0].identity.product;
+        summary.appendChild(node(doc, 'p', report.scope ? report.scope.factory.name + ' · ' + selected.join(' / ') : 'دامنه معتبر موجود نیست', 'report-scope'));
+        const meta = node(doc, 'div', null, 'report-toolbar-meta');
+        meta.appendChild(node(doc, 'span', report.period ? 'دوره ' + report.period.id + ' · ' + formatDate(report.period.start) + ' تا ' + formatDate(report.period.end) : 'دوره معتبر موجود نیست', null, 'reportPeriod'));
+        meta.appendChild(node(doc, 'span', 'محاسبه: ' + formatDateTime(report.calculated_at), null, 'reportCalculatedAt'));
+        summary.appendChild(meta); toolbar.appendChild(summary);
+        const actions = node(doc, 'div', null, 'report-toolbar-actions');
+        const exportButton = doc.getElementById('downloadCsvBtn');
+        if (exportButton) actions.appendChild(exportButton);
+        toolbar.appendChild(actions); target.appendChild(toolbar);
 
         if (report.state === 'PARTIAL') {
-            const warning = node(doc, 'div', null, 'alert alert-warning report-partial');
+            const warning = node(doc, 'div', null, 'report-partial');
             warning.setAttribute('role', 'note');
-            warning.appendChild(node(doc, 'strong', report.kpis.partial_total_label));
-            warning.appendChild(node(doc, 'p', fa(report.coverage.excluded) + ' پیکربندی از محاسبه کنار گذاشته شده است. اعداد فقط پیکربندی‌های محاسبه‌شده منتخب را پوشش می‌دهند؛ دلیل‌ها در جدول جزئیات آمده است.'));
+            warning.appendChild(node(doc, 'strong', 'مجموع جزئی'));
+            warning.appendChild(node(doc, 'span', fa(cov.excluded) + ' پیکربندی کنار گذاشته شده؛ اعداد فقط موارد محاسبه‌شده منتخب را پوشش می‌دهند. دلیل‌ها در جدول آمده است.'));
             target.appendChild(warning);
         } else if (report.state !== 'OK') {
-            const message = report.state === 'NO_MATCH' ? 'انتخاب کامل است اما پیکربندی منطبقی یافت نشد.' :
-                STATE_LABELS[report.state] + '؛ هیچ مجموع کامل قابل ارائه نیست. پوشش و دلیل‌ها را بررسی کنید.';
-            target.appendChild(node(doc, 'p', message, 'alert alert-warning'));
+            target.appendChild(node(doc, 'p', report.state === 'NO_MATCH' ? 'پیکربندی منطبقی یافت نشد.' : STATE_LABELS[report.state] + '؛ پوشش و دلیل‌ها را بررسی کنید.', 'report-partial'));
         }
 
-        const cov = report.coverage;
-        const coverageLine = node(doc, 'p', null, 'report-coverage', 'coverageSummary');
-        coverageLine.appendChild(node(doc, 'strong', 'پوشش شمار پیکربندی: '));
-        coverageLine.appendChild(amount(doc, cov.percentage, 'coveragePercentage'));
-        coverageLine.appendChild(node(doc, 'span', cov.percentage === null ? '' : '٪'));
-        coverageLine.appendChild(node(doc, 'span', '؛ ثبت‌شده ' + fa(cov.configured) + '، محاسبه‌شده ' + fa(cov.calculated) + '، کنارگذاشته‌شده ' + fa(cov.excluded)));
-        target.appendChild(coverageLine);
+        const coverage = node(doc, 'div', null, 'report-coverage', 'coverageSummary');
+        const coverageText = node(doc, 'div', null, 'report-coverage-text');
+        coverageText.appendChild(node(doc, 'strong', 'پوشش محاسبه'));
+        coverageText.appendChild(amount(doc, cov.percentage, 'coveragePercentage', 'percentage', { compact: false, coverage: cov }));
+        coverageText.appendChild(node(doc, 'span', 'ثبت‌شده ' + fa(cov.configured) + ' · محاسبه‌شده ' + fa(cov.calculated) + ' · کنارگذاشته‌شده ' + fa(cov.excluded)));
+        coverage.appendChild(coverageText);
+        const track = node(doc, 'div', null, 'report-coverage-track');
+        track.setAttribute('aria-hidden', 'true');
+        const fill = node(doc, 'span');
+        // A CSS coordinate only; the displayed percentage and exact access come
+        // from the string formatter, with incomplete coverage guarded there.
+        if (cov.percentage !== null && numbers.compare(cov.percentage, '0') >= 0 && numbers.compare(cov.percentage, '100') <= 0) fill.style.width = cov.percentage + '%';
+        track.appendChild(fill); coverage.appendChild(track); target.appendChild(coverage);
 
-        const kpis = node(doc, 'div', null, 'report-kpis kpi-grid');
-        const total = node(doc, 'div', null, 'report-kpi dash-card');
-        total.appendChild(node(doc, 'h6', report.state === 'PARTIAL' ? report.kpis.partial_total_label : 'هزینه پیش‌بینی‌شده', null, 'totalCostLabel'));
-        total.appendChild(amount(doc, report.state === 'PARTIAL' ? report.kpis.partial_total : report.kpis.projected_total, 'totalCost'));
-        total.appendChild(node(doc, 'p', 'ریال / دوره (IRR/period)', 'report-unit'));
-        kpis.appendChild(total);
+        const kpis = node(doc, 'div', null, 'report-kpis');
+        function kpi(title, raw, id, unit, supporting, options) {
+            const card = node(doc, 'section', null, 'report-kpi');
+            card.appendChild(node(doc, 'h3', title, null, id === 'totalCost' ? 'totalCostLabel' : undefined));
+            const value = amount(doc, raw, id, unit, options);
+            if (value.textContent.length > 32) value.classList.add('is-long-number');
+            card.appendChild(value);
+            if (supporting) card.appendChild(node(doc, 'p', supporting, 'report-kpi-support'));
+            kpis.appendChild(card); return card;
+        }
+        kpi(report.state === 'PARTIAL' ? 'مجموع جزئی' : 'هزینه پیش‌بینی‌شده', report.state === 'PARTIAL' ? report.kpis.partial_total : report.kpis.projected_total,
+            'totalCost', 'IRR/period', 'پیکربندی‌های منتخب محاسبه‌شده');
         const average = report.kpis.weighted_average;
-        const avg = node(doc, 'div', null, 'report-kpi dash-card');
-        avg.appendChild(node(doc, 'h6', 'میانگین موزون هزینه واحد'));
-        avg.appendChild(amount(doc, average.value, 'avgCost', average.state === 'NOT_APPLICABLE' ? 'قابل اعمال نیست' : undefined));
-        avg.appendChild(node(doc, 'p', 'ریال / محصول (IRR/product)', 'report-unit'));
-        const precision = technical(doc, avg, 'صورت و مخرج میانگین موزون');
-        appendMeta(doc, precision, 'صورت: هزینه پیش‌بینی‌شده (ریال / دوره)', amount(doc, average.numerator, 'weightedNumerator'));
-        appendMeta(doc, precision, 'مخرج: برنامه تولید (محصول / دوره)', amount(doc, average.denominator, 'weightedDenominator'));
-        precision.appendChild(node(doc, 'p', 'جمعیت: پیکربندی‌های منتخب محاسبه‌شده؛ پوشش همان شمار پیکربندی گزارش است.', 'report-secondary'));
-        kpis.appendChild(avg);
-        const configured = node(doc, 'div', null, 'report-kpi dash-card');
-        configured.appendChild(node(doc, 'h6', 'تعداد پیکربندی‌های منطبق'));
-        configured.appendChild(amount(doc, String(report.kpis.matched_configuration_count), 'productCount'));
-        configured.appendChild(node(doc, 'p', 'محاسبه‌شده ' + fa(cov.calculated) + ' / کنارگذاشته‌شده ' + fa(cov.excluded), 'report-secondary'));
-        kpis.appendChild(configured);
+        kpi('میانگین موزون هزینه واحد', average.value, 'avgCost', 'IRR/product', 'وزن‌دهی بر مبنای برنامه تولید', { state: average.state });
+        kpi('پیکربندی‌های منطبق', String(report.kpis.matched_configuration_count), 'productCount', 'configuration',
+            fa(cov.calculated) + ' محاسبه‌شده · ' + fa(cov.excluded) + ' کنارگذاشته‌شده');
         const top = report.kpis.top_cost_driver;
-        const driverCard = node(doc, 'div', null, 'report-kpi dash-card');
-        driverCard.appendChild(node(doc, 'h6', 'عامل غالب هزینه'));
-        driverCard.appendChild(node(doc, 'p', top.id === null ? 'در دسترس نیست' : DRIVER_LABELS[top.id], null, 'topDriver'));
-        driverCard.appendChild(amount(doc, top.value, 'topDriverValue'));
-        driverCard.appendChild(node(doc, 'span', ' ریال / دوره', 'report-unit'));
-        appendMeta(doc, driverCard, 'سهم از مجموع', top.share === null ? 'در دسترس نیست (مجموع صفر یا ناموجود)' : formatDecimal(top.share) + '٪');
-        if (top.tie) appendMeta(doc, driverCard, 'عامل‌های هم‌رتبه', top.tied_ids.map(id => DRIVER_LABELS[id]).join('، '));
-        driverCard.appendChild(node(doc, 'p', 'بزرگ‌ترین قدر مطلق سهم هزینه پیش‌بینی‌شده؛ ترتیب و هم‌رتبگی مطابق پاسخ محاسبه.', 'report-secondary'));
-        kpis.appendChild(driverCard); target.appendChild(kpis);
+        const topCard = kpi('عامل غالب هزینه', top.value, 'topDriverValue', 'IRR/period');
+        const topName = node(doc, 'p', top.id === null ? 'در دسترس نیست' : DRIVER_LABELS[top.id], 'report-driver-name', 'topDriver');
+        topCard.insertBefore(topName, topCard.children[1]);
+        const share = node(doc, 'p', null, 'report-kpi-support');
+        share.append(node(doc, 'span', 'سهم گزارش: '), amount(doc, top.share, 'topDriverShare', 'percentage', { compact: false })); topCard.appendChild(share);
+        if (top.tie) {
+            const ties = node(doc, 'details', null, 'report-ties');
+            ties.appendChild(node(doc, 'summary', fa(top.tied_ids.length) + ' عامل هم‌رتبه'));
+            ties.appendChild(node(doc, 'p', top.tied_ids.map(id => DRIVER_LABELS[id]).join('، '))); topCard.appendChild(ties);
+        }
+        target.appendChild(kpis);
+        target.appendChild(node(doc, 'p', 'اعداد برای نمایش تا دو رقم اعشار گرد شده‌اند. برای مقدار کامل و کپی دقیق، روی عدد بروید یا آن را انتخاب کنید.', 'report-format-note'));
 
-        const chartGrid = node(doc, 'div', null, 'report-chart-grid charts');
-        const productCard = node(doc, 'section', null, 'report-chart-card chart-box');
-        productCard.appendChild(node(doc, 'h5', 'مقایسه هزینه واحد محصول'));
-        const driverChartCard = node(doc, 'section', null, 'report-chart-card chart-box');
-        driverChartCard.appendChild(node(doc, 'h5', 'ترکیب هزینه پیش‌بینی‌شده عوامل'));
-        driverChartCard.appendChild(node(doc, 'p', 'مبالغ علامت‌دارِ پیکربندی‌های منتخب محاسبه‌شده؛ مخازن خام کل کارخانه در این نمودار جمع نمی‌شوند.', 'report-secondary'));
-        chartGrid.appendChild(productCard); chartGrid.appendChild(driverChartCard); target.appendChild(chartGrid);
-        const instances = []; charts.set(target, instances);
-        // Put the product first so abbreviated axis labels remain useful. The
-        // tooltip still carries the complete four-part identity.
-        renderChart(doc, productCard, 'productCostChart', report.breakdowns.products, report.breakdowns.products.map(row =>
-            row.identity.product + ' | ' + row.identity.category + ' / ' + row.identity.subcategory + ' (' + row.identity.factory_id + ')'),
-            'unit_cost', 'مقایسه هزینه واحد محصول', instances);
-        renderChart(doc, driverChartCard, 'driverCompositionChart', report.breakdowns.drivers, report.breakdowns.drivers.map(row => DRIVER_LABELS[row.id]), 'value', 'ترکیب هزینه پیش‌بینی‌شده عوامل', instances);
-
-        const drivers = section(doc, target, 'مقادیر دقیق عوامل هزینه');
-        const driverBody = table(doc, drivers, 'driverTable', 'سهم هزینه پیش‌بینی‌شده در پیکربندی‌های منتخب محاسبه‌شده؛ پوشش همان گزارش است.', ['عامل', 'مبلغ (ریال / دوره)', 'سهم از مجموع']);
-        report.breakdowns.drivers.forEach(item => {
-            const row = node(doc, 'tr'); cell(doc, row, DRIVER_LABELS[item.id]); cell(doc, row, amount(doc, item.value));
-            cell(doc, row, item.share === null ? 'در دسترس نیست' : formatDecimal(item.share) + '٪'); driverBody.appendChild(row);
+        const chartContainer = node(doc, 'div', null, 'report-charts'); target.appendChild(chartContainer);
+        const detail = section(doc, target, 'جزئیات پیکربندی‌ها', 'reportConfigurations');
+        let chartController;
+        const tableController = window.DashboardTable.mount(report, detail, { onFocusCleared: () => {
+            if (chartController && chartController.clearFocus) chartController.clearFocus();
+        } });
+        chartController = window.DashboardCharts.mount(report, chartContainer, {
+            onProductFocus: value => tableController.focus(value), onResetFocus: () => tableController.resetFocus()
         });
-        if (!report.breakdowns.drivers.length) { const row = node(doc, 'tr'); const td = cell(doc, row, 'عامل قابل محاسبه‌ای موجود نیست.'); td.colSpan = 3; driverBody.appendChild(row); }
-
-        const detail = section(doc, target, 'ریز پیکربندی‌های منتخب');
-        const detailBody = table(doc, detail, 'detailTable', 'تمام پیکربندی‌های منتخب، شامل موارد کنارگذاشته‌شده؛ هویت کامل هر ردیف مستقل است.',
-            ['شناسه کارخانه', 'دسته', 'زیردسته', 'محصول', 'وضعیت', 'هزینه واحد (ریال / محصول)', 'برنامه تولید (محصول / دوره)', 'هزینه پیش‌بینی‌شده (ریال / دوره)', 'دلیل / کد']);
-        report.detail_rows.forEach(item => {
-            const row = node(doc, 'tr', null, item.state === 'OK' ? '' : 'report-excluded'); row.dataset.state = item.state;
-            IDENTITY_FIELDS.forEach(key => cell(doc, row, item.identity[key]));
-            cell(doc, row, STATE_LABELS[item.state]);
-            ['unit_cost', 'prediction', 'projected_cost'].forEach(key => cell(doc, row, amount(doc, item[key])));
-            cell(doc, row, item.issues.map(problem => problem.message + ' [' + problem.code + ']').join('؛ ') || '—'); detailBody.appendChild(row);
-        });
-        if (!report.detail_rows.length) { const row = node(doc, 'tr'); const td = cell(doc, row, 'پیکربندی منطبقی برای نمایش موجود نیست.'); td.colSpan = 9; detailBody.appendChild(row); }
+        views.set(target, { table: tableController, charts: chartController });
 
         if (report.issues.length) {
-            const problemSection = section(doc, target, 'دلیل‌های ورودی و پوشش', 'reportIssues');
+            const problems = disclosure(doc, target, 'دلیل‌های ورودی و پوشش (' + fa(report.issues.length) + ')', 'reportIssues');
             const list = node(doc, 'ul', null, 'report-issue-list');
-            report.issues.forEach(problem => list.appendChild(node(doc, 'li', (problem.identity ? identityText(problem.identity) + '؛ ' : '') + problem.message + ' [' + problem.code + ']')));
-            problemSection.appendChild(list);
+            report.issues.forEach(problem => list.appendChild(node(doc, 'li', (problem.identity ? identityText(problem.identity) + '؛ ' : '') + problem.message)));
+            problems.appendChild(list);
         }
 
-        const pools = technical(doc, target, 'مقایسه مخازن کارخانه و مبالغ مدل‌شده', 'reportPools');
-        pools.appendChild(node(doc, 'p', 'خام: کل کارخانه. مدل منتخب: پیکربندی‌های منتخب محاسبه‌شده. مدل دسته: کل جمعیت برنامه تولید دسته‌های گزارش‌شده. اختلاف هر مدل با خام مقایسه دو دامنه است و الزام برابری ندارد.', 'report-secondary'));
-        const poolBody = table(doc, pools, 'poolTable', 'مبالغ مخزن‌ها؛ ریال / دوره (IRR/period)', ['مخزن', 'خام کل کارخانه', 'مدل منتخب', 'منتخب منهای خام', 'مدل کامل دسته‌ها', 'دسته‌ها منهای خام']);
+        const pools = disclosure(doc, target, 'مقایسه مخازن کارخانه و مبالغ مدل‌شده', 'reportPools');
+        pools.appendChild(node(doc, 'p', 'خام: کل کارخانه. مدل منتخب: پیکربندی‌های منتخب محاسبه‌شده. مدل دسته: کل جمعیت برنامه تولید دسته‌های گزارش‌شده. اختلاف دامنه‌ها الزام برابری ندارد.', 'report-secondary'));
+        const poolBody = table(doc, pools, 'poolTable', 'ریال / دوره؛ هر ستون جمعیت مشخص خود را دارد.', ['مخزن', 'خام کل کارخانه', 'مدل منتخب', 'منتخب منهای خام', 'مدل کامل دسته‌ها', 'دسته‌ها منهای خام']);
         report.breakdowns.factory_pools.forEach(item => {
             const row = node(doc, 'tr'); cell(doc, row, DRIVER_LABELS[item.id]);
             ['raw_total', 'modeled_selected_total', 'selected_minus_raw', 'modeled_category_total', 'category_minus_raw'].forEach(key => cell(doc, row, amount(doc, item[key])));
             poolBody.appendChild(row);
             const categories = node(doc, 'tr'); const td = cell(doc, categories, null); td.colSpan = 6;
-            item.categories.forEach(category => appendMeta(doc, td, category.category, 'مخزن تعدیل‌شده ' + formatDecimal(category.adjusted_pool) + ' ریال / دوره؛ مخرج برنامه تولید کامل دسته ' + formatDecimal(category.prediction_denominator) + ' محصول / دوره'));
+            item.categories.forEach(category => {
+                const line = node(doc, 'p', null, 'report-secondary');
+                line.append(node(doc, 'strong', category.category + ': '), node(doc, 'span', 'مخزن تعدیل‌شده '), amount(doc, category.adjusted_pool),
+                    node(doc, 'span', ' · برنامه تولید کامل دسته '), amount(doc, category.prediction_denominator, undefined, 'product/period'));
+                td.appendChild(line);
+            });
             poolBody.appendChild(categories);
         });
-        if (!report.breakdowns.factory_pools.length) { const row = node(doc, 'tr'); const td = cell(doc, row, 'مخزن مدل‌شده‌ای برای این گزارش موجود نیست.'); td.colSpan = 6; poolBody.appendChild(row); }
+        if (!report.breakdowns.factory_pools.length) { const row = node(doc, 'tr'); cell(doc, row, 'مخزن مدل‌شده‌ای موجود نیست.').colSpan = 6; poolBody.appendChild(row); }
 
-        const arithmetic = technical(doc, target, 'جزئیات فنی دقت جمع Decimal', 'reportPrecision');
+        const technical = disclosure(doc, target, 'جزئیات فنی گزارش', 'reportTechnical');
+        appendMeta(doc, technical, 'نسخه فرمول', node(doc, 'code', report.formula_version, 'report-machine-value'));
+        const weighted = section(doc, technical, 'میانگین موزون');
+        appendMeta(doc, weighted, 'صورت؛ هزینه پیش‌بینی‌شده منتخب', amount(doc, average.numerator, 'weightedNumerator'));
+        appendMeta(doc, weighted, 'مخرج؛ برنامه تولید منتخب', amount(doc, average.denominator, 'weightedDenominator', 'product/period'));
+        weighted.appendChild(node(doc, 'p', 'جمعیت: پیکربندی‌های منتخب محاسبه‌شده؛ پوشش همان شمار پیکربندی گزارش است.', 'report-secondary'));
+        const arithmetic = section(doc, technical, 'تطبیق جمع Decimal', 'reportPrecision');
         if (report.arithmetic_reconciliation) {
             const trace = report.arithmetic_reconciliation;
             appendMeta(doc, arithmetic, 'مجموع ردیف‌های پیش‌بینی‌شده', amount(doc, trace.projected_rows_total));
             appendMeta(doc, arithmetic, 'مجموع اجزای عوامل', amount(doc, trace.driver_components_total));
-            appendMeta(doc, arithmetic, 'اختلاف ردیف‌ها منهای عوامل (ریال / دوره)', amount(doc, trace.difference));
-            arithmetic.appendChild(node(doc, 'p', 'این اختلاف فنی از ترتیب جمع Decimal گزارش شده است؛ هیچ مبلغی برای پنهان کردن آن تغییر نکرده است.', 'report-secondary'));
-        } else arithmetic.appendChild(node(doc, 'p', 'جزئیات دقت برای این وضعیت قابل محاسبه نیست.'));
-
-        const lineage = technical(doc, target, 'زمان و شناسنامه منابع عمومی', 'reportLineage');
-        lineage.appendChild(node(doc, 'p', 'زمان واقعی منبع، خط مبنای تعیین‌شده مالک و زمان اجرای محاسبه مستقل‌اند. اثر انگشت، تاریخ تاریخی منبع را اثبات نمی‌کند.', 'report-secondary'));
-        appendMeta(doc, lineage, 'نسخه فرمول', report.formula_version);
-        const lineageBody = table(doc, lineage, 'lineageTable', 'فقط شناسنامه عمومی منابع مجاز؛ بدون مسیر فایل و مقادیر پارامترهای ورودی.', ['منبع', 'هویت پیکربندی', 'زمان واقعی منبع', 'خط مبنای مالک', 'نسخه تجاری', 'اثر انگشت']);
+            appendMeta(doc, arithmetic, 'اختلاف ردیف‌ها منهای عوامل', amount(doc, trace.difference));
+            arithmetic.appendChild(node(doc, 'p', 'اختلاف فنی از ترتیب جمع Decimal گزارش شده است؛ مبلغ‌های اصلی بدون تغییر حفظ شده‌اند.', 'report-secondary'));
+        } else arithmetic.appendChild(node(doc, 'p', 'تطبیق برای این وضعیت قابل محاسبه نیست.'));
+        const lineage = section(doc, technical, 'زمان و شناسنامه منابع مجاز', 'reportLineage');
+        lineage.appendChild(node(doc, 'p', 'زمان واقعی منبع، خط مبنای مالک و زمان محاسبه مستقل‌اند. اثر انگشت تاریخ تاریخی منبع را اثبات نمی‌کند.', 'report-secondary'));
+        const lineageBody = table(doc, lineage, 'lineageTable', 'شناسنامه عمومی منابع؛ بدون مسیر فایل یا پارامترهای ورودی.', ['منبع', 'هویت پیکربندی', 'زمان واقعی منبع', 'خط مبنای مالک', 'نسخه تجاری', 'اثر انگشت']);
         report.source_lineage.forEach(item => {
             const row = node(doc, 'tr'); cell(doc, row, sourceText(item.source)); cell(doc, row, item.identity ? identityText(item.identity) : '—');
             cell(doc, row, formatDateTime(item.actual_as_of)); cell(doc, row, formatDate(item.owner_assigned_baseline)); cell(doc, row, item.business_version || 'در دسترس نیست');
-            cell(doc, row, item.fingerprint); lineageBody.appendChild(row);
+            cell(doc, row, numbers.identifier(doc, item.fingerprint)); lineageBody.appendChild(row);
         });
         return report;
     }
@@ -526,6 +464,5 @@
         return '\uFEFF' + lines.join('\r\n') + '\r\n';
     }
 
-    window.addEventListener('resize', () => charts.forEach(instances => instances.forEach(chart => { try { chart.resize(); } catch (error) { /* Optional visual only. */ } })));
     window.DashboardReport = Object.freeze({ validate, render, clear, csv, formatDecimal });
 })(window);
