@@ -29,8 +29,11 @@ class HierarchySelectionError(ValueError):
 class ProductHierarchyService:
     """Build deterministic, factory-isolated filter options without writes."""
 
-    def __init__(self, factories_root: Path | None = None):
+    def __init__(self, factories_root: Path | None = None, *, catalog=None):
         self.factories_root = Path(factories_root or (Path(parent_path) / "Factories"))
+        # Analytical callers reuse their request's product snapshot so option
+        # validation and allocation populations cannot discover different files.
+        self.catalog = catalog
 
     def options(
         self,
@@ -105,21 +108,22 @@ class ProductHierarchyService:
     def _products(self, operational_key, hierarchy, categories, subcategories):
         result = []
         try:
-            products = build_product_catalog(self.factories_root, [operational_key])
+            products = self.catalog if self.catalog is not None else build_product_catalog(self.factories_root, [operational_key])
         except OSError as exc:
             raise HierarchyMetadataError("خواندن پیکربندی محصولات ممکن نیست.") from exc
         for item in products:
-            if item.category in categories and item.subcategory in subcategories:
-                    identity = [operational_key, item.category, item.subcategory, item.product]
-                    encoded = base64.urlsafe_b64encode(
-                        json.dumps(identity, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-                    ).decode("ascii").rstrip("=")
-                    result.append({
-                        "id": encoded,
-                        "label": item.product,
-                        "category": item.category,
-                        "subcategory": item.subcategory,
-                    })
+            if (item.category in categories and item.subcategory in subcategories
+                    and item.subcategory in hierarchy[item.category]):
+                identity = [operational_key, item.category, item.subcategory, item.product]
+                encoded = base64.urlsafe_b64encode(
+                    json.dumps(identity, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+                ).decode("ascii").rstrip("=")
+                result.append({
+                    "id": encoded,
+                    "label": item.product,
+                    "category": item.category,
+                    "subcategory": item.subcategory,
+                })
         return sorted(result, key=lambda item: (item["label"].casefold(), item["category"].casefold(), item["subcategory"].casefold()))
 
     @staticmethod

@@ -1,7 +1,8 @@
 # قرارداد محصول داشبورد — نسخه ۱
 
-این سند مصوبات مالک محصول برای DASH-0.4 و برش مستقل فیلترهای DASH-1 را
-ثبت می‌کند. شواهد وضع موجود در
+این سند مصوبات مالک محصول برای DASH-0.4، برش مستقل فیلترهای DASH-1 و
+اجرای backend تحلیل DASH-3 را ثبت می‌کند. قرارداد API اجرایی در
+[PR-06](pr06-dashboard-cost-analysis-api.md) و شواهد وضع موجود در
 [کشف ماژول](dashboard-module-discovery.md)،
 [ممیزی هزینه](dash0-current-costing-audit.md) و
 [خط‌مبناهای مشخصه‌ای](dash0-characterization-baselines.md) است. وضعیت مصوبات
@@ -20,12 +21,14 @@
 |---|---|---|
 | ورود به صفحه با دسترسی کارخانه‌ای | `dashboard:READ` روی حداقل یک کارخانه | 403 |
 | دریافت سلسله‌مراتب یک کارخانه | `dashboard:READ` روی همان کارخانه | 403؛ بدون lookup عملیاتی |
+| تحلیل هزینه یک کارخانه | `dashboard:READ` روی همان کارخانه | 403؛ بدون lookup عملیاتی |
 | مشاهده/اجرای حساسیت عمومی (آتی) | Dashboard READ و `general_parameters:READ` | کنش نمایش داده/اجرا نمی‌شود |
 | مشاهده/اجرای حساسیت کارخانه (آتی) | Dashboard READ و `factory_parameters:READ` روی همان کارخانه | کنش نمایش داده/اجرا نمی‌شود |
 
 مدیران سطح بالا طبق سیاست مرکزی به همهٔ کارخانه‌های فعال دسترسی دارند. مجوز
-`product` هرگز پیش‌شرط endpoint داشبورد نیست و مجوز یک کارخانه دامنهٔ کارخانه
-دیگر را باز نمی‌کند. HTTP 401/403 نتایج دسترسی‌اند، نه وضعیت دادهٔ کسب‌وکار.
+`product` یا `cost_calculation` پیش‌شرط endpoint داشبورد نیست و مجوز یک
+کارخانه دامنهٔ کارخانه دیگر را باز نمی‌کند. HTTP 401/403 نتایج دسترسی‌اند،
+نه وضعیت دادهٔ کسب‌وکار.
 
 ## قرارداد دقیق فیلتر
 
@@ -49,11 +52,16 @@ sequence و AbortController کنار می‌گذارد، فقط انتخاب ه�
 
 ## وضعیت‌های تحلیلی و سناریو
 
-شش وضعیت دادهٔ مصوب برای اجرای عددی آتی باید بدون تبدیل ضمنی به صفر تعریف
-شوند: `OK`، `MISSING_INPUT`، `INVALID_INPUT`، `AMBIGUOUS_INPUT`،
+شش وضعیت دادهٔ مصوب اجرای عددی بدون تبدیل ضمنی به صفر تعریف می‌شوند:
+`OK`، `MISSING_INPUT`، `INVALID_INPUT`، `AMBIGUOUS_INPUT`،
 `NOT_APPLICABLE` و `CALCULATION_ERROR`. تجمیع ناقص وضعیت جداگانهٔ `PARTIAL`
-دارد و پوشش و شمار excluded را همراه می‌کند. endpoint هزینه در این PR عمداً
-`501 NOT_IMPLEMENTED` و `kpis: null` می‌دهد؛ صفر ساختگی گزارش نمی‌شود.
+دارد و پوشش و شمار excluded را همراه می‌کند. `GET /api/cost_analysis`
+نسخه `1` با موتور مشترک هزینه اجرا می‌شود: پوشش کامل `projected_total`،
+پوشش مختلط فقط `partial_total` با برچسب «مجموع جزئی» و نبود ردیف معتبر
+مقدارهای عددی `null` می‌دهد. انتخاب صریح هر سه سطح الزامی است؛
+`NO_MATCH` از `NOT_SELECTED` جدا می‌ماند. جزئیات دامنه، breakdown، دوره،
+lineage و وضعیت فعلی top driver در [قرارداد PR-06](pr06-dashboard-cost-analysis-api.md)
+ثبت شده است؛ صفر ساختگی گزارش نمی‌شود.
 
 سناریوهای what-if آتی صرفاً در حافظهٔ درخواست‌اند: هیچ write به Profile، BOM،
 پارامتر عمومی یا `Data/Factories` مجاز نیست. زمان محاسبه و provenance فقط اگر
@@ -62,11 +70,14 @@ sequence و AbortController کنار می‌گذارد، فقط انتخاب ه�
 ## موتور مشترک هزینهٔ PR-05
 
 فرمول live و چهار gate عددی G1–G4 در تاریخ `2026-09-27` به تأیید مالک رسیدند.
-Cost Calculation از loader فقط‌خواندنی و همان تابع pure که مصرف‌کنندگان تحلیلی
-آتی استفاده خواهند کرد عبور می‌کند. period legacy باید در فایل binding
-owner-controlled به یک کارخانه و یک بازهٔ صریح متصل باشد. baseline مالک از
-actual timestamp و calculation timestamp جدا گزارش می‌شود. Dashboard KPI و UI
-حساسیت همچنان خارج از دامنهٔ این PR هستند.
+Cost Calculation و Dashboard از همان تابع pure عبور می‌کنند. loader پیش‌فرض
+Cost Calculation رفتار مهاجرت موجود را حفظ می‌کند؛ Dashboard صریحاً از
+`read_only=True` و `module="dashboard"` با snapshot درخواست استفاده می‌کند
+و configuration، metadata یا دوره اولیه نمی‌سازد. period legacy باید در
+binding معتبر موجود به یک کارخانه و بازه صریح متصل باشد؛ رکورد معتبر
+`SYSTEM_INITIALIZATION` نیز پذیرفته می‌شود. baseline مالک از actual timestamp
+و calculation timestamp جدا گزارش می‌شود. KPIهای backend در PR-06 اجرا
+می‌شوند؛ تکمیل UI، نمودار/CSV و حساسیت در دامنه مراحل بعدی باقی می‌مانند.
 
 ## فرض‌های فنیِ تأییدنشده
 

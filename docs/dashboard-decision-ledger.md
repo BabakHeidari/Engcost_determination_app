@@ -9,7 +9,7 @@ V1 و وابستگی‌ها دقیقاً محدود به متن زیر است؛ 
 | 002 | A | مجموع unit×prediction هم‌دوره؛ ناقص فقط «مجموع جزئی» + coverage/excluded | APPROVED | G2/G3 در PR-05 تصویب شد |
 | 003 | B | میانگین production-weighted با numerator/denominator/population/coverage | APPROVED | جمعیت کامل هم‌دسته و هم‌دوره |
 | 004 | B | شمار configuration چهارگانه؛ configured/calculated/excluded جدا | APPROVED | 013 |
-| 005 | A | بزرگ‌ترین contribution مطلق مصوب؛ value/share/tie؛ بدون label حدسی | APPROVED_WITH_OPEN_DETAIL | 009 و KPI population |
+| 005 | A+clarification | بزرگ‌ترین contribution مطلق projected در پیکربندی‌های منتخب معتبر؛ BOM یک driver و شش pool دقیق؛ value/share/tie و tied IDs قطعی؛ بدون label حدسی | APPROVED | گروه‌بندی BOM + شش pool در گفت‌وگوی مالک `2026-10-10` بسته شد؛ share از همان total و برای total صفر null |
 | 006 | A | inverse allocation با division؛ pool یک‌بار روی کل جمعیت برنامه‌ریزی‌شدهٔ دسته تخصیص می‌یابد | APPROVED | modeled با raw reconcile اجباری نمی‌شود |
 | 007 | A | prediction = واحد برنامه‌ریزی پیکربندی در planning period صریح | APPROVED | binding مالک برای legacy الزامی است |
 | 008 | CUSTOM | missing/invalid prediction صفر نیست؛ state و partial coverage | APPROVED | 010 |
