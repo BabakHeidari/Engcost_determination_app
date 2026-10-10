@@ -1,17 +1,162 @@
 import logging
+import json
 from datetime import date
 from pathlib import Path
 
 from flask import Blueprint, abort, current_app, g, render_template, jsonify, request
+from werkzeug.exceptions import RequestEntityTooLarge
 from utils.auth import get_profile_store, login_required
 from utils.costing_engine import CostInputError
 from utils.dashboard_analysis import DashboardAnalysisService, empty_report, safe_issue, serialize
 from utils.dashboard_periods import DashboardPeriodMetadata
+from utils.dashboard_sensitivity import (
+    DashboardSensitivityService, SensitivityRequestError, empty_sensitivity,
+)
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.product_hierarchy_service import HierarchyMetadataError, HierarchySelectionError, ProductHierarchyService
 
 dashboard_bp = Blueprint("dashboard", __name__)
 LOGGER = logging.getLogger(__name__)
+
+SENSITIVITY_SELECTION_FIELDS = frozenset({
+    "factory", "category", "subcategory", "product", "period", "start", "end",
+})
+SENSITIVITY_MAX_BODY_BYTES = 64 * 1024
+
+
+def _sensitivity_json_object(pairs):
+    """Reject duplicate JSON keys, including duplicates in override objects."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON field")
+        result[key] = value
+    return result
+
+
+def _sensitivity_request(*, scenario):
+    if scenario:
+        if request.args or not request.is_json:
+            raise SensitivityRequestError("INVALID_REQUEST", "EXPECTED_SCENARIO_JSON")
+        if request.content_length is not None and request.content_length > SENSITIVITY_MAX_BODY_BYTES:
+            raise SensitivityRequestError("INVALID_REQUEST", "PAYLOAD_TOO_LARGE", status=413)
+        # Preserve a stricter application limit and cached body reads performed
+        # by authentication/CSRF middleware. Flask also bounds chunked bodies.
+        existing_limit = request.max_content_length
+        request.max_content_length = (
+            min(existing_limit, SENSITIVITY_MAX_BODY_BYTES)
+            if existing_limit is not None else SENSITIVITY_MAX_BODY_BYTES
+        )
+        raw = request.get_data(cache=True)
+        if len(raw) > SENSITIVITY_MAX_BODY_BYTES:
+            raise SensitivityRequestError("INVALID_REQUEST", "PAYLOAD_TOO_LARGE", status=413)
+        try:
+            payload = json.loads(raw, object_pairs_hook=_sensitivity_json_object,
+                                 parse_constant=lambda _value: _reject_json_constant())
+        except (ValueError, UnicodeError, RecursionError):
+            raise SensitivityRequestError("INVALID_REQUEST", "MALFORMED_SCENARIO_JSON") from None
+        if not isinstance(payload, dict) or set(payload) - (SENSITIVITY_SELECTION_FIELDS | {"overrides"}):
+            raise SensitivityRequestError("INVALID_REQUEST", "UNEXPECTED_SCENARIO_INPUT")
+        if "overrides" not in payload or not isinstance(payload["overrides"], list):
+            raise SensitivityRequestError("INVALID_REQUEST", "EXPECTED_OVERRIDES_LIST")
+    else:
+        if (set(request.args) - SENSITIVITY_SELECTION_FIELDS
+                or any(len(request.args.getlist(key)) != 1 for key in request.args)):
+            raise SensitivityRequestError("INVALID_REQUEST", "UNEXPECTED_QUERY_INPUT")
+        payload = request.args.to_dict()
+
+    if any(key not in payload for key in ("factory", "category", "subcategory", "product", "period")):
+        raise SensitivityRequestError("NOT_SELECTED", "EXPLICIT_SELECTION_REQUIRED")
+    for key in SENSITIVITY_SELECTION_FIELDS & set(payload):
+        value = payload[key]
+        if (not isinstance(value, str) or not value or value != value.strip()
+                or len(value) > 2048 or any(ord(char) < 32 or ord(char) == 127 for char in value)
+                or value == "__ALL__"):
+            raise SensitivityRequestError("INVALID_SELECTION", "ONE_CONFIGURATION_REQUIRED")
+    if ("start" in payload) != ("end" in payload):
+        raise SensitivityRequestError("INVALID_REQUEST", "INCOMPLETE_PERIOD_RANGE")
+    if "start" in payload:
+        try:
+            start, end = (date.fromisoformat(payload[key]) for key in ("start", "end"))
+            if start.isoformat() != payload["start"] or end.isoformat() != payload["end"] or start > end:
+                raise ValueError("invalid date range")
+        except ValueError:
+            raise SensitivityRequestError("INVALID_REQUEST", "INVALID_PERIOD_RANGE") from None
+    return payload
+
+
+def _reject_json_constant():
+    raise ValueError("non-finite JSON constant")
+
+
+def _sensitivity_response(*, scenario):
+    """Keep the established login/JSON POST lifecycle and typed HTTP outcomes."""
+    try:
+        payload = _sensitivity_request(scenario=scenario)
+
+        class RegistrySnapshot:
+            def __init__(self, factories):
+                self.factories = factories
+
+            def list_factories(self):
+                return self.factories
+
+        service = FactoryService(RegistrySnapshot(get_profile_store().list_factories()))
+        service.require_access(payload["factory"], g.current_user, "dashboard")
+        options = {}
+        if current_app.config.get("COSTING_DATA_ROOT"):
+            options["data_root"] = Path(current_app.config["COSTING_DATA_ROOT"])
+        if current_app.config.get("COSTING_PERIOD_BINDINGS_FILE"):
+            options["period_bindings_path"] = Path(current_app.config["COSTING_PERIOD_BINDINGS_FILE"])
+        sensitivity = DashboardSensitivityService(service, **options)
+        action = sensitivity.scenario if scenario else sensitivity.parameters
+        arguments = {"category": payload["category"], "subcategory": payload["subcategory"],
+                     "product": payload["product"], "period_id": payload["period"],
+                     "start": payload.get("start"), "end": payload.get("end")}
+        if scenario:
+            arguments["overrides"] = payload["overrides"]
+        report = action(payload["factory"], g.current_user, **arguments)
+        status = 200 if report["state"] == "OK" else (500 if report["state"] == "CALCULATION_ERROR" else 422)
+        return jsonify(serialize(report)), status
+    except SensitivityRequestError as exc:
+        report = getattr(exc, "public_report", None) or empty_sensitivity(
+            exc.state, issues=[safe_issue("INVALID_INPUT", exc.code)])
+        return jsonify(serialize(report)), exc.status
+    except RequestEntityTooLarge:
+        return jsonify(empty_sensitivity("INVALID_REQUEST", issues=[safe_issue(
+            "INVALID_INPUT", "PAYLOAD_TOO_LARGE")])), 413
+    except FactoryNotFoundError:
+        return jsonify(empty_sensitivity("UNKNOWN_FACTORY", issues=[safe_issue(
+            "INVALID_INPUT", "FACTORY_NOT_FOUND")])), 404
+    except (FactoryAccessDeniedError, FactoryInactiveError):
+        return jsonify(empty_sensitivity("FORBIDDEN", issues=[safe_issue(
+            "INVALID_INPUT", "FACTORY_FORBIDDEN")])), 403
+    except HierarchySelectionError:
+        return jsonify(empty_sensitivity("INVALID_SELECTION", issues=[safe_issue(
+            "INVALID_INPUT", "INVALID_HIERARCHY_SELECTION")])), 400
+    except HierarchyMetadataError:
+        return jsonify(empty_sensitivity("UNAVAILABLE", issues=[safe_issue(
+            "MISSING_INPUT", "HIERARCHY_UNAVAILABLE")])), 503
+    except CostInputError as exc:
+        report = getattr(exc, "public_report", None) or empty_sensitivity(
+            exc.state.value, issues=[safe_issue(exc.state.value, exc.detail.code)])
+        return jsonify(serialize(report)), 500 if exc.state.value == "CALCULATION_ERROR" else 422
+    except Exception:
+        LOGGER.exception("Dashboard sensitivity failed")
+        return jsonify(empty_sensitivity("CALCULATION_ERROR", issues=[safe_issue(
+            "CALCULATION_ERROR", "SENSITIVITY_FAILED")])), 500
+
+
+@dashboard_bp.route("/api/dashboard/sensitivity/parameters", methods=["GET"])
+@login_required
+def sensitivity_parameters():
+    return _sensitivity_response(scenario=False)
+
+
+@dashboard_bp.route("/api/dashboard/sensitivity/scenario", methods=["POST"])
+@login_required
+def sensitivity_scenario():
+    return _sensitivity_response(scenario=True)
 
 @dashboard_bp.route("/dashboard")
 @login_required

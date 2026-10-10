@@ -16,6 +16,11 @@
 چهارگانه، period، BOM rows، شش driver، provenance و خطاها است. override فقط
 در حافظه اعمال می‌شود.
 
+[PR-08 / DASH-5](pr08-dashboard-sensitivity-api.md) از همین تابع و
+`CostOverrides` برای registry مجاز و مقایسهٔ خط‌مبنا/سناریوی یک پیکربندی استفاده
+می‌کند. loader آن مانند تحلیل هزینه فقط‌خواندنی و request-scoped است؛ فرمول و
+gateهای G1–G4 تغییر نمی‌کنند.
+
 ## تفاوت مصوب legacy → V1
 
 | موضوع | Legacy characterization | V1 مصوب |
