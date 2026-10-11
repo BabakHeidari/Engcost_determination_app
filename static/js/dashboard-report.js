@@ -218,7 +218,9 @@
         if (active) { active.table.destroy(); active.charts.destroy(); }
         views.delete(target);
         const doc = target.ownerDocument;
-        window.DashboardNumbers.dispose(doc);
+        // Exact-value listeners and their weak registrations are shared with
+        // the independent Sensitivity panel. Keep those sibling controls live.
+        window.DashboardNumbers.closeAll(doc);
         // Keep the controller's original button and its listener when relocating
         // CSV between the selection panel and the accepted report toolbar.
         const exportButton = doc.getElementById('downloadCsvBtn');

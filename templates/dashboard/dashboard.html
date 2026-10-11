@@ -9,11 +9,11 @@
         <div><p class="dashboard-eyebrow">داشبورد هزینه ساخت</p><h1>تحلیل هزینه</h1></div>
         <button class="btn btn-outline-secondary btn-sm" type="button" onclick="history.back()">بازگشت</button>
     </div>
-    <ul class="nav nav-tabs dashboard-tabs" role="tablist" aria-label="تحلیل‌ها">
-        <li class="nav-item"><button class="nav-link active" id="cost-tab" type="button" role="tab" aria-selected="true" aria-controls="cost">تحلیل هزینه</button></li>
-        <li class="nav-item"><button class="nav-link disabled" type="button" role="tab" aria-selected="false" disabled>حساسیت — در دست توسعه</button></li>
+    <ul class="nav nav-tabs dashboard-tabs" role="tablist" aria-label="تحلیل‌ها" aria-orientation="horizontal">
+        <li class="nav-item" role="presentation"><button class="nav-link active" id="cost-tab" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#cost" aria-selected="true" aria-controls="cost" tabindex="0">تحلیل هزینه</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="sensitivity-tab" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#sensitivity" aria-selected="false" aria-controls="sensitivity" tabindex="-1">حساسیت</button></li>
     </ul>
-    <section id="cost" role="tabpanel" aria-labelledby="cost-tab">
+    <section id="cost" class="tab-pane show active" role="tabpanel" aria-labelledby="cost-tab" tabindex="0">
         <form id="analysisForm" class="filter-card" novalidate>
             <div class="selection-heading"><h2>دامنه و دوره تحلیل</h2><span>«همه» شامل اعضای همان دامنه است.</span></div>
             <div class="selection-grid">
@@ -35,6 +35,45 @@
         <div id="costDashboard" hidden aria-label="گزارش تحلیل هزینه"></div>
         <div id="noDataPlaceholder" class="dashboard-empty"><span aria-hidden="true">▥</span><p>گزارشی اجرا نشده است.</p><p>دامنه و دوره را انتخاب کنید تا هزینه‌ها از منابع مجاز کارخانه محاسبه شوند.</p></div>
     </section>
+    <section id="sensitivity" class="tab-pane" role="tabpanel" aria-labelledby="sensitivity-tab" tabindex="0" hidden>
+        <p id="sens-notice" class="sens-notice"><span aria-hidden="true">◈</span> این تغییرات فقط شبیه‌سازی‌اند و در اطلاعات اصلی سیستم ذخیره نمی‌شوند.</p>
+        <form id="sens-form" novalidate>
+            <div class="filter-card">
+                <div class="selection-heading"><h2>دامنه و دوره شبیه‌سازی</h2><span>یک کارخانه و یک پیکربندی دقیق محصول را انتخاب کنید.</span></div>
+                <div class="selection-grid">
+                    <div><label for="sens-factory">کارخانه</label><select id="sens-factory" class="form-select"><option value="">یک کارخانه را انتخاب کنید</option></select></div>
+                    <div><label for="sens-category">دسته</label><select id="sens-category" class="form-select" disabled><option value="">ابتدا کارخانه را انتخاب کنید</option></select></div>
+                    <div><label for="sens-subcategory">زیردسته</label><select id="sens-subcategory" class="form-select" disabled><option value="">ابتدا دسته را انتخاب کنید</option></select></div>
+                    <div><label for="sens-product">محصول</label><select id="sens-product" class="form-select" disabled><option value="">ابتدا زیردسته را انتخاب کنید</option></select></div>
+                </div>
+                <div class="selection-feedback"><div id="sens-filter-status" class="dashboard-status is-neutral" role="status" aria-live="polite">ابتدا یک کارخانه را انتخاب کنید.</div><button id="sens-retry-options" class="btn btn-outline-secondary btn-sm" type="button" hidden>دریافت دوباره گزینه‌ها</button></div>
+                <div class="sens-period-row">
+                    <div><label for="sens-period">دوره ثبت‌شده</label><select id="sens-period" class="form-select" disabled aria-describedby="sens-period-hint sens-period-status"><option value="">ابتدا کارخانه را انتخاب کنید</option></select></div>
+                    <div class="sens-period-context"><p id="sens-period-hint" class="sens-help">انتخاب صریح یک دوره ثبت‌شده لازم است. تاریخ‌های جلالی مرز همین دوره‌اند و سابقه تاریخی منابع را اثبات نمی‌کنند.</p><div id="sens-period-status" class="dashboard-status is-neutral" role="status" aria-live="polite">دوره پس از انتخاب کارخانه نمایش داده می‌شود.</div></div>
+                </div>
+                <div class="sens-refresh-row"><p class="sens-help">دریافت دوباره خط‌مبنا، پیش‌نویس و مقایسه را پاک می‌کند و منابع را دوباره می‌خواند.</p><button id="sens-refresh" class="btn btn-outline-secondary" type="button" disabled>دریافت دوباره خط‌مبنا</button></div>
+            </div>
+            <div id="sens-baseline" class="sens-baseline" aria-label="خط‌مبنای فعلی" hidden></div>
+            <section id="sens-editor" class="sens-card" aria-labelledby="sens-editor-heading" hidden>
+                <div class="sens-section-heading"><div><h2 id="sens-editor-heading">تغییرات فرضی</h2><p class="sens-help">پارامترهای موردنظر را اضافه کنید. بدون تغییر هم می‌توانید سناریو را اجرا کنید.</p></div></div>
+                <p class="sens-mode-help">«مقدار مطلق» مقدار نهایی فرضی را تعیین می‌کند. «تغییر درصدی» نسبت به خط‌مبناست؛ سهم ۵۰ با افزایش ۱۰٪ به ۵۵ می‌رسد.</p>
+                <div id="sens-editor-status" class="dashboard-status is-neutral" role="status" aria-live="polite"></div>
+                <details id="sens-catalog" class="sens-catalog" open>
+                    <summary>پارامترهای مجاز؛ افزودن تغییر جدید</summary>
+                    <div id="sens-general-parameters" class="sens-parameter-group" hidden></div>
+                    <div id="sens-factory-parameters" class="sens-parameter-group" hidden></div>
+                    <div id="sens-unsupported" class="sens-unsupported" hidden></div>
+                </details>
+                <div class="sens-draft-section"><h3 class="sens-group-heading">پیش‌نویس تغییرات</h3><div id="sens-draft" class="sens-draft" aria-label="فهرست تغییرات پیش‌نویس"></div></div>
+            </section>
+            <div class="sens-run-row"><p class="sens-help">محاسبه فقط با انتخاب «اجرای سناریو» انجام می‌شود. بازنشانی، تغییرات فرضی را پاک می‌کند و خط‌مبنای معتبر همین دامنه را نگه می‌دارد.</p><div class="dashboard-actions"><button id="sens-run" class="btn btn-primary" type="submit" disabled>اجرای سناریو</button><button id="sens-reset" class="btn btn-outline-secondary" type="button" disabled>بازنشانی</button></div></div>
+        </form>
+        <div id="sens-status" class="dashboard-status is-neutral analysis-status" role="status" aria-live="polite" aria-atomic="true">برای شروع، پیکربندی دقیق محصول و دوره را انتخاب کنید.</div>
+        <section id="sens-comparison" aria-labelledby="sens-comparison-heading" hidden>
+            <div class="report-toolbar sens-comparison-toolbar"><div class="report-toolbar-summary"><h2 id="sens-comparison-heading">مقایسه خط‌مبنا و سناریو</h2><p class="sens-help">هر دو نتیجه از منابع همان درخواست اجرا محاسبه شده‌اند.</p></div><button id="sens-export" class="btn btn-outline-success" type="button" disabled>دریافت CSV این مقایسه</button></div>
+            <div id="sens-results" aria-label="نتایج سناریوی فرضی" hidden></div>
+        </section>
+    </section>
 </div>
 {% endblock %}
 {% block extra_js %}
@@ -45,4 +84,8 @@
 <script src="{{ url_for('static', filename='js/dashboard-charts.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dashboard-report.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dashboard-analysis.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard-tabs.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard-sensitivity-model.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard-sensitivity-view.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard-sensitivity.js') }}"></script>
 {% endblock %}
