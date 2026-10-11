@@ -44,7 +44,10 @@
     }
 
     function unitLabel(unit) {
-        return Object.prototype.hasOwnProperty.call(UNITS, unit) ? UNITS[unit] : '';
+        if (Object.prototype.hasOwnProperty.call(UNITS, unit)) return UNITS[unit];
+        // Authorized parameter source units (for example USD/kg and IRR/USD)
+        // keep their original form in formatting and the exact-value dialog.
+        return typeof unit === 'string' && unit.length <= 80 && /^[\p{L}\p{N} _.-]+\/[\p{L}\p{N} _.-]+$/u.test(unit) ? unit : '';
     }
 
     function withUnit(content, options) {
@@ -167,7 +170,14 @@
         state.pinned = false;
         state.awaitingAnchor = false;
         if (trigger) trigger.setAttribute('aria-expanded', 'false');
-        if (state.portal) state.portal.hidden = true;
+        if (state.portal) {
+            state.portal.hidden = true;
+            // A dismissed dialog must not retain values from a scope whose
+            // permissions may have changed since it was opened.
+            state.full.textContent = '';
+            state.label.textContent = '';
+            state.status.textContent = '';
+        }
         if (restoreFocus && trigger && trigger.isConnected) {
             // Restoring focus must not reopen the portal through focusin.
             state.restoring = true;

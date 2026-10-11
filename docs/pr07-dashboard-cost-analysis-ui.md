@@ -2,9 +2,10 @@
 
 صفحه `/dashboard` گزارش نسخه ۱ [PR-06](pr06-dashboard-cost-analysis-api.md)
 را به فارسی و RTL ارائه می‌کند. پوسته مشترک، Bootstrap، IRANSansX، مجوز
-`dashboard:READ` و فرمول و دروازه‌های G1–G4 حفظ می‌شوند. حساسیت غیرفعال است؛
+`dashboard:READ` و فرمول و دروازه‌های G1–G4 حفظ می‌شوند. در برش PR-07 حساسیت غیرفعال بود؛
 [PR-08](pr08-dashboard-sensitivity-api.md) تنها registry و API آن را اضافه
-می‌کند و فعال‌سازی رابط به PR-09 تعلق دارد.
+می‌کند و فعال‌سازی رابط در [PR-09](pr09-dashboard-sensitivity-ui.md) ثبت شده است؛
+انتخاب‌ها و lifecycle دو تب مستقل‌اند.
 
 ## انتخاب و دوره
 
