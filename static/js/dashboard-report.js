@@ -232,7 +232,7 @@
         delete target.dataset.state;
     }
 
-    function render(report, root) {
+    function render(report, root, visuals) {
         if (!validate(report)) throw new Error('UNSUPPORTED_REPORT_SCHEMA');
         const target = resolveRoot(root);
         if (!target) throw new Error('REPORT_CONTAINER_MISSING');
@@ -325,7 +325,9 @@
         const tableController = window.DashboardTable.mount(report, detail, { onFocusCleared: () => {
             if (chartController && chartController.clearFocus) chartController.clearFocus();
         } });
-        chartController = window.DashboardCharts.mount(report, chartContainer, {
+        chartController = visuals ? window.DashboardVisuals.cost(report, visuals, chartContainer, {
+            onProductFocus: value => tableController.focus(value), onResetFocus: () => tableController.resetFocus()
+        }) : window.DashboardCharts.mount(report, chartContainer, {
             onProductFocus: value => tableController.focus(value), onResetFocus: () => tableController.resetFocus()
         });
         views.set(target, { table: tableController, charts: chartController });
@@ -466,5 +468,7 @@
         return '\uFEFF' + lines.join('\r\n') + '\r\n';
     }
 
-    window.DashboardReport = Object.freeze({ validate, render, clear, csv, formatDecimal });
+    window.DashboardReport = Object.freeze({ validate, render, clear, csv, formatDecimal,
+        setActive(value) { views.forEach(view => { if (view.charts.setActive) view.charts.setActive(value); else if (value) view.charts.resize(); }); }
+    });
 })(window);

@@ -16,6 +16,10 @@ from utils.product_hierarchy_service import ALL, ProductHierarchyService
 VERSION = "1"
 ZERO = Decimal(0)
 SAFE_MESSAGES = {
+    "ALIASED_EXPERIMENT_PARAMETERS": "عامل‌های آزمایش یک منبع مشترک را کنترل می‌کنند و مستقل نیستند؛ دو پارامتر با منبع متفاوت انتخاب کنید.",
+    "DUPLICATE_PARAMETER_ID": "یک پارامتر نباید در همان سناریو یا محور آزمایش تکرار شود.",
+    "CONFLICTING_SOURCE_OVERRIDES": "دو تغییر پیشنهادی به یک منبع مشترک اشاره دارند؛ یکی را حذف کنید.",
+    "SAMPLE_OUT_OF_DOMAIN": "نقطه آزمایش خارج از دامنه معتبر ورودی است و صفر محسوب نمی‌شود.",
     "PERIOD_NOT_BOUND": "دوره معتبر و فعال برای این کارخانه موجود نیست.",
     "PERIOD_MISMATCH": "بازه درخواست با دوره ثبت‌شده مطابقت ندارد.",
     "INVALID_PERIOD_BINDING": "تنظیمات دوره برنامه‌ریزی معتبر نیست.",

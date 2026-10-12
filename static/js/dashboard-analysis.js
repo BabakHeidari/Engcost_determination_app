@@ -20,6 +20,7 @@
     let analysisSequence = 0, analysisRequest = null, analysisLoading = false;
     let acceptedSnapshot = null, acceptedScope = null;
     let periodMetadata = null;
+    document.addEventListener('dashboard:tabchange', event => report.setActive(event.detail.panel === 'cost'));
 
     const statusMessages = {
         400: 'انتخاب‌ها یا بازه دوره معتبر نیست؛ ورودی‌ها را بررسی کنید.',
@@ -261,18 +262,20 @@
         setStatus(byId('analysisStatus'), 'LOADING', 'در حال محاسبه از منابع مجاز همین کارخانه…');
         updateControls();
         try {
-            const response = await fetch('/api/cost_analysis?' + params, {
+            const response = await fetch('/api/dashboard/cost-analysis/visuals?' + params, {
                 headers: {'Accept': 'application/json'}, signal: analysisRequest.signal, cache: 'no-store'
             });
             const received = await readResponse(response);
             if (sequence !== analysisSequence || scope !== scopeKey()) return;
-            const {status, data} = received;
+            const {status} = received;
+            const envelope = window.DashboardVisuals.adaptCost(received.data);
+            const data = envelope.analysis;
             if (!report.validate(data)) throw {kind: 'SCHEMA', status};
             const matches = scopeMatches(data, params);
             if (status === 200 || status === 422) {
                 if ((status === 200 || data.scope) && !matches) throw {kind: 'SCHEMA', status};
                 const snapshot = freeze(data);
-                report.render(snapshot);
+                report.render(snapshot, undefined, envelope.visuals);
                 // An accepted 422 snapshot can contain valuable excluded rows; access/transport failures never export.
                 if (matches && (status === 200 || data.detail_rows.length > 0)) {
                     acceptedSnapshot = snapshot;
