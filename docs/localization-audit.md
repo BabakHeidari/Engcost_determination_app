@@ -1,5 +1,10 @@
 # fa-IR Persian and RTL Localization Audit
 
+Historical audit note: PR-10 retired the unreferenced Dashboard prototype
+templates `dashboard_newer.html` and `dashboard copy.html`. Their observations
+below are retained as audit history; the active Dashboard is documented in the
+[current user guide](dashboard-visual-analytics-user-guide.md).
+
 ## Audit scope
 
 This audit covers the current Flask application surfaces visible to end users and administrators, including Jinja templates, page-local JavaScript strings, shared static JavaScript, CSS/layout assumptions, Flask JSON/flash messages, dashboard chart/CSV strings, and existing documentation notes about print/PDF/export behavior. This is an audit and planning artifact only; no application code, templates, styles, JavaScript behavior, routes, APIs, data files, schemas, or business logic were changed.

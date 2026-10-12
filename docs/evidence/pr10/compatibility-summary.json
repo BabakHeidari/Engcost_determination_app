@@ -1,0 +1,11 @@
+{
+  "tests": 96,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "passed": 96,
+  "elapsed_seconds": 326.665,
+  "evidence": "compatibility-final.xml",
+  "reproduction_command": "DASHBOARD_CHROMIUM_PATH=/usr/bin/chromium work/pr10-venv/bin/python -m pytest tests/test_dashboard_frontend.py tests/test_dashboard_sensitivity_frontend.py -q --tb=short --junitxml=work/pr10-evidence/compatibility-final.xml",
+  "source_stage": "Prior to final exact-product controller guard; labelled legacy compatibility"
+}

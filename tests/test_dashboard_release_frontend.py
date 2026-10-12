@@ -15,7 +15,7 @@ from pathlib import Path
 import shutil
 import threading
 from time import perf_counter
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import pytest
 from werkzeug.serving import make_server
@@ -474,6 +474,75 @@ def test_malformed_received_document_never_enables_results_or_export(release_ui,
         page.route('**' + LAB, lambda r: r.fulfill(status=200, content_type='application/json', body=json.dumps(body)))
         page.locator('#sens-run').press('Enter'); page.wait_for_function("document.querySelector('#sens-status').dataset.state !== 'LOADING'")
         assert not page.locator('#sens-results').is_visible() and page.locator('#sens-export').is_disabled()
+
+
+def test_exact_product_with_all_parents_rejects_coherent_same_label_other_path(release_ui):
+    ui = release_ui; page = ui['page']; env = ui['analysis']
+    # Same label, distinct authorized paths. The installed prediction resolves A
+    # once by name in each category; both paths have valid V2 category weights.
+    other_category, other_subcategory = 'other-category', 'other-sub'
+    _write(env.factory / other_category / other_subcategory / 'A.json', _bom([2]))
+    metadata_path = env.data / 'Factories/__metadata.json'
+    metadata = json.loads(metadata_path.read_text())
+    metadata['product_hierarchy'][env.factory.name][other_category] = [other_subcategory]
+    _write(metadata_path, metadata)
+    _write(env.factory / 'configuration/category_weights.json', {'data': {
+        'category': ['category', other_category], 'selling_share_of_category': [50, 50],
+    }})
+    ui['checkpoint']()
+    _select(page)
+    # Obtain the opaque references from the actual authorized hierarchy options;
+    # neither the test nor the client decodes a product reference.
+    selected_ref = page.locator('#productSelect option').filter(
+        has_text='A | category / sub').get_attribute('value')
+    other_ref = page.locator('#productSelect option').filter(
+        has_text=f'A | {other_category} / {other_subcategory}').get_attribute('value')
+    assert selected_ref and other_ref and selected_ref != other_ref
+    page.select_option('#productSelect', selected_ref)
+    legitimate, query = analyze(ui)
+    assert query['category'] == query['subcategory'] == ['__ALL__']
+    assert legitimate['analysis']['scope']['selection']['product'] == selected_ref
+    expected = {'factory_id': FACTORY, 'category': 'category', 'subcategory': 'sub', 'product': 'A'}
+    assert legitimate['analysis']['detail_rows'][0]['identity'] == expected
+    assert page.locator('#analysisStatus').get_attribute('data-state') == 'OK'
+    assert page.locator('#costDashboard').is_visible() and page.locator('#downloadCsvBtn').is_enabled()
+    _, rows = downloaded(page, '#downloadCsvBtn')
+    assert [{key: row[key] for key in expected} for row in rows
+            if row['row_type'] == 'configuration'] == [expected]
+    intercepted = []
+    def wrong_path_transport(route):
+        url = urlparse(route.request.url)
+        params = parse_qs(url.query)
+        assert params['category'] == params['subcategory'] == ['__ALL__']
+        assert params['product'] == [selected_ref]
+        params['product'] = [other_ref]
+        # Fetch a genuine Flask visual report with its legitimate other-path
+        # reference. Every nested identity and monetary value stays coherent.
+        response = route.fetch(url=url._replace(query=urlencode(params, doseq=True)).geturl())
+        assert response.status == 200
+        actual = response.json()
+        assert actual['analysis']['state'] == 'OK'
+        assert actual['analysis']['scope']['selection']['product'] == other_ref
+        assert actual['analysis']['detail_rows'][0]['identity'] == {
+            **expected, 'category': other_category, 'subcategory': other_subcategory,
+        }
+        forged = copy.deepcopy(actual)
+        forged['analysis']['scope']['selection']['product'] = selected_ref
+        # Explicitly prove that the sole response edit is the selected reference.
+        restored = copy.deepcopy(forged)
+        restored['analysis']['scope']['selection']['product'] = other_ref
+        assert restored == actual
+        intercepted.append(forged)
+        route.fulfill(response=response, json=forged)
+    page.route('**' + VISUALS + '?*', wrong_path_transport)
+    body, _ = analyze(ui)
+    assert len(intercepted) == 1 and body == intercepted[0]
+    assert page.evaluate('body=>DashboardReport.validate(DashboardVisuals.adaptCost(body).analysis)', body)
+    received_state = (page.locator('#analysisStatus').get_attribute('data-state'),
+                      page.locator('#costDashboard').is_visible(),
+                      page.locator('#downloadCsvBtn').is_disabled(),
+                      page.evaluate('releaseResources().liveCharts'))
+    assert received_state == ('UNAVAILABLE', False, True, 0)
 
 
 def test_repeated_panel_tab_and_report_replacement_disposes_resources(release_ui):

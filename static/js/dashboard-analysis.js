@@ -54,7 +54,11 @@
         select.replaceChildren(option('', placeholder), option(ALL, 'همه'),
             ...options.map(item => {
                 const entry = option(item.id, select === productSelect ? item.label + ' | ' + item.category + ' / ' + item.subcategory : item.label);
-                if (select === productSelect) entry.dataset.productLabel = item.label;
+                if (select === productSelect) {
+                    entry.dataset.productLabel = item.label;
+                    entry.dataset.productCategory = item.category;
+                    entry.dataset.productSubcategory = item.subcategory;
+                }
                 return entry;
             }));
         select.disabled = false;
@@ -244,7 +248,12 @@
         if (!data.scope) return false;
         return data.scope.factory?.id === params.get('factory') &&
             ['category', 'subcategory', 'product'].every(key => data.scope.selection?.[key] === params.get(key)) &&
-            (params.get('product') === ALL || data.detail_rows.every(row => row.identity.product === productSelect.selectedOptions[0]?.dataset.productLabel)) &&
+            (params.get('product') === ALL || data.detail_rows.every(row => {
+                const selected = productSelect.selectedOptions[0]?.dataset;
+                return row.identity.product === selected?.productLabel &&
+                    row.identity.category === selected?.productCategory &&
+                    row.identity.subcategory === selected?.productSubcategory;
+            })) &&
             (!data.period || ((!params.has('period') || data.period.id === params.get('period')) &&
                 (!params.has('start') || data.period.start === params.get('start')) &&
                 (!params.has('end') || data.period.end === params.get('end'))));

@@ -1,5 +1,10 @@
 # PR-09A — current-data visual analytics and shared-baseline lab
 
+PR-09A is now merged as GitHub #45, main
+`fc373ca92e97c91d3d3b4a1a181096cbdf733c37`. The implementation-time results
+below are retained as historical PR evidence. Current hardening, regression,
+dependency and release status is in [PR-10](pr10-dashboard-release-readiness.md).
+
 Base: merged PR-09 / GitHub #44, `fb610755d04561649a6a35ebc3dbd287070bad17`.
 The merged Persian Sensitivity UI was verified before implementation. No PR-10
 work, historical cost-series endpoint, historical snapshots, persistence, source

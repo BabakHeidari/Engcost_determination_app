@@ -46,6 +46,20 @@ def source_hashes(repository):
             for path in sorted(files)}
 
 
+def backend_revision_differences(repository, git_repository, revision):
+    names = subprocess.check_output(["git", "-C", str(git_repository), "ls-tree", "-r", "--name-only", revision],
+                                    text=True).splitlines()
+    expected = {name for name in names if name == "app.py" or
+                (name.startswith(("modules/", "utils/")) and name.endswith(".py"))}
+    captured = source_hashes(repository)
+    changed = set(captured).symmetric_difference(expected)
+    for name in set(captured).intersection(expected):
+        original = subprocess.check_output(["git", "-C", str(git_repository), "show", f"{revision}:{name}"])
+        if hashlib.sha256(original).hexdigest() != captured[name]:
+            changed.add(name)
+    return sorted(changed)
+
+
 def revision_metadata(repository, archive_revision):
     """Do not accidentally describe an archive using its parent Git checkout."""
     result = subprocess.run(["git", "-C", str(repository), "rev-parse", "--show-toplevel"],
@@ -54,9 +68,13 @@ def revision_metadata(repository, archive_revision):
     if own_checkout:
         if archive_revision:
             raise ValueError("--archive-revision is only valid for a source archive")
+        revision = subprocess.check_output(["git", "-C", str(repository), "rev-parse", "HEAD"], text=True).strip()
+        changed_backend = backend_revision_differences(repository, repository, revision)
         return {"source_kind": "git_checkout",
-                "revision": subprocess.check_output(["git", "-C", str(repository), "rev-parse", "HEAD"], text=True).strip(),
-                "tracked_changes": bool(subprocess.check_output(["git", "-C", str(repository), "diff", "--name-only"], text=True).strip())}
+                "revision": revision,
+                "tracked_changes": bool(subprocess.check_output(["git", "-C", str(repository), "diff", "--name-only"], text=True).strip()),
+                "backend_sources_match_revision": not changed_backend,
+                "changed_backend_sources": changed_backend}
     if not archive_revision:
         return {"source_kind": "source_archive", "revision": None, "tracked_changes": None}
     # The harness checkout supplies Git objects solely to verify provenance;
@@ -64,22 +82,12 @@ def revision_metadata(repository, archive_revision):
     harness_repository = Path(__file__).resolve().parents[1]
     revision = subprocess.check_output(["git", "-C", str(harness_repository), "rev-parse",
                                         "--verify", archive_revision + "^{commit}"], text=True).strip()
-    names = subprocess.check_output(["git", "-C", str(harness_repository), "ls-tree", "-r", "--name-only", revision],
-                                    text=True).splitlines()
-    expected = {name for name in names if name == "app.py" or
-                (name.startswith(("modules/", "utils/")) and name.endswith(".py"))}
-    captured = source_hashes(repository)
-    if set(captured) != expected:
-        raise ValueError("Source archive backend file population differs from the selected Git revision")
-    changed = []
-    for name, digest in captured.items():
-        original = subprocess.check_output(["git", "-C", str(harness_repository), "show", f"{revision}:{name}"])
-        if hashlib.sha256(original).hexdigest() != digest:
-            changed.append(name)
+    changed = backend_revision_differences(repository, harness_repository, revision)
     if changed:
         raise ValueError(f"Source archive differs from {revision}: {', '.join(changed)}")
     return {"source_kind": "verified_source_archive", "revision": revision,
-            "tracked_changes": False, "archive_backend_sources_verified": True}
+            "tracked_changes": False, "archive_backend_sources_verified": True,
+            "backend_sources_match_revision": True, "changed_backend_sources": []}
 
 
 def build_cases(fixture, client):
