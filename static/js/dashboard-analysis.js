@@ -52,8 +52,11 @@
     }
     function fillSelect(select, options, placeholder, previous) {
         select.replaceChildren(option('', placeholder), option(ALL, 'همه'),
-            ...options.map(item => option(item.id, select === productSelect ?
-                item.label + ' | ' + item.category + ' / ' + item.subcategory : item.label)));
+            ...options.map(item => {
+                const entry = option(item.id, select === productSelect ? item.label + ' | ' + item.category + ' / ' + item.subcategory : item.label);
+                if (select === productSelect) entry.dataset.productLabel = item.label;
+                return entry;
+            }));
         select.disabled = false;
         if ([ALL, ...options.map(item => item.id)].includes(previous)) select.value = previous;
     }
@@ -241,6 +244,7 @@
         if (!data.scope) return false;
         return data.scope.factory?.id === params.get('factory') &&
             ['category', 'subcategory', 'product'].every(key => data.scope.selection?.[key] === params.get(key)) &&
+            (params.get('product') === ALL || data.detail_rows.every(row => row.identity.product === productSelect.selectedOptions[0]?.dataset.productLabel)) &&
             (!data.period || ((!params.has('period') || data.period.id === params.get('period')) &&
                 (!params.has('start') || data.period.start === params.get('start')) &&
                 (!params.has('end') || data.period.end === params.get('end'))));
@@ -268,7 +272,9 @@
             const received = await readResponse(response);
             if (sequence !== analysisSequence || scope !== scopeKey()) return;
             const {status} = received;
-            const envelope = window.DashboardVisuals.adaptCost(received.data);
+            let envelope;
+            try { envelope = window.DashboardVisuals.adaptCost(received.data); }
+            catch (_) { throw {kind: 'SCHEMA', status}; }
             const data = envelope.analysis;
             if (!report.validate(data)) throw {kind: 'SCHEMA', status};
             const matches = scopeMatches(data, params);
@@ -328,6 +334,11 @@
         link.click();
         link.remove();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    window.addEventListener('pagehide', () => {
+        analysisSequence += 1; requestSequence += 1;
+        analysisRequest?.abort(); activeRequest?.abort(); report.clear();
+        window.DashboardNumbers.dispose(document);
     });
     updateControls();
 })(window, document);

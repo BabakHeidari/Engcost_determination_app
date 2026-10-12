@@ -145,7 +145,7 @@
         if (!array(value.breakdown.driver_components, row => keys(row, ['pool_id', 'per_unit_contribution', 'product_period_contribution', ...rawFields]) &&
             POOLS.includes(row.pool_id) && ['per_unit_contribution', 'product_period_contribution', ...rawFields].every(key => decimal(row[key]))) ||
             !unique(value.breakdown.driver_components.map(row => row.pool_id))) return false;
-        return value.state === 'OK' ? value.issues.length === 0 : value.issues.length > 0 &&
+        return value.state === 'OK' ? value.issues.length === 0 && value.breakdown.driver_components.length === POOLS.length : value.issues.length > 0 &&
             value.breakdown.bom_components.length === 0 && value.breakdown.driver_components.length === 0;
     }
     function delta(value) {

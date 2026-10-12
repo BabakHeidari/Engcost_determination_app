@@ -4,7 +4,9 @@ from pathlib import Path
 import pytest
 
 from utils.costing_engine import FACTORY_POOL_IDS
+from utils.factory_configuration import ensure_factory_configuration_v2
 from utils.profile_store import ProfileDataStore
+from html_contract import javascript_json
 
 
 def _write(path, value):
@@ -43,15 +45,23 @@ def workflow(tmp_path, monkeypatch):
     _write(factory / "category_weights.json", {"data": {"category": ["category"], "selling_share_of_category": [50]}})
     _write(factory / "ProductionPrediction.json", {"data": {"Product Name": ["A", "B"], "Predicted Production": [10, 10]}})
     for pool in FACTORY_POOL_IDS:
-        _write(factory / f"Factory_Data_{pool}.json", {"data": {"cost": [1000 if pool == "Payroll" else 0]}})
+        _write(factory / f"Factory_Data_{pool}.json", {"data": {
+            "subject": ["fixture"], "cost": [1000 if pool == "Payroll" else 0],
+        }})
+    # Deliberate fixture preparation installs the approved V2 sources before
+    # request assertions. Legacy detailed pools require a subject column.
+    ensure_factory_configuration_v2("factory-canonical", "legacy-folder", data_root=data, persist=True)
     sources = ["materials", "bom", "weights", "predictions", *(f"pool:{item}" for item in FACTORY_POOL_IDS)]
     binding = tmp_path / "costing_period_bindings.json"
     _write(binding, {"bindings": [{"factory_id": "factory-canonical", "period_id": "P", "active": True,
                                     "approved": True, "status": "ACTIVE",
                                     "start": "2026-10-01", "end": "2026-12-31", "sources": sources}]})
     monkeypatch.setattr("modules.cost_calculation.routes.product_path", str(catalogue.with_suffix("")))
-    app_module.app.config.update(TESTING=True, APP_DATA_FILE=str(profiles), SECRET_KEY="test",
-                                 COSTING_DATA_ROOT=str(data), COSTING_PERIOD_BINDINGS_FILE=str(binding))
+    for key, value in {
+        "TESTING": True, "APP_DATA_FILE": str(profiles), "SECRET_KEY": "test",
+        "COSTING_DATA_ROOT": str(data), "COSTING_PERIOD_BINDINGS_FILE": str(binding),
+    }.items():
+        monkeypatch.setitem(app_module.app.config, key, value)
     client = app_module.app.test_client()
     with client.session_transaction() as session:
         session["user_id"] = "cost-user"
@@ -69,7 +79,9 @@ def test_catalogue_maps_operational_key_to_canonical_id_and_hides_unauthorized(w
     page = client.get("/cost/cost_calculation")
     assert page.status_code == 200
     text = page.get_data(as_text=True)
-    assert "factory-canonical" in text and "کارخانه آزمون" in text
+    rows = javascript_json(text, "tableJSON")
+    assert rows == [{"Factory": "factory-canonical", "Factory_Label": "کارخانه آزمون",
+                     "Category": "category", "Subcategory": "sub", "Product_Name": "A"}]
     assert "legacy-folder" not in text and "factory-secret" not in text and "Hidden" not in text
 
 
@@ -103,7 +115,7 @@ def test_missing_binding_is_typed_actionable_and_never_zero(workflow):
 
 def test_missing_source_response_exposes_diagnostic_without_zero_fallback(workflow):
     app, client, _ = workflow
-    payroll = Path(app.config["COSTING_DATA_ROOT"]) / "Factories" / "legacy-folder" / "Factory_Data_Payroll.json"
+    payroll = Path(app.config["COSTING_DATA_ROOT"]) / "Factories" / "legacy-folder" / "configuration" / "cost_pools" / "Payroll.json"
     payroll.unlink()
 
     response = client.post("/cost/get_cost", json=_payload())
@@ -112,7 +124,7 @@ def test_missing_source_response_exposes_diagnostic_without_zero_fallback(workfl
     error = response.get_json()["error"]
     assert error["message"] == "منبع مورد نیاز برای محاسبه پیدا نشد."
     assert error["missing_source"] == "pool:Payroll"
-    assert error["expected_path"].endswith("Factory_Data_Payroll.json")
+    assert error["expected_path"].endswith("configuration/cost_pools/Payroll.json")
     assert "materials" in error["available_sources"]
     assert error["source_diagnostic"]["missing_sources"][0]["reason"] == "file not found"
     assert "Final_Production_Cost" not in response.get_json()
@@ -150,7 +162,7 @@ def test_frontend_distinguishes_failures_zero_and_stale_responses(workflow):
     page = client.get("/cost/cost_calculation").get_data(as_text=True)
     for marker in ('kind: "network"', 'response.status === 400', 'response.status === 403',
                    'response.status === 404', 'response.status === 422', 'response.status >= 500',
-                   'kind: "invalid-json"', 'kind: "non-json"', 'sequence !== calculationSequence'):
+                   'kind: "invalid-json"', '? "auth" : "non-json"', 'sequence !== calculationSequence'):
         assert marker in page
     assert "Final_Production_Cost ?? 0" not in page
     assert "داده‌های هزینه بارگذاری نشد. ممکن است Backend" not in page

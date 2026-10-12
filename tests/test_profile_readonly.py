@@ -16,7 +16,8 @@ def add_user(store, user_id, role, factory_id=None, full_name=None):
         "email": f"{user_id}@example.com",
         "full_name": full_name or user_id,
         "system_role": role, "job_title": full_name or "",
-        "access_grants": ([{"scope_type": "FACTORY", "factory_id": factory_id, "module": "product", "permissions": ["READ"]}] if factory_id else []),
+        "access_grants": ([{"scope_type": "FACTORY", "factory_id": factory_id, "module": "product", "permissions": ["READ"]}] if factory_id else [])
+        + ([{"scope_type": "GLOBAL", "factory_id": None, "module": "profile", "permissions": ["READ"]}] if role == "USER" else []),
         "is_active": True,
         "must_change_password": False,
         "password_hash": f"scrypt:secret-{user_id}",
@@ -69,21 +70,27 @@ def test_authenticated_profile_uses_json_and_never_exposes_hash(profile_app):
 
 
 def test_non_admin_sees_only_self(profile_app):
-    body = authenticated_client(profile_app[0], "usr_office").get("/profile/profile").get_data(as_text=True)
+    response = authenticated_client(profile_app[0], "usr_office").get("/profile/profile")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
     assert "کارشناس ستادی" in body
     assert "مدیر واقعی" not in body
     assert "کارشناس کارخانه الف" not in body
 
 
 def test_ordinary_user_sees_only_self_and_real_audit(profile_app):
-    body = authenticated_client(profile_app[0], "usr_a_admin").get("/profile/profile").get_data(as_text=True)
+    response = authenticated_client(profile_app[0], "usr_a_admin").get("/profile/profile")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
     assert "مدیر کارخانه الف" in body
     assert "کارشناس کارخانه الف" not in body and "کارشناس کارخانه ب" not in body and "واقعی ب" not in body
     assert "profile.viewed" in body
 
 
 def test_empty_history_is_truthful_and_page_is_read_only(profile_app):
-    body = authenticated_client(profile_app[0], "usr_office").get("/profile/profile").get_data(as_text=True)
+    response = authenticated_client(profile_app[0], "usr_office").get("/profile/profile")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
     assert "هنوز رویداد واقعی برای نمایش ثبت نشده است." in body
     assert "فقط برای مشاهده اطلاعات است" in body
     assert "افزودن کاربر" not in body
@@ -91,7 +98,9 @@ def test_empty_history_is_truthful_and_page_is_read_only(profile_app):
 
 
 def test_no_demo_fallback_and_persian_rtl_remain(profile_app):
-    body = authenticated_client(profile_app[0], "usr_office").get("/profile/profile").get_data(as_text=True)
+    response = authenticated_client(profile_app[0], "usr_office").get("/profile/profile")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
     assert 'dir="rtl"' in body
     assert "پروفایل کاربر" in body and "دسترسی‌های مؤثر" in body
     for fake in ("کارخانه آلفا", "کارخانه بتا", "تغییر کاربر", "Math.random", "DEFAULT_USERS"):
@@ -113,4 +122,7 @@ def test_safe_view_model_contains_no_secret_keys(profile_app):
     model = build_profile_view_model(store, store.get_user_by_id("usr_admin"))
     serialized = json.dumps(model)
     assert "password" not in serialized.casefold()
-    assert "revision" not in serialized.casefold()
+    # Revision is public optimistic-concurrency metadata, required by the
+    # approved administrative editor; secret authentication values are absent.
+    assert model["current_user"]["revision"] == 1
+    assert not any(key in serialized.casefold() for key in ("password_hash", "reset_token", "session_id"))

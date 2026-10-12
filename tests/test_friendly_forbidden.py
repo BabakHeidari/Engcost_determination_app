@@ -106,7 +106,7 @@ def test_authentication_redirect_and_authorization_403_remain_distinct(app_store
     ("grants", "expected_href", "expected_label"),
     [
         ([grant("desk")], "/workdesk", "رفتن به میز کار"),
-        ([grant("profile")], "/profile/profile", "رفتن به بخش در دسترس"),
+        ([grant("profile")], "/workdesk", "رفتن به میز کار"),
         ([], "/workdesk", "رفتن به میز کار"),
     ],
 )
@@ -116,8 +116,8 @@ def test_safe_fallback_uses_effective_access(app_store, grants, expected_href, e
     body = response.get_data(as_text=True)
 
     assert response.status_code == 403
-    assert f'href="{expected_href}"' in body
-    assert expected_label in body
+    assert f'<a class="btn btn-primary" href="{expected_href}">{expected_label}</a>' in body
+    assert client.get(expected_href).status_code == 200
 
 
 def test_top_level_admin_fallback_is_desk(app_store):

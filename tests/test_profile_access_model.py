@@ -93,10 +93,11 @@ def test_visual_access_round_trip_multiple_scopes_and_normalizes_duplicates():
 
 def test_profile_template_uses_visual_selector_not_raw_json():
     template = open("templates/profile/profile.html", encoding="utf-8").read()
+    script = open("static/js/profile-page.js", encoding="utf-8").read()
     assert 'name="access_grants"' not in template
     assert "grant-row" not in template
     assert "profile-access-manager.js" in template
-    assert "form.elements.expected_revision.value = user.revision" in template
+    assert "editForm.elements.expected_revision.value = user.revision" in script
     assert "user['expected_revision']" not in template
 
 

@@ -1,4 +1,4 @@
-"""Real Chromium checks of the authorized Dashboard and its shipped assets.
+"""Legacy PR-07 compatibility checks, with explicit test-only caller adapters.
 
 Install the optional ``playwright`` package and Chromium to run these checks.
 No application startup or repository Data files are used: the API fixture from
@@ -52,7 +52,7 @@ def ui(analysis, monkeypatch, browser, request):
     app.add_url_rule("/logout", endpoint="auth.logout", view_func=lambda: "logout")
     app.context_processor(lambda: {"module_navigation": {"dashboard": True}, "user": "کاربر آزمون"})
     monkeypatch.setattr("modules.dashboard.routes.ProductHierarchyService",
-                        lambda: ProductHierarchyService(analysis.data / "Factories"))
+                        lambda *args, **kwargs: ProductHierarchyService(analysis.data / "Factories"))
     server = make_server("127.0.0.1", 0, app, threaded=True)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -66,6 +66,9 @@ def ui(analysis, monkeypatch, browser, request):
     page.set_default_timeout(6000)
     errors = []
     page.on("pageerror", lambda error: errors.append(str(error)))
+    # Compatibility suites deliberately exercise chart fallback by default.
+    # The PR-10 primary suite serves the pinned local vendor without this route.
+    page.route("**/static/vendor/echarts/echarts-5.6.0.min.js", lambda route: route.abort())
     # Offline chart fallback is an explicit supported mode; all local assets and
     # all Flask requests still execute. No remote resources are necessary.
     page.route("https://**/*", lambda route: route.abort())
@@ -147,12 +150,10 @@ def _download(page):
 
 
 def _real_echarts(page):
-    library = Path(os.environ.get("DASHBOARD_ECHARTS_PATH", ROOT / "work" / "vendor" / "echarts.min.js"))
-    if not library.is_file():
-        pytest.skip("Real chart checks require a cached ECharts library or DASHBOARD_ECHARTS_PATH")
-    page.route("https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js",
-               lambda route: route.fulfill(content_type="application/javascript", body=library.read_bytes()))
+    # Explicitly opt into the same pinned local library shipped by the page.
+    page.unroute("**/static/vendor/echarts/echarts-5.6.0.min.js")
     page.reload(wait_until="networkidle")
+    assert page.evaluate("window.echarts && echarts.version") == "5.6.0"
 
 
 def _chart_options(page):
@@ -175,6 +176,26 @@ def _clipboard(page):
     }""")
 
 
+def _rename_synthetic_identity(report, row, **changes):
+    """Keep the public references consistent when testing hostile labels."""
+    previous = copy.deepcopy(row["identity"])
+    row["identity"].update(**changes)
+    for item in (*report["source_lineage"], *report["issues"],
+                 *(issue for detail in report["detail_rows"] for issue in detail["issues"])):
+        if item.get("identity") == previous:
+            item["identity"] = copy.deepcopy(row["identity"])
+    if previous["category"] != row["identity"]["category"]:
+        calculated_categories = {detail["identity"]["category"] for detail in report["detail_rows"]
+                                 if detail["state"] == "OK"}
+        for pool in report["breakdowns"]["factory_pools"]:
+            original = next(item for item in pool["categories"] if item["category"] == previous["category"])
+            if not any(item["category"] == row["identity"]["category"] for item in pool["categories"]):
+                renamed = copy.deepcopy(original)
+                renamed["category"] = row["identity"]["category"]
+                pool["categories"].append(renamed)
+            pool["categories"] = [item for item in pool["categories"] if item["category"] in calculated_categories]
+
+
 def _expand_report(report, count=27):
     """Independent composite identities, repeated names and safe-precision gaps."""
     original = copy.deepcopy(report["detail_rows"][0])
@@ -192,6 +213,26 @@ def _expand_report(report, count=27):
     report["kpis"].update(matched_configuration_count=count, projected_total="156039333333")
     report["kpis"]["weighted_average"].update(value="9007199254740993.12345678901234567890",
                                                 numerator="156039333333", denominator="378.000")
+    report["arithmetic_reconciliation"]["projected_rows_total"] = "156039333333"
+    # The expanded fixture represents new selected composite configurations.
+    # Preserve their public source fingerprints while assigning each cloned
+    # product source and pool category to an actual selected identity.
+    lineage = []
+    for source in report["source_lineage"]:
+        if "identity" not in source:
+            lineage.append(source)
+        elif source["identity"] == original["identity"]:
+            for row in rows:
+                cloned = copy.deepcopy(source)
+                cloned["identity"] = copy.deepcopy(row["identity"])
+                lineage.append(cloned)
+    report["source_lineage"] = lineage
+    categories = list(dict.fromkeys(row["identity"]["category"] for row in rows))
+    for pool in report["breakdowns"]["factory_pools"]:
+        original_category = next(item for item in pool["categories"]
+                                 if item["category"] == original["identity"]["category"])
+        pool["categories"] = [{**copy.deepcopy(original_category), "category": category}
+                              for category in categories]
     for owner in (report["kpis"]["weighted_average"], report["kpis"]["top_cost_driver"],
                   *report["breakdowns"]["factory_pools"]):
         if "coverage" in owner:
@@ -480,11 +521,13 @@ def test_high_precision_ties_html_text_and_csv_injection_are_preserved_safely(ui
                                              tie=True, tied_ids=["BOM", "Depriciation"])
     report["arithmetic_reconciliation"]["difference"] = negative
     first, second = report["detail_rows"]
-    first["identity"].update(category='<img src=x onerror="window.xss=1">',
-                             subcategory="@خطر", product='=SUM(1,2)\n"محصول فارسی"')
+    _rename_synthetic_identity(report, first, category='<img src=x onerror="window.xss=1">',
+                               subcategory="@خطر", product='=SUM(1,2)\n"محصول فارسی"')
     first.update(unit_cost=negative, prediction="-10", projected_cost=large)
-    second["identity"].update(category="-2+3", product="<script>window.xss=1</script>")
+    _rename_synthetic_identity(report, second, category="-2+3", product="<script>window.xss=1</script>")
     report["breakdowns"]["products"] = copy.deepcopy(report["detail_rows"])
+    report["breakdowns"]["drivers"][0].update(value=large, share=None)
+    report["arithmetic_reconciliation"]["projected_rows_total"] = large
     _fulfill(page, report)
     _analyze(page)
     assert page.locator("#totalCost[data-raw]").get_attribute("data-raw") == large
@@ -706,6 +749,8 @@ def test_exact_value_hover_keyboard_copy_and_mobile_portal(ui):
     precise = "9007199254740993.12345678901234567890"
     report["kpis"]["projected_total"] = "156039333333"
     report["kpis"]["weighted_average"]["value"] = precise
+    report["kpis"]["weighted_average"]["numerator"] = "156039333333"
+    report["arithmetic_reconciliation"]["projected_rows_total"] = "156039333333"
     _fulfill(page, report)
     _analyze(page)
     _clipboard(page)
@@ -801,7 +846,8 @@ def test_table_exact_sort_search_pagination_and_csv_use_full_accepted_snapshot(u
     report = _expand_report(_request(ui["analysis"]).get_json())
     excluded = report["detail_rows"][-1]
     excluded.update(state="INVALID_INPUT", unit_cost=None, prediction=None, projected_cost=None,
-                    bom_total=None, issues=[{"state": "INVALID_INPUT", "code": "INVALID_PERCENTAGE",
+                    bom_total=None, bom_components=[], driver_components=[],
+                    issues=[{"state": "INVALID_INPUT", "code": "INVALID_PERCENTAGE",
                                              "message": "درصد ضایعات این پیکربندی نامعتبر است."}])
     report["breakdowns"]["products"] = copy.deepcopy(report["detail_rows"][:-1])
     report.update(state="PARTIAL")
@@ -809,6 +855,9 @@ def test_table_exact_sort_search_pagination_and_csv_use_full_accepted_snapshot(u
     report["kpis"].update(projected_total=None, partial_total="156039333333", partial_total_label="مجموع جزئی")
     report["kpis"]["weighted_average"]["state"] = "PARTIAL"
     report["kpis"]["top_cost_driver"]["state"] = "PARTIAL"
+    for owner in (report["kpis"]["weighted_average"], report["kpis"]["top_cost_driver"],
+                  *report["breakdowns"]["factory_pools"]):
+        owner["coverage"] = copy.deepcopy(report["coverage"])
     _fulfill(page, report)
     _analyze(page)
     requests = []
@@ -866,6 +915,8 @@ def test_real_signed_and_zero_driver_charts_retain_backend_shares_and_all_groups
             driver["value"] = ["-100.0000000000000000000001", "250.0000000000000000000001"][index] if index < 2 else "0.000"
             driver["share"] = ["-66.66666666666666666666666667", "166.6666666666666666666666667"][index] if index < 2 else "0"
         report["kpis"]["projected_total"] = "150"
+        report["kpis"]["weighted_average"]["numerator"] = "150"
+        report["arithmetic_reconciliation"]["projected_rows_total"] = "150"
         report["kpis"]["top_cost_driver"].update(id=report["breakdowns"]["drivers"][1]["id"],
             value="250.0000000000000000000001", share="166.6666666666666666666666667",
             tied_ids=[report["breakdowns"]["drivers"][1]["id"]])
@@ -902,7 +953,8 @@ def test_real_many_product_chart_focus_reset_dominant_bom_and_safe_tooltips(ui):
     # A low contribution stays discoverable without inflating its visual share.
     for driver in report["breakdowns"]["drivers"][1:]:
         driver.update(value="0.50000000000000000001", share="0.00000000032043041111")
-    report["detail_rows"][0]["identity"]["product"] = '<img src=x onerror="window.xss=1">'
+    _rename_synthetic_identity(report, report["detail_rows"][0],
+                               product='<img src=x onerror="window.xss=1">')
     report["breakdowns"]["products"] = copy.deepcopy(report["detail_rows"])
     _fulfill(page, report)
     _analyze(page)

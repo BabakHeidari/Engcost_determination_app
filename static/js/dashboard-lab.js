@@ -9,32 +9,119 @@
         const side=raw.scenarios.find(s=>s.id===id),d=raw.comparisons[id+'_minus_baseline'].unit_cost;
         return w.DashboardSensitivityModel.adapt(oldReport(raw,side.result,{amount:d.amount,percentage:d.percentage,percentage_state:d.percentage_state,unit:'IRR/product',direction:'scenario_minus_baseline'},side.effective_overrides));
     }
-    function delta(d,unit,direction){return d&&d.unit===unit&&d.direction===direction&&['amount','reference','target','percentage_denominator'].every(k=>decimal(d[k]))&&
-        (d.percentage_state==='OK'?decimal(d.percentage):d.percentage_state==='NOT_APPLICABLE'&&d.percentage===null);}
-    function adapt(raw){
-        if(raw?.state!=='OK')return {context:w.DashboardSensitivityModel.adapt(raw),lab:null};
-        if(raw.visual_version!=='1'||!Array.isArray(raw.scenarios)||raw.scenarios.length!==2||new Set(raw.scenarios.map(s=>s.id)).size!==2||!['A','B'].every(id=>raw.scenarios.some(s=>s.id===id)))throw Error('LAB_SCHEMA');
-        for(const direction of ['A_minus_baseline','B_minus_baseline','B_minus_A']){
-            const c=raw.comparisons?.[direction],f=c?.waterfall;
-            if(!delta(c?.unit_cost,'IRR/product',direction)||!delta(c?.projected_cost,'IRR/period',direction)||f?.unit!=='IRR/product'||f.direction!==direction||
-                !['reference','target','reconciliation'].every(k=>decimal(f[k]))||!Array.isArray(f.components)||f.components.length!==7||
-                ![...f.components,f.technical_reconciliation].every(r=>r&&typeof r.id==='string'&&['value','start','end','offset','size'].every(k=>decimal(r[k]))))throw Error('LAB_SCHEMA');
-        }
-        const a=adaptedSide(raw,'A');adaptedSide(raw,'B');
-        const e=raw.experiment;
-        if(e){
-            if(!['tornado','one_factor','two_factor'].includes(e.type)||!Array.isArray(e.points)||e.points.length>121||e.reference!=='captured_baseline_other_inputs_fixed'||
-                e.valid_count!==e.points.filter(p=>p.state==='OK').length||e.invalid_count!==e.points.filter(p=>p.state!=='OK').length)throw Error('LAB_SCHEMA');
-            for(const p of e.points){
-                if(!Array.isArray(p.inputs)||!p.inputs.every(i=>raw.parameters.some(r=>r.parameter_id===i.parameter_id&&r.unit===i.unit)&&['absolute','percent_change'].includes(i.mode)&&decimal(i.value)&&decimal(i.final_value))||
-                    !(p.state==='OK'?decimal(p.unit_cost)&&decimal(p.projected_cost)&&delta(p.unit_delta,'IRR/product','point_minus_baseline')&&delta(p.projected_delta,'IRR/period','point_minus_baseline'):p.state==='INVALID_INPUT'&&p.unit_cost===null&&p.projected_cost===null))throw Error('LAB_SCHEMA');
+    const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+    const keys = (v, required) => object(v) && required.every(k => Object.hasOwn(v, k)) && Object.keys(v).every(k => required.includes(k));
+    const unique = values => new Set(values).size === values.length;
+    const count = v => Number.isSafeInteger(v) && v >= 0;
+    const factors = ['BOM', 'AdministrativeandResearch', 'Payroll', 'Overhead', 'FinancialCosts', 'Depriciation', 'NonOperationalCostsandIncomes'];
+    const zero = v => w.DashboardNumbers.compare(v, '0') === 0;
+    const nonnegative = v => w.DashboardNumbers.compare(v, '0') >= 0;
+    function delta(d, unit, direction, reference, target) {
+        return keys(d, ['amount', 'reference', 'target', 'unit', 'direction', 'percentage_denominator', 'percentage', 'percentage_state']) &&
+            d.unit === unit && d.direction === direction && ['amount', 'reference', 'target', 'percentage_denominator'].every(k => decimal(d[k])) &&
+            d.reference === reference && d.target === target && d.percentage_denominator === reference &&
+            (zero(reference) ? d.percentage_state === 'NOT_APPLICABLE' && d.percentage === null : d.percentage_state === 'OK' && decimal(d.percentage));
+    }
+    function adapt(raw) {
+        if (raw?.state !== 'OK') return {context:w.DashboardSensitivityModel.adapt(raw), lab:null};
+        const invalid = () => { throw Error('LAB_SCHEMA'); };
+        if (!keys(raw, [...fields, 'visual_version', 'scenarios', 'comparisons', 'experiment', 'evaluation_budget', 'baseline_context']) ||
+            raw.visual_version !== '1' || raw.baseline_context !== 'fresh_inputs_captured_once_for_this_request' ||
+            !Array.isArray(raw.scenarios) || raw.scenarios.length !== 2 || !unique(raw.scenarios.map(s => s?.id)) ||
+            !raw.scenarios.every(s => keys(s, ['id', 'result', 'effective_overrides']) && ['A', 'B'].includes(s.id)) ||
+            !keys(raw.comparisons, ['A_minus_baseline', 'B_minus_baseline', 'B_minus_A'])) invalid();
+        const aResult = raw.scenarios.find(s => s.id === 'A').result, bResult = raw.scenarios.find(s => s.id === 'B').result;
+        for (const [direction, reference, target] of [['A_minus_baseline', raw.baseline, aResult], ['B_minus_baseline', raw.baseline, bResult], ['B_minus_A', aResult, bResult]]) {
+            const c = raw.comparisons[direction], f = c?.waterfall;
+            if (!reference || !target || !keys(c, ['unit_cost', 'projected_cost', 'waterfall']) ||
+                !delta(c.unit_cost, 'IRR/product', direction, reference.unit_cost, target.unit_cost) ||
+                !delta(c.projected_cost, 'IRR/period', direction, reference.projected_cost, target.projected_cost) ||
+                !keys(f, ['reference', 'target', 'components', 'technical_reconciliation', 'reconciliation', 'unit', 'direction', 'meaning']) ||
+                f.unit !== 'IRR/product' || f.direction !== direction || f.meaning !== 'output_component_differences_not_independent_input_effects' ||
+                f.reference !== reference.unit_cost || f.target !== target.unit_cost || !decimal(f.reconciliation) ||
+                !Array.isArray(f.components) || f.components.length !== 7 || !unique(f.components.map(r => r?.id)) || !f.components.every(r => factors.includes(r?.id)) ||
+                f.technical_reconciliation?.id !== 'TECHNICAL_RECONCILIATION' || f.technical_reconciliation.value !== f.reconciliation) invalid();
+            let previous = f.reference;
+            for (const row of [...f.components, f.technical_reconciliation]) {
+                if (!keys(row, ['id', 'value', 'start', 'end', 'offset', 'size']) || !['value', 'start', 'end', 'offset', 'size'].every(k => decimal(row[k])) ||
+                    row.start !== previous || !nonnegative(row.size)) invalid();
+                previous = row.end;
             }
-            if(e.type==='tornado'&&(!Array.isArray(e.ranking)||e.ranking.length>10||!e.ranking.every(r=>raw.parameters.some(p=>p.parameter_id===r.parameter_id)&&
-                (r.state==='OK'?decimal(r.impact):r.state==='INVALID_INPUT'&&r.impact===null))))throw Error('LAB_SCHEMA');
         }
-        const budget=raw.evaluation_budget;if(!budget||!Number.isInteger(budget.reserved)||budget.reserved>200||budget.reserved!==3+(e?.points.length||0)||!Number.isInteger(budget.executed)||budget.executed>budget.reserved)throw Error('LAB_SCHEMA');
-        const frozen=JSON.parse(JSON.stringify(raw));function freeze(v){if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}return v;}
-        return {context:a,lab:freeze(frozen)};
+        // The established PR-08 validator enforces registry/grant redaction on
+        // both results. Extensions below never infer or reconstruct source inputs.
+        const a = adaptedSide(raw, 'A'); adaptedSide(raw, 'B');
+        if (a.baseline.state !== 'OK' || a.scenario.state !== 'OK' || bResult.state !== 'OK') invalid();
+        const registry = new Map(a.parameters.map(p => [p.parameter_id, p]));
+        function input(i) {
+            const p = registry.get(i?.parameter_id);
+            return keys(i, ['parameter_id', 'mode', 'value', 'unit', 'final_value']) && p && p.unit === i.unit && p.supported_modes.includes(i.mode) && decimal(i.value) && decimal(i.final_value);
+        }
+        function effective(i, inputs) {
+            const p = registry.get(i?.parameter_id), supplied = inputs.find(v => v.parameter_id === i?.parameter_id);
+            return keys(i, ['parameter_id', 'mode', 'value', 'baseline_value', 'final_value', 'unit', 'provenance_state']) && p && supplied &&
+                i.provenance_state === 'HYPOTHETICAL_OVERRIDE' && ['value', 'baseline_value', 'final_value'].every(k => decimal(i[k])) &&
+                ['mode', 'value', 'final_value', 'unit'].every(k => i[k] === supplied[k]) && i.baseline_value === p.baseline_value;
+        }
+        const e = raw.experiment;
+        if (e !== null) {
+            if (!['tornado', 'one_factor', 'two_factor'].includes(e?.type) ||
+                !keys(e, ['type', 'points', 'valid_count', 'invalid_count', 'unit_cost_unit', 'projected_cost_unit', 'reference', ...(e.type === 'tornado' ? ['ranking'] : [])]) ||
+                !Array.isArray(e.points) || !e.points.length || e.points.length > ({tornado:20, one_factor:41, two_factor:121}[e.type]) ||
+                e.reference !== 'captured_baseline_other_inputs_fixed' || e.unit_cost_unit !== 'IRR/product' || e.projected_cost_unit !== 'IRR/period' ||
+                !count(e.valid_count) || !count(e.invalid_count) || e.valid_count !== e.points.filter(p => p.state === 'OK').length ||
+                e.invalid_count !== e.points.filter(p => p.state === 'INVALID_INPUT').length || e.valid_count + e.invalid_count !== e.points.length) invalid();
+            for (const p of e.points) {
+                const valid = p?.state === 'OK';
+                if (!keys(p, ['inputs', e.type === 'tornado' ? 'side' : 'indices', 'state', 'unit_cost', 'projected_cost', 'effective_inputs', 'issue', ...(valid ? ['unit_delta', 'projected_delta'] : [])]) ||
+                    !Array.isArray(p.inputs) || p.inputs.length !== (e.type === 'two_factor' ? 2 : 1) || !p.inputs.every(input) || !unique(p.inputs.map(i => i.parameter_id)) ||
+                    !Array.isArray(p.effective_inputs) || !unique(p.effective_inputs.map(i => i?.parameter_id))) invalid();
+                if (valid) {
+                    if (!decimal(p.unit_cost) || !decimal(p.projected_cost) || p.issue !== null || p.effective_inputs.length !== p.inputs.length || !p.effective_inputs.every(i => effective(i, p.inputs)) ||
+                        !delta(p.unit_delta, 'IRR/product', 'point_minus_baseline', raw.baseline.unit_cost, p.unit_cost) ||
+                        !delta(p.projected_delta, 'IRR/period', 'point_minus_baseline', raw.baseline.projected_cost, p.projected_cost)) invalid();
+                } else if (p.state !== 'INVALID_INPUT' || p.unit_cost !== null || p.projected_cost !== null || p.effective_inputs.length ||
+                    !keys(p.issue, ['code', 'message']) || p.issue.code !== 'SAMPLE_OUT_OF_DOMAIN' || typeof p.issue.message !== 'string') invalid();
+            }
+            if (e.type === 'tornado') {
+                if (e.points.length % 2 || !Array.isArray(e.ranking) || e.ranking.length !== e.points.length / 2 ||
+                    !unique(e.ranking.map(r => r?.parameter_id))) invalid();
+                const ranges = new Map();
+                for (const p of e.points) {
+                    if (!['low', 'high'].includes(p.side)) invalid();
+                    const id = p.inputs[0].parameter_id, range = ranges.get(id) || {};
+                    if (range[p.side]) invalid(); range[p.side] = p; ranges.set(id, range);
+                }
+                if (ranges.size !== e.ranking.length) invalid();
+                for (const r of e.ranking) {
+                    const pair = ranges.get(r?.parameter_id), lo = pair?.low?.inputs[0], hi = pair?.high?.inputs[0];
+                    if (!keys(r, ['parameter_id', 'impact', 'state']) || !lo || !hi || lo.mode !== hi.mode || w.DashboardNumbers.compare(lo.value, hi.value) > 0 ||
+                        r.state !== (pair.low.state === 'OK' && pair.high.state === 'OK' ? 'OK' : 'INVALID_INPUT') ||
+                        (r.state === 'OK' ? !decimal(r.impact) || !nonnegative(r.impact) : r.impact !== null)) invalid();
+                }
+            } else {
+                const width = e.type === 'two_factor' ? 2 : 1, positions = new Set(), axes = Array.from({length:width}, () => new Map());
+                for (const p of e.points) {
+                    if (!Array.isArray(p.indices) || p.indices.length !== width || !p.indices.every(i => count(i) && i < (width === 2 ? 11 : 41))) invalid();
+                    const position = JSON.stringify(p.indices); if (positions.has(position)) invalid(); positions.add(position);
+                    p.inputs.forEach((i, axis) => {
+                        const values = axes[axis], previous = values.get(p.indices[axis]);
+                        if (previous && ['parameter_id', 'mode', 'value', 'unit', 'final_value'].some(k => previous[k] !== i[k])) invalid();
+                        values.set(p.indices[axis], i);
+                    });
+                }
+                for (const values of axes) {
+                    if (Array.from(values.keys()).some(i => i >= values.size) || !Array.from(values.values()).every(i => i.parameter_id === values.get(0).parameter_id && i.mode === values.get(0).mode)) invalid();
+                }
+                if (e.points.length !== axes.reduce((size, values) => size * values.size, 1) || (width === 2 && axes[0].get(0).parameter_id === axes[1].get(0).parameter_id)) invalid();
+            }
+        }
+        const budget = raw.evaluation_budget;
+        if (!keys(budget, ['reserved', 'executed', 'maximum']) || budget.maximum !== 200 || !count(budget.reserved) || budget.reserved > budget.maximum ||
+            budget.reserved !== 3 + (e?.points.length || 0) || !count(budget.executed) || budget.executed < 3 + (e?.valid_count || 0) || budget.executed > budget.reserved) invalid();
+        const frozen = JSON.parse(JSON.stringify(raw));
+        function freeze(v) { if (v && typeof v === 'object') { Object.values(v).forEach(freeze); Object.freeze(v); } return v; }
+        return {context:a, lab:freeze(frozen)};
     }
     function mount(container){
         let workspace=null,snapshot=null,active=true;

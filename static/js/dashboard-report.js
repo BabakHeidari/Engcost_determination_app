@@ -31,15 +31,19 @@
     const IDENTITY_FIELDS = ['factory_id', 'category', 'subcategory', 'product'];
     const views = new Map();
     const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+    const keys = (value, required, optional = []) => object(value) && required.every(key => Object.hasOwn(value, key)) &&
+        Object.keys(value).every(key => required.includes(key) || optional.includes(key));
     const text = value => typeof value === 'string';
     const nullableText = value => value === null || text(value);
     const decimal = value => value === null || (text(value) && DECIMAL.test(value));
     const count = value => Number.isSafeInteger(value) && value >= 0;
     const state = value => text(value) && Object.prototype.hasOwnProperty.call(STATE_LABELS, value);
     const driver = value => text(value) && Object.prototype.hasOwnProperty.call(DRIVER_LABELS, value);
-    const identity = value => object(value) && IDENTITY_FIELDS.every(key => text(value[key]));
+    const identity = value => object(value) && Object.keys(value).length === 4 && IDENTITY_FIELDS.every(key => text(value[key]) && value[key].length > 0);
+    const unique = values => new Set(values).size === values.length;
+    const sameCoverage = (a, b) => ['configured', 'calculated', 'excluded', 'percentage'].every(key => a[key] === b[key]);
     const coverage = value => object(value) && ['configured', 'calculated', 'excluded'].every(key => count(value[key])) && decimal(value.percentage);
-    const issue = value => object(value) && text(value.code) && state(value.state) && text(value.message) && (value.identity === undefined || identity(value.identity));
+    const issue = value => keys(value, ['code', 'state', 'message'], ['identity']) && text(value.code) && state(value.state) && text(value.message) && (value.identity === undefined || identity(value.identity));
     const issues = value => Array.isArray(value) && value.every(issue);
     function dateOnly(value) {
         if (!text(value) || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -48,16 +52,22 @@
         const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         return year > 0 && month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1];
     }
-    const detailRow = value => object(value) && identity(value.identity) &&
+    const detailRow = value => keys(value, ['identity', 'state', 'unit_cost', 'unit', 'prediction', 'prediction_unit', 'projected_cost', 'projected_cost_unit', 'bom_total', 'bom_components', 'driver_components', 'issues']) && identity(value.identity) &&
         ['OK', 'MISSING_INPUT', 'INVALID_INPUT', 'AMBIGUOUS_INPUT', 'NOT_APPLICABLE', 'CALCULATION_ERROR'].includes(value.state) &&
         ['unit_cost', 'prediction', 'projected_cost', 'bom_total'].every(key => decimal(value[key])) &&
         value.unit === 'IRR/product' && value.prediction_unit === 'product/period' && value.projected_cost_unit === 'IRR/period' &&
         ['unit_cost', 'prediction', 'projected_cost', 'bom_total'].every(key => value.state === 'OK' ? value[key] !== null : value[key] === null) &&
-        Array.isArray(value.bom_components) && Array.isArray(value.driver_components) && issues(value.issues);
+        Array.isArray(value.bom_components) && value.bom_components.every(row => keys(row, ['row_id', 'material', 'gross_cost_in_rial', 'adjustment_factor', 'live_cost_in_rial', 'historical_cost_in_rial']) && text(row.row_id) && row.row_id.length > 0 && text(row.material) &&
+            ['gross_cost_in_rial', 'adjustment_factor', 'live_cost_in_rial'].every(key => decimal(row[key]) && row[key] !== null) && decimal(row.historical_cost_in_rial)) &&
+        unique(value.bom_components.map(row => row.row_id)) && Array.isArray(value.driver_components) && value.driver_components.every(row => keys(row, ['pool_id', 'raw_factory_pool', 'adjusted_category_pool', 'category_prediction_total', 'per_unit_contribution', 'product_period_contribution', 'modeled_minus_raw']) && driver(row.pool_id) && row.pool_id !== 'BOM' &&
+            ['raw_factory_pool', 'adjusted_category_pool', 'category_prediction_total', 'per_unit_contribution', 'product_period_contribution', 'modeled_minus_raw'].every(key => decimal(row[key]) && row[key] !== null)) &&
+        unique(value.driver_components.map(row => row.pool_id)) && issues(value.issues) &&
+        (value.state === 'OK' ? value.driver_components.length === 6 && value.issues.length === 0 : value.bom_components.length === 0 && value.driver_components.length === 0 && value.issues.length > 0) &&
+        value.issues.every(item => item.identity === undefined || identityKey(item.identity) === identityKey(value.identity));
     const identityKey = value => JSON.stringify(IDENTITY_FIELDS.map(key => value[key]));
 
     function validate(report) {
-        if (!object(report) || report.version !== '1' || !state(report.state) || !text(report.formula_version)) return false;
+        if (!object(report) || report.version !== '1' || !state(report.state) || report.formula_version !== 'cost-v1-owner-approved-2026-09-27') return false;
         if (report.scope !== null && (!object(report.scope) || !object(report.scope.factory) ||
             !text(report.scope.factory.id) || !text(report.scope.factory.name) || !text(report.scope.factory.code) ||
             !object(report.scope.selection) || !['category', 'subcategory', 'product'].every(key => nullableText(report.scope.selection[key])) ||
@@ -91,14 +101,15 @@
         if (report.arithmetic_reconciliation !== null && (!object(report.arithmetic_reconciliation) ||
             !['projected_rows_total', 'driver_components_total', 'difference'].every(key => decimal(report.arithmetic_reconciliation[key])) ||
             report.arithmetic_reconciliation.unit !== 'IRR/period')) return false;
-        if (!Array.isArray(report.source_lineage) || !report.source_lineage.every(item => object(item) && text(item.source) &&
+        if (!Array.isArray(report.source_lineage) || !report.source_lineage.every(item => keys(item, ['source', 'fingerprint', 'actual_as_of', 'owner_assigned_baseline', 'business_version'], ['identity']) && text(item.source) &&
             text(item.fingerprint) && /^[a-f\d]{64}$/i.test(item.fingerprint) && nullableText(item.actual_as_of) && nullableText(item.owner_assigned_baseline) && nullableText(item.business_version) &&
             (item.identity === undefined || identity(item.identity)))) return false;
         // These checks verify shape, identity and counts only. Financial totals,
         // rankings and shares are consumed exactly as returned by the backend.
         const cov = report.coverage;
         if (kpis.matched_configuration_count !== cov.configured || cov.calculated + cov.excluded !== cov.configured ||
-            report.detail_rows.length !== cov.configured || breakdowns.products.length !== cov.calculated) return false;
+            report.detail_rows.length !== cov.configured || breakdowns.products.length !== cov.calculated ||
+            (cov.configured ? cov.percentage === null || window.DashboardNumbers.compare(cov.percentage, '0') < 0 || window.DashboardNumbers.compare(cov.percentage, '100') > 0 : cov.percentage !== null)) return false;
         const validRows = report.detail_rows.filter(row => row.state === 'OK');
         if (validRows.length !== cov.calculated) return false;
         const selectedKeys = new Set(report.detail_rows.map(row => identityKey(row.identity)));
@@ -106,9 +117,19 @@
         const productKeys = new Set(breakdowns.products.map(row => identityKey(row.identity)));
         if (selectedKeys.size !== report.detail_rows.length || productKeys.size !== breakdowns.products.length ||
             breakdowns.products.some(row => row.state !== 'OK' || !calculatedKeys.has(identityKey(row.identity)))) return false;
+        if (breakdowns.products.some(row => {
+            const original = validRows.find(item => identityKey(item.identity) === identityKey(row.identity));
+            return ['unit_cost', 'prediction', 'projected_cost', 'bom_total'].some(key => row[key] !== original[key]) ||
+                JSON.stringify(row.bom_components) !== JSON.stringify(original.bom_components) || JSON.stringify(row.driver_components) !== JSON.stringify(original.driver_components);
+        }) || report.issues.some(item => item.identity !== undefined && !selectedKeys.has(identityKey(item.identity))) ||
+            report.source_lineage.some(item => item.identity !== undefined && !selectedKeys.has(identityKey(item.identity)))) return false;
+        if ((average.coverage && !sameCoverage(average.coverage, cov)) || (top.coverage && !sameCoverage(top.coverage, cov)) ||
+            breakdowns.factory_pools.some(pool => !sameCoverage(pool.coverage, cov) || !unique(pool.categories.map(item => item.category)) ||
+                pool.categories.some(item => !validRows.some(row => row.identity.category === item.category)))) return false;
         if (report.scope && report.detail_rows.some(row => row.identity.factory_id !== report.scope.factory.id ||
             (report.scope.selection.category !== '__ALL__' && row.identity.category !== report.scope.selection.category) ||
             (report.scope.selection.subcategory !== '__ALL__' && row.identity.subcategory !== report.scope.selection.subcategory))) return false;
+        if (report.scope && report.scope.selection.product !== '__ALL__' && report.detail_rows.length > 1) return false;
         if (!report.scope && report.detail_rows.length) return false;
         if (report.state === 'OK') {
             if (kpis.projected_total === null || kpis.partial_total !== null || kpis.partial_total_label !== null || !cov.calculated || cov.excluded) return false;
@@ -122,6 +143,14 @@
                 new Set(top.tied_ids).size !== top.tied_ids.length || top.tie !== (top.tied_ids.length > 1) ||
                 breakdowns.drivers.some(row => row.value === null) ||
                 breakdowns.factory_pools.some(row => ['raw_total', 'modeled_selected_total', 'selected_minus_raw', 'modeled_category_total', 'category_minus_raw'].some(key => row[key] === null))) return false;
+            if (average.numerator === null || average.denominator === null) return false;
+            const zeroQuantity = window.DashboardNumbers.compare(average.denominator, '0') === 0;
+            if (average.state !== (zeroQuantity ? 'NOT_APPLICABLE' : report.state) ||
+                (zeroQuantity ? average.value !== null : average.value === null) || top.state !== report.state || top.id !== top.tied_ids[0] ||
+                top.value !== breakdowns.drivers.find(row => row.id === top.id).value || top.share !== breakdowns.drivers.find(row => row.id === top.id).share ||
+                average.numerator !== (kpis.partial_total ?? kpis.projected_total) || window.DashboardNumbers.compare(average.denominator, '0') < 0 ||
+                !report.arithmetic_reconciliation || report.arithmetic_reconciliation.projected_rows_total !== (kpis.partial_total ?? kpis.projected_total) ||
+                ['projected_rows_total', 'driver_components_total', 'difference'].some(key => report.arithmetic_reconciliation[key] === null)) return false;
         } else if (breakdowns.drivers.length || breakdowns.factory_pools.length || top.id !== null || top.value !== null ||
             top.share !== null || top.tie !== null || top.tied_ids.length || average.value !== null || average.numerator !== null ||
             average.denominator !== null || report.arithmetic_reconciliation !== null) return false;
@@ -331,6 +360,7 @@
             onProductFocus: value => tableController.focus(value), onResetFocus: () => tableController.resetFocus()
         });
         views.set(target, { table: tableController, charts: chartController });
+        if (target.closest('[role="tabpanel"]')?.hidden && chartController.setActive) chartController.setActive(false);
 
         if (report.issues.length) {
             const problems = disclosure(doc, target, 'دلیل‌های ورودی و پوشش (' + fa(report.issues.length) + ')', 'reportIssues');
