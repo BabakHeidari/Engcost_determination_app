@@ -487,3 +487,7 @@ APP_DATA_FILE="$PWD/work/pr08-validation/profiles.json" APP_SECRET_KEY=pr08-isol
 تست مرورگر UI در این برش اجرا نشده است؛ رابط حساسیت غیرفعال است و template
 و asset رابط موجود تغییر نکرده‌اند. نتایج browser مربوط به PR-07 در
 [سند رابط تحلیل](pr07-dashboard-cost-analysis-ui.md) باقی می‌مانند.
+
+## PR-09A compatible visual extension
+
+See [current-data visualization and shared-baseline experiment API](pr09a-dashboard-visual-analytics.md) and the [strict JSON request schema](dashboard-visual-analysis-request.schema.json). The existing endpoint contract remains supported. The extensions add no historical series, stored scenarios or source writes.

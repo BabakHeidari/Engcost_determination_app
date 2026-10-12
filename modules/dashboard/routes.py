@@ -9,6 +9,8 @@ from utils.auth import get_profile_store, login_required
 from utils.costing_engine import CostInputError
 from utils.dashboard_analysis import DashboardAnalysisService, empty_report, safe_issue, serialize
 from utils.dashboard_periods import DashboardPeriodMetadata
+from utils.dashboard_visuals import cost_visuals
+from utils.dashboard_visual_sensitivity import DashboardVisualSensitivityService
 from utils.dashboard_sensitivity import (
     DashboardSensitivityService, SensitivityRequestError, empty_sensitivity,
 )
@@ -34,7 +36,7 @@ def _sensitivity_json_object(pairs):
     return result
 
 
-def _sensitivity_request(*, scenario):
+def _sensitivity_request(*, scenario, visual=False):
     if scenario:
         if request.args or not request.is_json:
             raise SensitivityRequestError("INVALID_REQUEST", "EXPECTED_SCENARIO_JSON")
@@ -55,9 +57,10 @@ def _sensitivity_request(*, scenario):
                                  parse_constant=lambda _value: _reject_json_constant())
         except (ValueError, UnicodeError, RecursionError):
             raise SensitivityRequestError("INVALID_REQUEST", "MALFORMED_SCENARIO_JSON") from None
-        if not isinstance(payload, dict) or set(payload) - (SENSITIVITY_SELECTION_FIELDS | {"overrides"}):
+        allowed_extra = {"scenarios", "experiment"} if visual else {"overrides"}
+        if not isinstance(payload, dict) or set(payload) - (SENSITIVITY_SELECTION_FIELDS | allowed_extra):
             raise SensitivityRequestError("INVALID_REQUEST", "UNEXPECTED_SCENARIO_INPUT")
-        if "overrides" not in payload or not isinstance(payload["overrides"], list):
+        if not visual and ("overrides" not in payload or not isinstance(payload["overrides"], list)):
             raise SensitivityRequestError("INVALID_REQUEST", "EXPECTED_OVERRIDES_LIST")
     else:
         if (set(request.args) - SENSITIVITY_SELECTION_FIELDS
@@ -89,10 +92,10 @@ def _reject_json_constant():
     raise ValueError("non-finite JSON constant")
 
 
-def _sensitivity_response(*, scenario):
+def _sensitivity_response(*, scenario, visual=False):
     """Keep the established login/JSON POST lifecycle and typed HTTP outcomes."""
     try:
-        payload = _sensitivity_request(scenario=scenario)
+        payload = _sensitivity_request(scenario=scenario, visual=visual)
 
         class RegistrySnapshot:
             def __init__(self, factories):
@@ -108,12 +111,15 @@ def _sensitivity_response(*, scenario):
             options["data_root"] = Path(current_app.config["COSTING_DATA_ROOT"])
         if current_app.config.get("COSTING_PERIOD_BINDINGS_FILE"):
             options["period_bindings_path"] = Path(current_app.config["COSTING_PERIOD_BINDINGS_FILE"])
-        sensitivity = DashboardSensitivityService(service, **options)
-        action = sensitivity.scenario if scenario else sensitivity.parameters
+        service_type = DashboardVisualSensitivityService if visual else DashboardSensitivityService
+        sensitivity = service_type(service, **options)
+        action = sensitivity.visual_analysis if visual else (sensitivity.scenario if scenario else sensitivity.parameters)
         arguments = {"category": payload["category"], "subcategory": payload["subcategory"],
                      "product": payload["product"], "period_id": payload["period"],
                      "start": payload.get("start"), "end": payload.get("end")}
-        if scenario:
+        if visual:
+            arguments.update(scenarios=payload.get("scenarios"), experiment=payload.get("experiment"))
+        elif scenario:
             arguments["overrides"] = payload["overrides"]
         report = action(payload["factory"], g.current_user, **arguments)
         status = 200 if report["state"] == "OK" else (500 if report["state"] == "CALCULATION_ERROR" else 422)
@@ -157,6 +163,12 @@ def sensitivity_parameters():
 @login_required
 def sensitivity_scenario():
     return _sensitivity_response(scenario=True)
+
+@dashboard_bp.route("/api/dashboard/sensitivity/visual-analysis", methods=["POST"])
+@login_required
+def sensitivity_visual_analysis():
+    return _sensitivity_response(scenario=True, visual=True)
+
 
 @dashboard_bp.route("/dashboard")
 @login_required
@@ -211,23 +223,36 @@ def filter_options():
 @dashboard_bp.route("/api/cost_analysis")
 @login_required
 def cost_analysis():
-    """Analyze existing sources for one authorized factory without persistence."""
+    return _cost_analysis_response()
+
+
+@dashboard_bp.route("/api/dashboard/cost-analysis/visuals")
+@login_required
+def cost_analysis_visuals():
+    return _cost_analysis_response(visual=True)
+
+
+def _cost_analysis_response(*, visual=False):
+    """Build canonical analysis once; chart derivation reads only this report."""
+    def respond(report):
+        payload = {"version": "1", "analysis": report, "visuals": cost_visuals(report)} if visual else report
+        return jsonify(serialize(payload))
     allowed = {"factory", "category", "subcategory", "product", "period", "start", "end"}
     if set(request.args) - allowed or any(len(request.args.getlist(key)) != 1 for key in request.args):
-        return jsonify(empty_report("INVALID_REQUEST", issues=[safe_issue(
+        return respond(empty_report("INVALID_REQUEST", issues=[safe_issue(
             "INVALID_INPUT", "UNEXPECTED_QUERY_INPUT")])), 400
     factory_id = request.args.get("factory")
     if factory_id is None:
-        return jsonify(empty_report("NOT_SELECTED")), 400
+        return respond(empty_report("NOT_SELECTED")), 400
     if factory_id == "__ALL__":
-        return jsonify(empty_report("INVALID_SELECTION", issues=[safe_issue(
+        return respond(empty_report("INVALID_SELECTION", issues=[safe_issue(
             "INVALID_INPUT", "ONE_FACTORY_REQUIRED")])), 400
     if any(not value or value != value.strip() or len(value) > 2048 or any(ord(char) < 32 for char in value)
            for value in request.args.values()):
-        return jsonify(empty_report("INVALID_SELECTION", issues=[safe_issue(
+        return respond(empty_report("INVALID_SELECTION", issues=[safe_issue(
             "INVALID_INPUT", "EMPTY_OR_MALFORMED_SELECTION")])), 400
     if ("start" in request.args) != ("end" in request.args):
-        return jsonify(empty_report("INVALID_REQUEST", issues=[safe_issue(
+        return respond(empty_report("INVALID_REQUEST", issues=[safe_issue(
             "INVALID_INPUT", "INCOMPLETE_PERIOD_RANGE")])), 400
     if "start" in request.args:
         try:
@@ -235,7 +260,7 @@ def cost_analysis():
             if start.isoformat() != request.args["start"] or end.isoformat() != request.args["end"] or start > end:
                 raise ValueError("invalid date range")
         except ValueError:
-            return jsonify(empty_report("INVALID_REQUEST", issues=[safe_issue(
+            return respond(empty_report("INVALID_REQUEST", issues=[safe_issue(
                 "INVALID_INPUT", "INVALID_PERIOD_RANGE")])), 400
     # Capture the registry once: repeated authorization inside the loader sees
     # exactly the same factories, without opening further mutable store reads.
@@ -261,22 +286,22 @@ def cost_analysis():
         )
         status = 400 if report["state"] == "NOT_SELECTED" else (
             200 if report["state"] in {"OK", "PARTIAL", "NO_MATCH"} else 422)
-        return jsonify(serialize(report)), status
+        return respond(report), status
     except FactoryNotFoundError:
-        return jsonify(empty_report("UNKNOWN_FACTORY", issues=[safe_issue(
+        return respond(empty_report("UNKNOWN_FACTORY", issues=[safe_issue(
             "INVALID_INPUT", "FACTORY_NOT_FOUND")])), 404
     except (FactoryAccessDeniedError, FactoryInactiveError):
-        return jsonify(empty_report("FORBIDDEN", issues=[safe_issue(
+        return respond(empty_report("FORBIDDEN", issues=[safe_issue(
             "INVALID_INPUT", "FACTORY_FORBIDDEN")])), 403
     except HierarchySelectionError:
-        return jsonify(empty_report("INVALID_SELECTION", issues=[safe_issue(
+        return respond(empty_report("INVALID_SELECTION", issues=[safe_issue(
             "INVALID_INPUT", "INVALID_HIERARCHY_SELECTION")])), 400
     except HierarchyMetadataError:
-        return jsonify(empty_report("UNAVAILABLE", issues=[safe_issue(
+        return respond(empty_report("UNAVAILABLE", issues=[safe_issue(
             "MISSING_INPUT", "HIERARCHY_UNAVAILABLE")])), 503
     except CostInputError as exc:
-        return jsonify(empty_report(exc.state.value, issues=[safe_issue(exc.state.value, exc.detail.code)])), 422
+        return respond(empty_report(exc.state.value, issues=[safe_issue(exc.state.value, exc.detail.code)])), 422
     except Exception:
         LOGGER.exception("Dashboard analysis failed")
-        return jsonify(empty_report("CALCULATION_ERROR", issues=[safe_issue(
+        return respond(empty_report("CALCULATION_ERROR", issues=[safe_issue(
             "CALCULATION_ERROR", "ANALYSIS_FAILED")])), 500

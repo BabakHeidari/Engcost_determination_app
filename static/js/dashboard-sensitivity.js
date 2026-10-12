@@ -12,8 +12,13 @@
     const runButton = byId('sens-run'), resetButton = byId('sens-reset');
     const refreshButton = byId('sens-refresh'), exportButton = byId('sens-export');
     const baselineView = window.DashboardSensitivityView.mount(byId('sens-baseline'));
-    const comparisonView = window.DashboardSensitivityView.mount(byId('sens-results'));
-    const drafts = new Map();
+    const comparisonView = window.DashboardLab.mount(byId('sens-results'));
+    const draftSets = {A: new Map(), B: new Map()};
+    let activeScenario = 'A', drafts = draftSets.A;
+    let acceptedLab = null;
+    const experiments = window.DashboardLabControls.mount(byId('lab-experiment-controls'), () => {
+        invalidateComparison('تنظیم آزمایش تغییر کرده است؛ نتیجه و خروجی قبلی معتبر نیستند.'); controls();
+    });
     let hierarchyGeneration = 0, hierarchyRequest = null, hierarchyLoading = false;
     let registryGeneration = 0, registryRequest = null, registryLoading = false;
     let scenarioGeneration = 0, scenarioRequest = null, scenarioLoading = false, revision = 0;
@@ -60,21 +65,34 @@
         return contextScope === scopeKey() && context?.baseline?.state === 'OK';
     }
     function draftValidation() {
-        const overrides = [];
-        for (const [id, draft] of drafts) {
-            const parameter = context?.parameters.find(item => item.parameter_id === id);
-            if (!parameter) return {valid: false, error: 'پارامتر پیشنهادی دیگر مجاز یا قابل استفاده نیست.'};
-            const result = model.validateOverride(parameter, draft.mode, draft.raw);
-            if (!result.valid) return result;
-            overrides.push(result.override);
+        const scenarios = [];
+        for (const id of ['A', 'B']) {
+            const overrides = [];
+            for (const [parameterId, draft] of draftSets[id]) {
+                const parameter = context?.parameters.find(item => item.parameter_id === parameterId);
+                if (!parameter) return {valid:false,error:'پارامتر پیشنهادی دیگر مجاز نیست.'};
+                const result = model.validateOverride(parameter, draft.mode, draft.raw);
+                if (!result.valid) return result;
+                overrides.push(result.override);
+            }
+            scenarios.push({id,overrides});
         }
-        return model.buildRequest(selection(), overrides);
+        const experiment = experiments.prepare();
+        experiments.showError(experiment.error);
+        if (!experiment.valid) return experiment;
+        const selected = selection();
+        const check = model.buildRequest(selected, scenarios[0].overrides);
+        if (!check.valid) return check;
+        const body = {...check.body, scenarios, experiment:experiment.spec}; delete body.overrides;
+        const json=JSON.stringify(body);
+        if (new TextEncoder().encode(json).length>65536) return {valid:false,error:'حجم درخواست بیشتر از حد مجاز است.'};
+        return {valid:true,json};
     }
     function controls() {
         runButton.disabled = hierarchyLoading || registryLoading || scenarioLoading || !complete() ||
             !baselineAvailable() || !draftValidation().valid;
         runButton.textContent = scenarioLoading ? 'در حال اجرای سناریو…' : 'اجرای سناریو';
-        resetButton.disabled = !drafts.size && !accepted && !scenarioLoading;
+        resetButton.disabled = !draftSets.A.size && !draftSets.B.size && !accepted && !scenarioLoading && experiments.prepare().spec === null;
         refreshButton.disabled = !complete() || hierarchyLoading || registryLoading || scenarioLoading;
         exportButton.disabled = !accepted || acceptedScope !== scopeKey() || acceptedRevision !== revision;
         form.setAttribute('aria-busy', String(hierarchyLoading || registryLoading || scenarioLoading));
@@ -86,7 +104,7 @@
     function invalidateComparison(message) {
         revision += 1;
         cancelScenario();
-        accepted = null; acceptedScope = null; acceptedRevision = null;
+        accepted = null; acceptedLab = null; acceptedScope = null; acceptedRevision = null;
         exportButton.disabled = true;
         numbers.closeAll(document);
         comparisonView.clear(); byId('sens-comparison').hidden = true;
@@ -102,7 +120,9 @@
     }
     function clearContext() {
         numbers.closeAll(document);
-        context = null; contextScope = null; latestBaseline = null; drafts.clear();
+        accepted = null; acceptedLab = null; acceptedScope = null; acceptedRevision = null;
+        comparisonView.clear(); byId('sens-comparison').hidden = true; exportButton.disabled = true;
+        context = null; contextScope = null; latestBaseline = null; draftSets.A.clear(); draftSets.B.clear(); experiments.clear();
         baselineView.clear(); byId('sens-baseline').hidden = true;
         renderEditor();
     }
@@ -343,7 +363,8 @@
             if (selectedPeriod) selectedPeriod.textContent = snapshot.period.id + ' | ' + range;
         }
         // Every POST may change permissions. Discard drafts absent from the new authorized registry.
-        for (const id of drafts.keys()) if (!snapshot.parameters.some(item => item.parameter_id === id)) drafts.delete(id);
+        for (const set of Object.values(draftSets)) for (const id of set.keys()) if (!snapshot.parameters.some(item => item.parameter_id === id)) set.delete(id);
+        experiments.update(snapshot.parameters);
         latestBaseline = snapshot.baseline ? {...snapshot, scenario: null, delta: null, effective_overrides: []} : null;
         renderEditor();
         if (byId('sens-catalog')) byId('sens-catalog').open = true;
@@ -406,19 +427,21 @@
         scenarioRequest = new AbortController(); scenarioLoading = true;
         status('sens-status', 'LOADING', 'در حال اجرای سناریوی فرضی از منابع مجاز فعلی…'); controls();
         try {
-            const response = await fetch('/api/dashboard/sensitivity/scenario', {method: 'POST',
+            const response = await fetch('/api/dashboard/sensitivity/visual-analysis', {method: 'POST',
                 headers: {Accept: 'application/json', 'Content-Type': 'application/json'}, credentials: 'same-origin',
                 body: prepared.json, cache: 'no-store', signal: scenarioRequest.signal});
             const received = await readResponse(response);
             if (generation !== scenarioGeneration || scope !== scopeKey() || draftRevision !== revision) return;
-            const snapshot = validateReceived(received);
-            if (received.status === 200 && snapshot.state === 'OK' && snapshot.baseline?.state === 'OK' &&
+            const visual = window.DashboardLab.adapt(received.data);
+            const snapshot = visual.context;
+            if (snapshot.identity && snapshot.period && !model.matchesScope(snapshot, selection())) throw {kind:'SCHEMA',status:received.status};
+            if (received.status === 200 && visual.lab && snapshot.state === 'OK' && snapshot.baseline?.state === 'OK' &&
                 snapshot.scenario?.state === 'OK' && snapshot.delta) {
                 const changed = previousContext !== contextSignature(snapshot);
                 acceptContext(snapshot, scope);
-                accepted = snapshot; acceptedScope = scope; acceptedRevision = revision;
+                accepted = snapshot; acceptedLab = visual.lab; acceptedScope = scope; acceptedRevision = revision;
                 baselineView.clear(); byId('sens-baseline').hidden = true;
-                byId('sens-comparison').hidden = false; comparisonView.render(snapshot);
+                byId('sens-comparison').hidden = false; comparisonView.render(visual.lab);
                 if (byId('sens-catalog')) byId('sens-catalog').open = false;
                 status('sens-status', 'OK', changed ?
                     'منابع یا خط‌مبنای مجاز از زمان دریافت قبلی تغییر کرده‌اند؛ هر دو نتیجه از خط‌مبنای تازه همین اجرا هستند.' :
@@ -433,11 +456,11 @@
     }
     function reset() {
         invalidateComparison('پیش‌نویس و مقایسه پاک شدند؛ آخرین خط‌مبنای مجاز همین انتخاب حفظ شده است.');
-        drafts.clear(); renderEditor(); controls();
+        draftSets.A.clear(); draftSets.B.clear(); experiments.reset(); renderEditor(); controls();
     }
     function download() {
         if (!accepted || acceptedScope !== scopeKey() || acceptedRevision !== revision) return;
-        const blob = new Blob([model.csv(accepted)], {type: 'text/csv;charset=utf-8'});
+        const blob = new Blob([window.DashboardLab.csv(acceptedLab)], {type: 'text/csv;charset=utf-8'});
         const url = URL.createObjectURL(blob);
         const anchor = node('a'); anchor.href = url; anchor.download = 'dashboard-sensitivity.csv';
         document.body.append(anchor); anchor.click(); anchor.remove();
@@ -459,5 +482,6 @@
         baselineView.setActive(active); comparisonView.setActive(active); numbers.closeAll(document);
     });
     window.addEventListener('pagehide', () => { cancelRegistry(); cancelScenario(); hierarchyRequest?.abort(); baselineView.destroy(); comparisonView.destroy(); });
+    byId('lab-draft-scenario').addEventListener('change', event => { activeScenario = event.target.value; drafts = draftSets[activeScenario]; byId('lab-draft-heading').textContent = 'پیش‌نویس مستقل سناریو ' + activeScenario; renderEditor(); });
     renderEditor(); controls();
 })(window, document);

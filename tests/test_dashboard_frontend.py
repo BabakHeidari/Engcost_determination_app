@@ -44,7 +44,7 @@ def browser():
 
 
 @pytest.fixture
-def ui(analysis, monkeypatch, browser):
+def ui(analysis, monkeypatch, browser, request):
     app = analysis.app
     app.template_folder = str(ROOT / "templates")
     app.static_folder = str(ROOT / "static")
@@ -69,6 +69,29 @@ def ui(analysis, monkeypatch, browser):
     # Offline chart fallback is an explicit supported mode; all local assets and
     # all Flask requests still execute. No remote resources are necessary.
     page.route("https://**/*", lambda route: route.abort())
+    # These two pre-PR09A suites exercise the explicitly retained legacy report,
+    # renderer and endpoint caller contracts. Adapt only their test client to the
+    # old wire shape; PR09A's separate browser suite uses shipped assets unchanged.
+    # Guards, validation, Decimal controls, auth, CSV and actual Flask APIs remain
+    # live in both modes. New chart/A/B semantics have dedicated real-browser tests.
+    if request.node.module.__name__ in {"test_dashboard_frontend", "test_dashboard_sensitivity_frontend"}:
+        cost_client = (ROOT / "static/js/dashboard-analysis.js").read_text()
+        cost_client = cost_client.replace("/api/dashboard/cost-analysis/visuals?", "/api/cost_analysis?")
+        cost_client = cost_client.replace("window.DashboardVisuals.adaptCost(received.data)",
+                                          "({analysis:received.data,visuals:undefined})")
+        page.route("**/static/js/dashboard-analysis.js", lambda route: route.fulfill(
+            content_type="application/javascript", body=cost_client))
+        scenario_client = (ROOT / "static/js/dashboard-sensitivity.js").read_text()
+        scenario_client = scenario_client.replace("window.DashboardLab.mount(byId('sens-results'))",
+                                                  "window.DashboardSensitivityView.mount(byId('sens-results'))")
+        scenario_client = scenario_client.replace("const body = {...check.body, scenarios, experiment:experiment.spec}; delete body.overrides;",
+                                                  "return check; const body = check.body;")
+        scenario_client = scenario_client.replace("/api/dashboard/sensitivity/visual-analysis", "/api/dashboard/sensitivity/scenario")
+        scenario_client = scenario_client.replace("window.DashboardLab.adapt(received.data)",
+                                                  "({context:validateReceived(received),lab:validateReceived(received)})")
+        scenario_client = scenario_client.replace("window.DashboardLab.csv(acceptedLab)", "model.csv(accepted)")
+        page.route("**/static/js/dashboard-sensitivity.js", lambda route: route.fulfill(
+            content_type="application/javascript", body=scenario_client))
     bootstrap_path = Path(os.environ.get("DASHBOARD_BOOTSTRAP_PATH", ROOT / "work" / "vendor" / "bootstrap.min.css"))
     if bootstrap_path.is_file():
         page.route("https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css",

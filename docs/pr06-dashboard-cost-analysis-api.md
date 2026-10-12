@@ -172,3 +172,7 @@ Calculation موجود حفظ می‌شود؛ اجرای تحلیل آن مسی�
 وضعیت داده بیزینسی محسوب نمی‌شوند. بررسی نبود write در آزمون‌ها شامل مسیر موفق، منبع
 مفقود و خرابی ورودی است؛ startup پیش از import اپلیکیشن به fixture مستقل
 هدایت می‌شود.
+
+## PR-09A compatible visual extension
+
+See [current-data visualization and shared-baseline experiment API](pr09a-dashboard-visual-analytics.md) and the [strict JSON request schema](dashboard-visual-analysis-request.schema.json). The existing endpoint contract remains supported. The extensions add no historical series, stored scenarios or source writes.

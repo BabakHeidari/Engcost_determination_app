@@ -373,6 +373,13 @@ class DashboardSensitivityService:
         return result
 
     @staticmethod
+    def _final_value(baseline, mode, value):
+        try:
+            return value if mode == "absolute" else baseline * (Decimal(1) + value / Decimal(100))
+        except (ArithmeticError, InvalidOperation):
+            raise SensitivityRequestError("INVALID_REQUEST", "INVALID_FINAL_VALUE") from None
+
+    @staticmethod
     def _normalize(inputs, parsed, registry):
         prices, currencies, pools, predictions, effective = {}, {}, {}, {}, []
         share, sources = None, set()
@@ -385,10 +392,7 @@ class DashboardSensitivityService:
             sources.add(parameter.source_key)
             metadata = parameter.public
             baseline = metadata["baseline_value"]
-            try:
-                final = value if mode == "absolute" else baseline * (Decimal(1) + value / Decimal(100))
-            except (ArithmeticError, InvalidOperation):
-                raise SensitivityRequestError("INVALID_REQUEST", "INVALID_FINAL_VALUE") from None
+            final = DashboardSensitivityService._final_value(baseline, mode, value)
             domain = metadata["domain"]
             if not final.is_finite() or final < domain["minimum"] or (
                 domain["minimum_exclusive"] and final == domain["minimum"]) or (
