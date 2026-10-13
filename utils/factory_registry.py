@@ -10,9 +10,10 @@ import json
 from pathlib import Path
 
 from utils.localization import display_value
+from utils.paths import parent_path
 
 
-DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[1] / "Data"
+DEFAULT_DATA_ROOT = Path(parent_path)
 
 
 def _load_json(path: Path):

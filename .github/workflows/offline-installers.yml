@@ -1,0 +1,98 @@
+name: Offline native installers
+on:
+  pull_request:
+  push:
+    branches: [packaging-pr11-offline-installers]
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  PYTHONUTF8: '1'
+jobs:
+  ubuntu:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.14'
+          architecture: x64
+      - name: Pinned build and test dependencies
+        run: |
+          python -m venv work/ci-venv
+          work/ci-venv/bin/python -m pip install -r requirements-packaging.txt -r requirements-test.txt -r requirements-browser.txt
+          work/ci-venv/bin/python -m playwright install --with-deps chromium
+      - name: Build on oldest target ABI
+        run: work/ci-venv/bin/python scripts/build_installers.py --max-glibc 2.35
+      - name: Install the actual offline deb
+        run: sudo dpkg -i work/pr11-artifacts/engcost_0.11.0_amd64.deb
+      - name: Frozen native smoke with external networking blocked
+        run: |
+          cc -shared -fPIC packaging/tests/block_external.c -ldl -o work/block_external.so
+          work/ci-venv/bin/python scripts/smoke_installed.py --executable /opt/engcost/Engcost --output work/pr11-artifacts/validation --browser --network-block-library work/block_external.so
+      - name: Actual installer reinstall and uninstall retention
+        run: work/ci-venv/bin/python scripts/validate_installer_lifecycle.py --executable /opt/engcost/Engcost --installer work/pr11-artifacts/engcost_0.11.0_amd64.deb --output work/pr11-artifacts/validation
+      - name: Existing backend regressions and operational inventory
+        run: work/ci-venv/bin/python scripts/validate_dashboard_release.py --suite backend --name native-ubuntu --evidence-dir work/pr11-artifacts/validation
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: engcost-ubuntu-22.04-x64
+          path: |
+            work/pr11-artifacts/*.deb
+            work/pr11-artifacts/SHA256SUMS
+            work/pr11-artifacts/build-info.json
+            work/pr11-artifacts/validation
+          if-no-files-found: error
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.14'
+          architecture: x64
+      - name: Pinned native build tools
+        shell: pwsh
+        run: |
+          choco install nsis --version=3.11 -y --no-progress
+          python -m venv work/ci-venv
+          work/ci-venv/Scripts/python -m pip install -r requirements-packaging.txt -r requirements-test.txt -r requirements-browser.txt
+          work/ci-venv/Scripts/python -m playwright install chromium
+      - name: Native Windows build
+        shell: pwsh
+        run: work/ci-venv/Scripts/python scripts/build_installers.py
+      - name: Install actual NSIS package
+        shell: pwsh
+        run: |
+          $installer = (Resolve-Path work/pr11-artifacts/Engcost-0.11.0-Setup.exe).Path
+          Start-Process $installer -ArgumentList '/S' -Wait
+          if (!(Test-Path "$env:LOCALAPPDATA/Programs/Engcost/Engcost.exe")) { throw 'Native installation failed' }
+      - name: Frozen Windows and browser smoke
+        shell: pwsh
+        run: |
+          $exe = "$env:LOCALAPPDATA/Programs/Engcost/Engcost.exe"
+          $rule = 'Engcost offline native fixture'
+          New-NetFirewallRule -DisplayName $rule -Direction Outbound -Program $exe -Action Block -RemoteAddress '0.0.0.0-126.255.255.255','128.0.0.0-255.255.255.255','::2-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'
+          try {
+            work/ci-venv/Scripts/python scripts/smoke_installed.py --executable $exe --output work/pr11-artifacts/validation --browser
+            if ($LASTEXITCODE -ne 0) { throw 'Frozen smoke failed' }
+          } finally { Remove-NetFirewallRule -DisplayName $rule }
+      - name: Actual installer reinstall and uninstall retention
+        shell: pwsh
+        run: work/ci-venv/Scripts/python scripts/validate_installer_lifecycle.py --executable "$env:LOCALAPPDATA/Programs/Engcost/Engcost.exe" --installer work/pr11-artifacts/Engcost-0.11.0-Setup.exe --output work/pr11-artifacts/validation
+      - name: Existing backend regressions and operational inventory
+        shell: pwsh
+        run: work/ci-venv/Scripts/python scripts/validate_dashboard_release.py --suite backend --name native-windows --evidence-dir work/pr11-artifacts/validation
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: engcost-windows-x64
+          path: |
+            work/pr11-artifacts/*Setup.exe
+            work/pr11-artifacts/SHA256SUMS
+            work/pr11-artifacts/build-info.json
+            work/pr11-artifacts/validation
+          if-no-files-found: error

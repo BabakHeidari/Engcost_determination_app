@@ -14,7 +14,13 @@ repeatable benchmarks, pinned dependencies and an operational handover. See
 [release readiness](pr10-dashboard-release-readiness.md) and the
 [manual UAT checklist](dashboard-release-uat.md). Technical checks and owner UAT
 are separate; owner sign-off remains PENDING. No deployment or production release
-approval is included. PR-11 is not started.
+approval is included.
+
+PR-11 implements offline native packaging, per-user workspace separation, private
+first-admin setup and a single-instance loopback Waitress launcher. Native OS
+validation, signing/licensing and owner acceptance are distinct gates; see
+[installation guide](offline-installers.md) and [actual validation status](pr11-validation.md).
+It does not add an updater, shared hosting, history capture or persisted scenarios.
 
 No source editing, persisted scenarios, history cache, sharing, optimization or
 forecasting is introduced by these Dashboard changes.

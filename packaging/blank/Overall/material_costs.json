@@ -1,0 +1,14 @@
+{
+  "_order": [
+    "material",
+    "unit",
+    "currency",
+    "cost_per_unit_in_currency"
+  ],
+  "data": {
+    "material": [],
+    "unit": [],
+    "currency": [],
+    "cost_per_unit_in_currency": []
+  }
+}

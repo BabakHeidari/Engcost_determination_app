@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fa-IR" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سامانه محلی</title><link rel="icon" href="/_local/static/favicon.png">
+<link rel="stylesheet" href="/_local/static/css/standalone.css"></head>
+<body data-state="{{ state }}"><main><img src="/_local/static/images/company-logo.png" alt="نشان شرکت" width="100">
+<h1>سامانه تعیین بهای تمام‌شده</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if state == 'select' %}
+<h2>انتخاب فضای کاری</h2><p>داده‌ها در پوشه انتخاب‌شده نگهداری می‌شوند. برای داده‌های موجود، پوشه دارای Data و instance را انتخاب کنید. ابتدا نسخه پشتیبان تهیه کنید.</p>
+<form method="post" action="/_local/workspace"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>مسیر کامل پوشه<input name="workspace" dir="ltr" required value="{{ default_workspace }}"></label>
+<label><input type="radio" name="mode" value="fresh" checked> فضای کاری تازه و خالی</label>
+<label><input type="radio" name="mode" value="existing"> استفاده از داده‌های موجود؛ بدون کپی یا جایگزینی</label>
+<button>بررسی و ادامه</button></form>
+{% elif state == 'admin' %}
+<h2>ساخت نخستین مدیر فناوری اطلاعات</h2><p>این مرحله فقط یک بار انجام می‌شود. گذرواژه اختصاصی با حداقل ۱۲ نویسه انتخاب کنید.</p>
+<form method="post" action="/_local/admin"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>نام کاربری<input name="username" required maxlength="160" autocomplete="username"></label>
+<label>نام و نام خانوادگی<input name="full_name" required maxlength="160" autocomplete="name"></label>
+<label>ایمیل<input name="email" type="email" dir="ltr" required maxlength="254" autocomplete="email"></label>
+<label>گذرواژه<input name="password" type="password" minlength="12" maxlength="256" required autocomplete="new-password"></label>
+<label>تکرار گذرواژه<input name="confirmation" type="password" minlength="12" maxlength="256" required autocomplete="new-password"></label>
+<button>ساخت مدیر و آماده‌سازی سامانه</button></form>
+{% elif state == 'preparing' %}<h2>در حال آماده‌سازی فضای کاری…</h2><p>پیکربندی کارخانه‌ها بررسی می‌شود. این صفحه باز می‌ماند و وضعیت را نمایش می‌دهد.</p>
+{% elif state == 'ready' %}<h2>سامانه آماده است</h2><p><a class="button" href="/login">ورود به سامانه</a></p>
+<p>بستن مرورگر برنامه را متوقف نمی‌کند. برای پایان کار، دکمه توقف را بزنید. کلیک دوباره روی نشان برنامه این سامانه را باز می‌کند.</p>
+{% endif %}
+<form method="post" action="/_local/stop"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="stop">توقف سامانه</button></form>
+</main><script src="/_local/static/js/standalone-panel.js"></script></body></html>

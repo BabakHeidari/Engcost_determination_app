@@ -763,6 +763,34 @@ class ProfileDataStore:
             return public_user(candidate)
         return self._mutate(change)
 
+    def create_initial_admin(self, values):
+        """One-time bootstrap transaction; callers must hold a private capability.
+
+        Check users inside the same locked mutation as creation. Never interpret
+        an unreadable store as empty or add an admin to an existing installation.
+        """
+        candidate = copy.deepcopy(values)
+
+        def change(data):
+            if data["users"]:
+                raise ProfileDataConflictError("Initial administrator setup is disabled")
+            if candidate.get("system_role") != "IT_ADMIN":
+                raise ProfileDataValidationError("Initial user must be an IT administrator")
+            candidate.setdefault("id", f"usr_{uuid.uuid4().hex}")
+            candidate["email"] = normalize_email(candidate.get("email"))
+            candidate["email_normalized"] = candidate["email"]
+            candidate["access_grants"] = []
+            candidate.setdefault("revision", 1)
+            candidate.setdefault("job_title", "")
+            data["users"].append(candidate)
+            data["audit_events"].append(new_event(
+                candidate["id"], "USER_CREATED", "user", candidate["id"],
+                changes={"system_role": "IT_ADMIN"},
+            ))
+            return public_user(candidate)
+
+        return self._mutate(change)
+
     def create_user_as_actor(self, actor_user_id, values):
         """Create a user and audit it in one authorization-aware transaction."""
         candidate = copy.deepcopy(values)

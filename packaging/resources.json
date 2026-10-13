@@ -1,0 +1,334 @@
+[
+  {
+    "path": "packaging/THIRD-PARTY-NOTICES.md",
+    "sha256": "63423f56015b49db756492815778f4e78f35891a160f3bfd7d875d782522fdf6"
+  },
+  {
+    "path": "packaging/blank/Overall/ProductsLater.json",
+    "sha256": "81d473817a71b5014d39b4f9e08a6e2a1ae81736ae59fa2384dba894b71432c9"
+  },
+  {
+    "path": "packaging/blank/Overall/factories.json",
+    "sha256": "fd3e9f4cd538487a09a28f89f1c38cc35f86b57c578a52400ffaa72442b338b8"
+  },
+  {
+    "path": "packaging/blank/Overall/material_costs.json",
+    "sha256": "aaa6298486eaa963986c6d031c9652c8958cf61b5f0bf7fa7b7d2d0e2be510e4"
+  },
+  {
+    "path": "packaging/blank/Overall/material_costs_history.json",
+    "sha256": "f522037b4a4fc4f8bf850b8d14189cc23dff705efa444a8b68dfefdb8bcf68fe"
+  },
+  {
+    "path": "packaging/blank/Overall/sample_product.json",
+    "sha256": "97cb72e414d07cb98e91c8b93abb28587f4ad79218108a7f9ef978931d3caa37"
+  },
+  {
+    "path": "packaging/vendor-manifest.json",
+    "sha256": "ed47c83ae6cce3b52f2ba6c3c7fbc2f1b961ef83baf681bc6e281ecd4d2ebd16"
+  },
+  {
+    "path": "static/css/dashboard.css",
+    "sha256": "07d279ebb0ea3d2715430f1c0db52f1e6e3af15862961ebfe65d62e67b696b16"
+  },
+  {
+    "path": "static/css/profile.css",
+    "sha256": "66ce61123ae34cf9047357159a7781dce9fb913cf363e88ba6c4df25d9a693ca"
+  },
+  {
+    "path": "static/css/standalone.css",
+    "sha256": "4258dca2caaa44ef511e5f72663b486a6910877044450f4bf96c8648e79c0e32"
+  },
+  {
+    "path": "static/css/style.css",
+    "sha256": "7a2add434cfd5ba00a921b9aabdebf0216b8ed0f1ae01a45854777a6b00c8dc1"
+  },
+  {
+    "path": "static/favicon.png",
+    "sha256": "8d9971a5657c6f678b921afaa3d0a90a6bfcd444cdf1242ff1f09c666ab865b1"
+  },
+  {
+    "path": "static/fonts/IRANSansX-Bold.woff2",
+    "sha256": "bbd6d49ba961d78e139ca30446f37e448aba0728c920e9f240acbb3e304876dc"
+  },
+  {
+    "path": "static/fonts/IRANSansX-Light.woff2",
+    "sha256": "d671fb110e1b2902bec883fcfecb59e1829c03c09f852072146d1c07041c359a"
+  },
+  {
+    "path": "static/fonts/IRANSansX-Medium.woff2",
+    "sha256": "7e9c5c08877c6a1c291e7846b25598c234da00cd834198dfc17b303c4fe27618"
+  },
+  {
+    "path": "static/fonts/IRANSansX-Regular.woff2",
+    "sha256": "13812a30ddb5f43dee6b08795045e14f2463e6a54b0153f94c87d78e0ae2ca11"
+  },
+  {
+    "path": "static/fonts/IRANSansX-UltraLight.woff2",
+    "sha256": "35a5b4bc5a590513f06f52c8202856c04e830c8d6b217a30f81db6013221c568"
+  },
+  {
+    "path": "static/images/company-logo.png",
+    "sha256": "acf7ce8f71d0c00745ceb896260154c2f060e5085e5f3c73ff269f5e41367029"
+  },
+  {
+    "path": "static/js/bom_costing.js",
+    "sha256": "c40f155c675aca21d5afd3b9135ce942c0bf675a7cfd672b47962b26751f24e7"
+  },
+  {
+    "path": "static/js/dashboard-analysis.js",
+    "sha256": "d5fd4c01a7a887601c9b24024316e7401bb04b7e91c125ccc4f4457463a9f9e9"
+  },
+  {
+    "path": "static/js/dashboard-charts.js",
+    "sha256": "fbbbc38d81c6b1080ce3045ec99c253d1a16a3a2b0c6eee719eb65599466cb47"
+  },
+  {
+    "path": "static/js/dashboard-lab-controls.js",
+    "sha256": "6c523ffb1f35d6c054f0ef182623512578a1d2f11ba720079ec62a91c71532b6"
+  },
+  {
+    "path": "static/js/dashboard-lab.js",
+    "sha256": "507ce3eb715da78506e53b51b836cce284e43c5dbe6ba4505e1ef5fc2efba0e5"
+  },
+  {
+    "path": "static/js/dashboard-numbers.js",
+    "sha256": "dc492e477a8d8f7e128052a47024d7736e94788a325ed2f78a7b8d61a638e3c0"
+  },
+  {
+    "path": "static/js/dashboard-report.js",
+    "sha256": "768d1c78c8bc541e140fe1db6d047a83b7ce3dfad1aa1eae33f2e5c8216e630a"
+  },
+  {
+    "path": "static/js/dashboard-sensitivity-model.js",
+    "sha256": "362941a1462cde869f894924c43735b21133c989a04e90610665c006c50f8a2d"
+  },
+  {
+    "path": "static/js/dashboard-sensitivity-view.js",
+    "sha256": "58f4d6ea0f6225e05449ebf6c0aa5c9d0d5fbf227740b26aa3b6ab6a404f985d"
+  },
+  {
+    "path": "static/js/dashboard-sensitivity.js",
+    "sha256": "d63da9100e15b3faee8fa4d344caeb166c1684d35b023e860fd5b189cf84e369"
+  },
+  {
+    "path": "static/js/dashboard-table.js",
+    "sha256": "f9a98a718d60ca146377f2fa7cdad0388e7d5c5c59e10645237bb8490d249f5a"
+  },
+  {
+    "path": "static/js/dashboard-tabs.js",
+    "sha256": "f190170bb87fbb301b7888813f686bae61d13e974e5e103d19467db7eff171bb"
+  },
+  {
+    "path": "static/js/dashboard-visuals.js",
+    "sha256": "14cba762bac2cf41be9d05ec7d7ce3f0ed09ee130c7e9688eda040bbb0932a3d"
+  },
+  {
+    "path": "static/js/jalali-date.js",
+    "sha256": "23a46998b49c220a473c13351f2df9ed10bcab631f6462b08f96e42e29daab32"
+  },
+  {
+    "path": "static/js/main.js",
+    "sha256": "41d583f29c39ab4968075fb5a100391002d95b896de86200247f9c0e054d722a"
+  },
+  {
+    "path": "static/js/profile-access-manager.js",
+    "sha256": "6baacadfb1db977dfa2b43cbdc3ea2c2eecaac98681948c58f4401ec99d6c685"
+  },
+  {
+    "path": "static/js/profile-page.js",
+    "sha256": "8a99f103b7b5d927e48aef8214c1766a8acc7d04011215490e9b1663760485ac"
+  },
+  {
+    "path": "static/js/standalone-entry.js",
+    "sha256": "490de9e92019ca3f763d630401ed10024e6b3eef63763222e8316d9f016eb82d"
+  },
+  {
+    "path": "static/js/standalone-panel.js",
+    "sha256": "90c0a10b7b1451ab79ed668cfcd87f0040921047bb170844db0353677260c0cd"
+  },
+  {
+    "path": "static/vendor/bootstrap/LICENSE",
+    "sha256": "3d0b0c88216e4752b9afd3d24e36faaf27873b5a45a61458bb3c83e794c26832"
+  },
+  {
+    "path": "static/vendor/bootstrap/bootstrap.bundle.min.js",
+    "sha256": "82f64f62bb03c1bc1824b0f9c9e05f70dba33e146818e63cdf5c306c8cf3dedd"
+  },
+  {
+    "path": "static/vendor/bootstrap/bootstrap.min.css",
+    "sha256": "3017df4a76db5f01c2b99b603d88b03106df13bcfe18e67b7c13c2341d3a67df"
+  },
+  {
+    "path": "static/vendor/echarts/LICENSE",
+    "sha256": "634293835b43a6dd2094fa39182a3d9a6b9ca43b7fdb9ac354e8037af2a3093a"
+  },
+  {
+    "path": "static/vendor/echarts/NOTICE",
+    "sha256": "fa99ac3af859d0e13166906dc53a73ad34a08898da7e8ae83407275496e9e30c"
+  },
+  {
+    "path": "static/vendor/echarts/README.md",
+    "sha256": "bea834a8e33c0ab8ff5c22569caae86a5e03c37931a23138d1ac16b9ebba6e66"
+  },
+  {
+    "path": "static/vendor/echarts/echarts-5.6.0.min.js",
+    "sha256": "bf4a223524e40b77c304bec67e1222cf551f14880cf42c69dc046558e11c07b1"
+  },
+  {
+    "path": "static/vendor/fontawesome/LICENSE.txt",
+    "sha256": "0aa8f86525273b2efa4f40f4272a188e187704252170e979dc06879adf68d43c"
+  },
+  {
+    "path": "static/vendor/fontawesome/css/all.min.css",
+    "sha256": "c22cfb6520a7fdbb738632834019acf47c78b1279462c0eb4cb83bae83ecb5a7"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-brands-400.ttf",
+    "sha256": "5656d596bc597165a42182f67b2b9f17d2ae47a9e3ef1b042b9a729739730705"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-brands-400.woff2",
+    "sha256": "3a8924cd5203a28628716aedb5cef0943da4c3b44e3ffcee90ab06387b41c490"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-regular-400.ttf",
+    "sha256": "5d02dc9b858e3c85a794f87e379857f4fedc4e26cf15001714a9a0e0b1d2294d"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-regular-400.woff2",
+    "sha256": "2bccecf0bc7e96cd5ce4003abeb3ae9ee4a3d19158c4e6edfd2df32d2f0d5721"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-solid-900.ttf",
+    "sha256": "fbbf06d7437aa30f3cd44c968380193545a8fc3eadfb7ad897bbb101eefec5a2"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-solid-900.woff2",
+    "sha256": "9fc85f3a4544ab0d570c7f8f9bbb88db8d92c359b2707580ea8b07c75673eae2"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-v4compatibility.ttf",
+    "sha256": "09663a36fc05e7190af8324b855105c5bb511ad94f94b81b34afee503279eca2"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-v4compatibility.woff2",
+    "sha256": "4d4a2d7fd1c6684845cb174fdd7fc073bd64cb741286fb247f8b76c2b7b852c4"
+  },
+  {
+    "path": "static/vendor/handsontable/LICENSE.txt",
+    "sha256": "5eaa63bb3ae5327dbf8fa3b9fae39c4cc2713a68e0e9344577286b0eddc17f12"
+  },
+  {
+    "path": "static/vendor/handsontable/handsontable-non-commercial-license.pdf",
+    "sha256": "1b2ca9bd01c9928c184ee96f034d82af2c1e55a58f9d32517a321ddf33486660"
+  },
+  {
+    "path": "static/vendor/handsontable/handsontable.full.min.css",
+    "sha256": "ff443e757e220023d7bf3c3db081d507c6ad4622e8a4408984f5b1b781527906"
+  },
+  {
+    "path": "static/vendor/handsontable/handsontable.full.min.js",
+    "sha256": "32d7dadf64e6eb6257a268290d99b4160928d27f7baf244be5626befdda6f784"
+  },
+  {
+    "path": "static/vendor/sheetjs/LICENSE",
+    "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
+  },
+  {
+    "path": "static/vendor/sheetjs/xlsx.full.min.js",
+    "sha256": "c9506197caf809a075b6dee1da0d36fb19da7158ffe8a88e7b0c96c5d8623c99"
+  },
+  {
+    "path": "templates/auth/change_password.html",
+    "sha256": "bf4c6a56c4162d96a6320ef75b301b4230f75f9c779b51b1458f5823dc99f33b"
+  },
+  {
+    "path": "templates/auth/login.html",
+    "sha256": "1530db92c114a95656244502d9bb7fc401a0bc6d587189f0c865a98b9750a067"
+  },
+  {
+    "path": "templates/base.html",
+    "sha256": "69188179956b5e1c9df5db84dbfac629e33f111018e7a3ed373af561b0282ef5"
+  },
+  {
+    "path": "templates/components/header.html",
+    "sha256": "68d2fa24f487783f8175246cde65497c26e3e04227beb39387fff363890516ce"
+  },
+  {
+    "path": "templates/components/sidebar.html",
+    "sha256": "f3b91d08e208bab8ce099e2f26eb24c074edcac144d358b9a226c1279edb5a98"
+  },
+  {
+    "path": "templates/cost/calculation.html",
+    "sha256": "232cbf1be227bcc2776187c0d32cbffebb8c07dd5dde2cb6d2cb8646a21303bc"
+  },
+  {
+    "path": "templates/dashboard/dashboard.html",
+    "sha256": "17f03fec776a3762300258664e32f6596d7a69782ef24c63b620a2afc43c5a6d"
+  },
+  {
+    "path": "templates/desk/workdesk.html",
+    "sha256": "9bb0a5ef005d39169388eec93d2504f6c992d8a637cc91dec1a1c1a3a336f237"
+  },
+  {
+    "path": "templates/errors/403.html",
+    "sha256": "b4d56be3027b44f2269c20e16e055210af7b2d56adc8331f3e273c6326541034"
+  },
+  {
+    "path": "templates/factory_parameters/factories.html",
+    "sha256": "d26fdd5580206ebb6d8f6dff1115d7d29b6e7ca1aff976edda22c876d4d412e5"
+  },
+  {
+    "path": "templates/factory_parameters/factory_cost_item.html",
+    "sha256": "ebde53448e314acf6bcf17ddcd2a09976464cade59f37487777ef16b3e09361b"
+  },
+  {
+    "path": "templates/factory_parameters/factory_details.html",
+    "sha256": "e7d1bb2967d1312ca22e71d773a99eadaeb91b6cd11dc947f514745f47897c2a"
+  },
+  {
+    "path": "templates/factory_parameters/factory_subfield.html",
+    "sha256": "dc1f7116c9c60be7bde610fc2e96ad6a3c820fb5c0f87b615e235e96d1eede91"
+  },
+  {
+    "path": "templates/factory_parameters/unavailable.html",
+    "sha256": "d41bfa207d4442842f6d486d49b07d9cc160259c639127205a55c0ee44dac812"
+  },
+  {
+    "path": "templates/general_parameters/general_parameters.html",
+    "sha256": "2d8712fd85813e0c76c580661e4fc52db26600c9a7673a1628fff14e67d5ba07"
+  },
+  {
+    "path": "templates/product/configuration.html",
+    "sha256": "46a67a8f3fcb7a4be2813157d4ec17c47b3ba7a38a53d111127672e075d93b73"
+  },
+  {
+    "path": "templates/product/product_page.html",
+    "sha256": "c029a04a8843cfd148679fb13c0700d63fcb5f4fa1f62959d40355dc3df09e9a"
+  },
+  {
+    "path": "templates/product/production_selection.html",
+    "sha256": "f7bbcc14ea775affb6ce0e02d4217868c67d21e19294231cd513c6a458e50b7a"
+  },
+  {
+    "path": "templates/profile/profile.html",
+    "sha256": "1fa7f11cb7b694f522d03eb9f72f3896119083bc1380726ca2bdb893746f3e98"
+  },
+  {
+    "path": "templates/profile/profile_error.html",
+    "sha256": "727c9a242466e10c63004e9df7c8b04f855d258d06d2661b23ed1f8f35a756d4"
+  },
+  {
+    "path": "templates/standalone/entry.html",
+    "sha256": "5a05e0192fdc6e125e330d7655d444fae347886f0ab161c28ce676f3307b1258"
+  },
+  {
+    "path": "templates/standalone/panel.html",
+    "sha256": "3ad317ae93d2c348ab9f262a39c14885ab57232cd77b4365e2a2fc33ef4ffec0"
+  },
+  {
+    "path": "templates/standalone/stopped.html",
+    "sha256": "b6be95895fcca306160aa393f551fde206b945dce5e9169702f1031adead0fae"
+  }
+]

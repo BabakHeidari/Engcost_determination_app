@@ -55,7 +55,7 @@ def main():
         checkout = Path(folder) / "checkout"
         checkout.mkdir()
         excluded = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache", "work")
-        for name in ("app.py", "AGENTS.md", "README.md", "modules", "utils", "templates",
+        for name in ("app.py", "engcost_launcher.py", "standalone", "packaging", "AGENTS.md", "README.md", "modules", "utils", "templates",
                      "static", "tests", "docs", "scripts", "Data", "Data_Better_Structure"):
             source = ROOT / name
             if source.is_dir():

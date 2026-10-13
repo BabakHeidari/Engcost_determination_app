@@ -4,6 +4,7 @@ import secrets
 import warnings
 
 from flask import Flask, jsonify, redirect, render_template, request, url_for
+from utils.runtime_paths import RuntimePaths
 from modules.auth.routes import auth_bp
 from modules.desk.routes import desk_bp
 from modules.product.routes import product_bp
@@ -23,7 +24,13 @@ from utils.factory_service import FactoryService
 from utils.auth import get_profile_store
 
 
-app = Flask(__name__)
+runtime_paths = RuntimePaths.from_environment()
+app = Flask(__name__, **({
+    "instance_path": str(runtime_paths.instance),
+    "template_folder": str(runtime_paths.resources / "templates"),
+    "static_folder": str(runtime_paths.resources / "static"),
+} if runtime_paths.standalone else {}))
+app.config.update(runtime_paths.flask_config())
 configured_secret = os.environ.get("APP_SECRET_KEY")
 if configured_secret:
     app.secret_key = configured_secret

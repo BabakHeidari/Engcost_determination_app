@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Engcost
+Name[fa]=سامانه تعیین بهای تمام‌شده
+Comment[fa]=اجرای محلی و آفلاین سامانه
+Exec=/opt/engcost/Engcost
+Icon=engcost
+Terminal=false
+Categories=Office;Finance;
+StartupNotify=true
+Actions=Stop;
+
+[Desktop Action Stop]
+Name=Stop Engcost
+Name[fa]=توقف سامانه
+Exec=/opt/engcost/Engcost --stop
