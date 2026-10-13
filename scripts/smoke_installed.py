@@ -203,10 +203,11 @@ def main():
     parser.add_argument('--network-block-library', type=Path, help='Linux native connect-blocking validation library')
     args = parser.parse_args()
     executable = args.executable.resolve(strict=True);output=args.output.resolve();output.mkdir(parents=True,exist_ok=True)
-    env = {key:value for key,value in os.environ.items() if key in {
+    preserved = {key.upper() for key in {
         'SystemRoot','WINDIR','LOCALAPPDATA','APPDATA','USERPROFILE','USERDOMAIN','USERNAME','TEMP','TMP',
         'LANG','LC_ALL','DISPLAY','XAUTHORITY','LD_PRELOAD','ENGCOST_NETWORK_REPORT'}}
-    env['PATH'] = str(Path(env['SystemRoot']) / 'System32') if os.name == 'nt' else '/nonexistent'
+    env = {key:value for key,value in os.environ.items() if key.upper() in preserved}
+    env['PATH'] = str(Path(os.environ['SystemRoot']) / 'System32') if os.name == 'nt' else '/nonexistent'
     if args.network_block_library:
         env['LD_PRELOAD'] = str(args.network_block_library.resolve(strict=True))
     summary = {'executable_sha256':hashlib.sha256(executable.read_bytes()).hexdigest(),

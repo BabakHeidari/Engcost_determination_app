@@ -99,7 +99,7 @@ class Controller:
             if not self.mutation.acquire(blocking=False):
                 abort(409)
             try:
-                if self.state != "select":
+                if self.stopping or self.state != "select":
                     abort(409)
                 self.select(request.form.get("workspace", ""), fresh=request.form.get("mode") == "fresh")
                 self.error = None
@@ -113,7 +113,7 @@ class Controller:
         @app.post("/_local/admin")
         def admin():
             with self.mutation:
-                if self.state != "admin":
+                if self.stopping or self.state != "admin":
                     abort(409)
                 try:
                     first_admin(self.workspace, request.form)
@@ -212,8 +212,12 @@ class Controller:
             self.stopping = True
             while self.active:
                 self.condition.wait(timeout=0.2)
-        if hasattr(self, "initializer"):
-            self.initializer.join()
+        # Setup writes use this same mutex. Wait for the complete transaction
+        # and any initializer it starts before releasing workspace ownership.
+        with self.mutation:
+            initializer = getattr(self, 'initializer', None)
+        if initializer is not None:
+            initializer.join()
 
     def close(self):
         if self.workspace:

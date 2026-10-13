@@ -146,3 +146,28 @@ def test_graceful_drain_waits_for_in_progress_write_and_refuses_new_requests(tmp
     assert not completed.is_set() and drain.is_alive()
     release.set(); writer.join(2); drain.join(2)
     assert completed.is_set() and not drain.is_alive()
+
+
+def test_graceful_stop_waits_for_authorized_first_admin_transaction(tmp_path, monkeypatch):
+    root,_=prepare(tmp_path/'workspace',fresh=True)
+    controller=Controller(tmp_path,tmp_path/'workspace',workspace=root)
+    controller.host='127.0.0.1:5555';controller.state='admin'
+    entered=threading.Event();release=threading.Event()
+    from standalone.workspace import first_admin as create
+    def slow_create(root,values):
+        entered.set();assert release.wait(5)
+        return create(root,values)
+    monkeypatch.setattr('standalone.controller.first_admin',slow_create)
+    monkeypatch.setattr(controller,'start_business',lambda:None)
+    def submit():
+        web=controller.local.test_client();origin='http://'+controller.host
+        web.set_cookie('engcost_local',controller.token,domain='127.0.0.1',path='/_local')
+        response=web.post('/_local/admin',data=admin()|{'csrf':controller.csrf},base_url=origin,
+                          environ_overrides={'REMOTE_ADDR':'127.0.0.1'},headers={'Origin':origin})
+        assert response.status_code==302
+    writer=threading.Thread(target=submit);writer.start();assert entered.wait(2)
+    drain=threading.Thread(target=controller.drain);drain.start()
+    assert drain.is_alive()
+    release.set();writer.join(2);drain.join(2)
+    assert not writer.is_alive() and not drain.is_alive()
+    assert ProfileDataStore(root/'instance/app_data.json').list_users()[0]['username']=='owner'
