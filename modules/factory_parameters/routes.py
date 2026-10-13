@@ -5,14 +5,15 @@ import json
 import os
 from pathlib import Path
 
-from flask import Blueprint, abort, g, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, g, jsonify, redirect, render_template, request, url_for
 
 from utils.auth import get_profile_store, login_required
 from utils.factory_configuration import (
     FactoryConfigurationError, POOL_IDS, derived_summary,
     ensure_factory_configuration_v2, load_pool, save_pool, validate_identifier,
-    validate_pool_id,
+    validate_pool_id, configuration_paths,
 )
+from utils.financial_editor import editor_documents
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.paths import parent_path
 
@@ -72,9 +73,15 @@ def factory_details(factory_name):
     table = {"_order": ["Subfield", "Cost", "PercentageOfAll"], "data": {
         "Subfield": list(POOL_IDS), "Cost": [summary["pool_totals"][p] for p in POOL_IDS],
         "PercentageOfAll": [summary["percentages"][p] for p in POOL_IDS]}}
-    config = root / "configuration"
-    category = json.loads((config / "category_weights.json").read_text(encoding="utf-8"))
-    prediction = json.loads((config / "production_prediction.json").read_text(encoding="utf-8"))
+    try:
+        paths = configuration_paths(root)
+        category, prediction = editor_documents(root,
+            json.loads(paths["weights"].read_text(encoding="utf-8")),
+            json.loads(paths["predictions"].read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        current_app.logger.exception("Financial editor unavailable for factory %s", record["id"])
+        return render_template("factory_parameters/unavailable.html",
+            message="پارامترهای مالی معتبر در دسترس نیست؛ برای بررسی با پشتیبانی تماس بگیرید."), 503
     return render_template("factory_parameters/factory_details.html", table_json=table,
         factory_name=record["id"], factory_display_name=record["name"], unconfigured=False,
         category_table=category, preditcionOfProductionPerCapitaData=prediction,
@@ -179,7 +186,7 @@ def save_category_table(factory_name):
     result = _authorized(factory_name, "MODIFY")
     if isinstance(result, tuple) and isinstance(result[1], int): return result
     _, root = result; payload = request.get_json(force=True)
-    _atomic_json(root / "configuration" / "category_weights.json", payload)
+    _atomic_json(configuration_paths(root)["weights"], payload)
     return jsonify({"status": "success"})
 
 
@@ -189,5 +196,5 @@ def save_prediction_production_per_capita(factory_name):
     result = _authorized(factory_name, "MODIFY")
     if isinstance(result, tuple) and isinstance(result[1], int): return result
     _, root = result; payload = request.get_json(force=True)
-    _atomic_json(root / "configuration" / "production_prediction.json", payload)
+    _atomic_json(configuration_paths(root)["predictions"], payload)
     return jsonify({"status": "success"})

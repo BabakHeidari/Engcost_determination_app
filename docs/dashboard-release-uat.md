@@ -7,6 +7,9 @@ Use approved current inputs; screenshots committed by PR-10 use synthetic fixtur
 
 | Check | Expected behavior | Owner result |
 |---|---|---|
+| Product creation after V2 | In a V2-only factory, Product WRITE can create category → subcategory → product without financial MODIFY; selection/options include it; existing shares/predictions remain unchanged | REPORTED FAILURE; technical fix covered in follow-up; owner retest PENDING |
+| New financial identities | Authorized Factory Parameters editor shows blank share/prediction cells without saving on GET; only MODIFY saves approved values; missing inputs stay typed unavailable | PENDING |
+| Creation retries and old attempts | Existing BOM/capacity remain intact and return 409; inspect files using the [safe guide](product-creation-owner-uat.md); repeat native Windows creation/rollback smoke | PENDING |
 | Admission and cascade | Authorized active factory only; category/subcategory/composite references preserve at least two distinct configurations | PENDING |
 | Cost Analysis ALL | Explicit ALL expands only selected scope; exact period dates display Jalali; full-category denominator is independent of local focus | PENDING |
 | Complete and incomplete records | Inspect two exact configurations and one incomplete record; PARTIAL, calculated/excluded counts and reasons remain visible; unavailable is not zero | PENDING |

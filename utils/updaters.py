@@ -5,11 +5,10 @@ import json
 from typing import Union, Optional
 from flask import session, jsonify
 from datetime import datetime, date, time
-import os
-from shutil import copy2
 from utils.xlsxTojson import xlsx_to_json_convertor, to_json
 from utils.load_data import load_json
 from utils.product_catalog import build_product_hierarchy, product_catalog_document
+from utils.product_creation import atomic_bytes, business_name, creation_path
 
 
 def modify_summery(factory):
@@ -190,31 +189,19 @@ def save_json_and_excel(module:str, saving_file:str):
 
 
 def product_adder(product_name, factory, category, subcategory):
-    file_path = f"{parent_path}\\Factories\\{factory}\\{category}\\{subcategory}"
-    template_path = f"{parent_path}\\Overall\\sample_product.json"
-    # os.makedirs(file_path, exist_ok=True)
-    copy2(template_path, file_path+f"\\{product_name}.json")
+    name = business_name(product_name, product=True)
+    folder = creation_path(parent_path, factory, category, subcategory)
+    content = (Path(parent_path) / "Overall" / "sample_product.json").read_bytes()
+    with (folder / f"{name}.json").open("xb") as handle:
+        handle.write(content)
+
 
 def category_adder(factory, category_name):
-    file_path = f"{parent_path}\\Factories\\{factory}\\{category_name}"
-    os.makedirs(file_path, exist_ok=True)
+    creation_path(parent_path, factory, category_name).mkdir()
+
 
 def subcategory_adder(factory, category_name, subcategory_name):
-    file_path = f"{parent_path}\\Factories\\{factory}\\{category_name}\\{subcategory_name}"
-    os.makedirs(file_path, exist_ok=True)
-
-def category_weights_updater(factory, category):
-    file_path = Path(parent_path) / "Factories" / factory / "category_weights.json"
-    category_weights = load_json(file_path)
-    if category not in category_weights['data']["category"]:
-        category_weights['data']["category"].append(category)
-        category_weights['data']["selling_share_of_category"].append(0)
-        to_json(file_path, category_weights)
-
-
-
-
-
+    creation_path(parent_path, factory, category_name, subcategory_name).mkdir()
 
 
 def directory_tracer(root_path, output_metadata=True, return_data=True, verbose=False, factory_keys=None):
@@ -241,7 +228,7 @@ def directory_tracer(root_path, output_metadata=True, return_data=True, verbose=
     }
     metadata_file = root_path / "__metadata.json" if output_metadata else None
     if metadata_file:
-        metadata_file.write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
+        atomic_bytes(metadata_file, json.dumps(metadata, indent=2, ensure_ascii=False).encode("utf-8"))
     if verbose:
         print(f"Product hierarchy contains {len(level1)} factories and excludes system namespaces.")
     if return_data:
@@ -266,14 +253,20 @@ def create_product_metadata(parent_path, output_path, factories_folder="Factorie
 
 
 def capacity_reader(prd_name, rel_path):
-    capacity = load_json(f"{parent_path}\\Factories\\{rel_path}\\{prd_name}_meta.json")
-    capacity = capacity["capacity"]
-    return capacity
+    # Accept either UI separator while using native pathlib joins.
+    parts = str(rel_path).replace("\\", "/").split("/")
+    if len(parts) != 3:
+        raise ValueError("مسیر محصول معتبر نیست.")
+    folder = creation_path(parent_path, *parts)
+    name = business_name(prd_name, product=True)
+    return load_json(folder / f"{name}_meta.json")["capacity"]
+
 
 def capacity_writer(product_name, factory, category, subcategory, capacity):
-    data = {"capacity": capacity}
-    file_path = f"{parent_path}\\Factories\\{factory}\\{category}\\{subcategory}\\{product_name}_meta.json"
-    to_json(file_path, data)
+    folder = creation_path(parent_path, factory, category, subcategory)
+    name = business_name(product_name, product=True)
+    with (folder / f"{name}_meta.json").open("x", encoding="utf-8") as handle:
+        json.dump({"capacity": capacity}, handle, ensure_ascii=False)
 
 #__________________________________________________________________#
 ##################------------MATERILAS-----------##################

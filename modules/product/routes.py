@@ -1,10 +1,12 @@
-from flask import Blueprint, abort, g, render_template, jsonify, request, session
+from flask import Blueprint, abort, current_app, g, render_template, jsonify, request, session
 from utils.auth import get_profile_store, login_required
 from utils.factory_service import FactoryAccessDeniedError, FactoryInactiveError, FactoryNotFoundError, FactoryService
 from utils.costing_engine import CostInputError, validate_live_bom_payload
 from utils.paths import material_path, parent_path
 from utils.load_data import load_json, load_bom
-from utils.updaters import category_adder, subcategory_adder, product_adder, directory_tracer, category_weights_updater, capacity_writer
+from utils.updaters import directory_tracer
+from utils.product_creation import CreationConflict, business_name, create
+from utils.file_lock import FileLockTimeout
 from utils.product_catalog import build_product_hierarchy, product_catalog_document
 import json
 from pathlib import Path
@@ -64,92 +66,55 @@ def product_options():
         "product_hierarchy": product_hierarchy
     })
 
+def _create(kind, fields):
+    try:
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            raise ValueError("درخواست باید یک شیء JSON معتبر باشد.")
+        factory_id = data.get("factory")
+        if not isinstance(factory_id, str) or not factory_id.strip():
+            raise ValueError("کارخانه باید انتخاب شود.")
+        service = FactoryService(get_profile_store())
+        record = service.require_access(factory_id.strip(), g.current_user, "product", "WRITE")
+        names = [business_name(data.get(field), product=field == "product_name") for field in fields]
+        create(parent_path, service.operational_key(record), kind, names,
+               capacity=data.get("capacity"),
+               refresh=lambda: directory_tracer(
+                   Path(parent_path) / "Factories", factory_keys=_registered_operational_keys(service)))
+        return jsonify({"status": "ok", "message": "ایجاد با موفقیت انجام شد."})
+    except FactoryNotFoundError:
+        return jsonify({"status": "error", "message": "کارخانه در رجیستری سامانه وجود ندارد."}), 404
+    except (FactoryAccessDeniedError, FactoryInactiveError):
+        return jsonify({"status": "error", "message": "دسترسی به کارخانه فعال مجاز نیست."}), 403
+    except CreationConflict as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 409
+    except ValueError:
+        # Decoder/resource details stay server-side.
+        current_app.logger.info("Invalid product creation request", exc_info=True)
+        return jsonify({"status": "error", "message": "اطلاعات یا مسیر انتخاب‌شده معتبر نیست."}), 400
+    except FileLockTimeout:
+        return jsonify({"status": "error", "message": "سامانه مشغول است؛ دوباره تلاش کنید."}), 503
+    except Exception:
+        current_app.logger.exception("Product %s creation failed for factory %s", kind, data.get("factory") if isinstance(data, dict) else None)
+        return jsonify({"status": "error", "message": "ایجاد انجام نشد؛ برای بررسی با پشتیبانی تماس بگیرید."}), 500
+
+
 @product_bp.route("/add_product", methods=["POST"])
 @login_required
 def add_product():
-    data = request.get_json()
-    product_name = data.get("product_name", "").strip()
-    factory_id = data.get("factory", "").strip()
-    category = data.get("category", "").strip()
-    subcategory = data.get("subcategory", "").strip()
-    capacity = data.get("capacity", "")
-
-    if not all([product_name, factory_id, category, subcategory]):
-        return jsonify({"status": "error", "message": "All fields are required."}), 400
-
-    try:
-        factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "product", "WRITE")
-        factory = FactoryService(get_profile_store()).operational_key(factory_record)
-        product_adder(product_name, factory, category, subcategory)
-        capacity_writer(product_name, factory, category, subcategory, capacity)
-        directory_tracer(Path(parent_path) / "Factories", factory_keys=_registered_operational_keys(FactoryService(get_profile_store())))
-        product_options()
-        category_weights_updater(factory, category)
-        return jsonify({"status": "ok"})
-    except FactoryNotFoundError as e:
-        return jsonify({"status": "error", "message": str(e)}), 404
-    except (FactoryAccessDeniedError, FactoryInactiveError) as e:
-        return jsonify({"status": "error", "message": str(e)}), 403
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return _create("product", ("category", "subcategory", "product_name"))
 
 
 @product_bp.route("/add_category", methods=["POST"])
 @login_required
 def add_category():
-    """Add a new category to the product data."""
-    data = request.get_json()
-    factory_id = data.get("factory", "").strip()
-    category_name = data.get("category_name", "").strip()
-    
-    if not all([factory_id, category_name]):
-        return jsonify({"status": "error", "message": "Factory and category name are required."}), 400
-    
-    try:
-        factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "product", "WRITE")
-        factory = FactoryService(get_profile_store()).operational_key(factory_record)
-        category_adder(factory, category_name)
-        directory_tracer(Path(parent_path) / "Factories", factory_keys=_registered_operational_keys(FactoryService(get_profile_store())))
-        product_options()
-        return jsonify({"status": "ok", "message": f"Category '{category_name}' added successfully."})
-    except FactoryNotFoundError as e:
-        return jsonify({"status": "error", "message": str(e)}), 404
-    except (FactoryAccessDeniedError, FactoryInactiveError) as e:
-        return jsonify({"status": "error", "message": str(e)}), 403
-    except ValueError as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return _create("category", ("category_name",))
 
 
 @product_bp.route("/add_subcategory", methods=["POST"])
 @login_required
 def add_subcategory():
-    """Add a new subcategory to the product data."""
-    data = request.get_json()
-    factory_id = data.get("factory", "").strip()
-    category = data.get("category", "").strip()
-    subcategory_name = data.get("subcategory_name", "").strip()
-    
-    if not all([factory_id, category, subcategory_name]):
-        return jsonify({"status": "error", "message": "Factory, category, and subcategory name are required."}), 400
-    
-    try:
-        factory_record = FactoryService(get_profile_store()).require_access(factory_id, g.current_user, "product", "WRITE")
-        factory = FactoryService(get_profile_store()).operational_key(factory_record)
-        subcategory_adder(factory, category, subcategory_name)
-        directory_tracer(Path(parent_path) / "Factories", factory_keys=_registered_operational_keys(FactoryService(get_profile_store())))
-        product_options()
-        return jsonify({"status": "ok", "message": f"Subcategory '{subcategory_name}' added successfully."})
-    except FactoryNotFoundError as e:
-        return jsonify({"status": "error", "message": str(e)}), 404
-    except (FactoryAccessDeniedError, FactoryInactiveError) as e:
-        return jsonify({"status": "error", "message": str(e)}), 403
-    except ValueError as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
+    return _create("subcategory", ("category", "subcategory_name"))
 
 
 @product_bp.route("/product/configuration")

@@ -22,7 +22,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 LEGACY_BROWSER = ["tests/test_dashboard_frontend.py", "tests/test_dashboard_sensitivity_frontend.py"]
-PRIMARY_BROWSER = ["tests/test_dashboard_visual_frontend.py", "tests/test_dashboard_release_frontend.py"]
+PRIMARY_BROWSER = ["tests/test_dashboard_visual_frontend.py", "tests/test_dashboard_release_frontend.py", "tests/test_product_creation_frontend.py"]
 
 
 def inventory(roots):

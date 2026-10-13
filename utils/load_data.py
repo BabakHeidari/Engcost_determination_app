@@ -1,7 +1,8 @@
 import json
 from pathlib import Path
 from utils.paths import parent_path
-from utils.xlsxTojson import xlsx_to_json_convertor, to_json
+from utils.xlsxTojson import xlsx_to_json_convertor
+from utils.factory_configuration import configuration_paths
 from utils.demo_data import demo_path_for
 from shutil import copy2
 import logging
@@ -53,18 +54,5 @@ def load_factory_subfield(factory_name:str, subfield:str):
     return data, subf_json_path
 
 def load_category_weights_of_costs(factory):
-    file_path = f"{parent_path}\\Factories\\{factory}\\category_weights.json"
-    try:
-        data = load_json(file_path)
-    except:
-        template_path = f"{parent_path}\\Overall\\category_table_sample.json"
-        copy2(template_path, file_path)
-        data = load_json(file_path)
-        fat_cats = load_json(f"{parent_path}\\Factories\\__metadata.json")
-        fat_cats = list(fat_cats["product_hierarchy"][factory].keys())
-        data["data"]["category"] = fat_cats
-        data["data"]["selling_share_of_category"] = len(fat_cats)*[100/len(fat_cats)]
-        to_json(file_path, data)
-    return data
-
-# load_factory_subfield('HajAmini', "AdministrativeandResearch")
+    """Read installed canonical weights; never create financial input defaults."""
+    return load_json(configuration_paths(Path(parent_path) / "Factories" / factory)["weights"])

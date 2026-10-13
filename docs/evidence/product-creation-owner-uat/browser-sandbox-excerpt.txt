@@ -1,0 +1,40 @@
+EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE                              [100%]
+==================================== ERRORS ====================================
+____ ERROR at setup of test_ab_goldens_reset_drafts_export_and_real_echarts ____
+tests/test_dashboard_frontend.py:40: in browser
+    instance = runtime.chromium.launch(executable_path=chromium, headless=True,
+/workspace/work/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:16702: in launch
+    self._sync(
+/workspace/work/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+/workspace/work/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:76: in send
+    return await self._connection.wrap_api_call(
+/workspace/work/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:632: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E
+E   <launching> /usr/bin/chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --disable-dev-shm-usage --user-data-dir=/tmp/playwright_chromiumdev_profile-7bqGkY --remote-debugging-pipe --no-startup-window
+E   <launched> pid=3069
+E   [pid=3069][err] [3069:3069:1013/152343.913848:ERROR:third_party/crashpad/crashpad/util/linux/socket.cc:45] setsockopt: Operation not permitted (1)
+E   Call log:
+E     - <launching> /usr/bin/chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --disable-dev-shm-usage --user-data-dir=/tmp/playwright_chromiumdev_profile-7bqGkY --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=3069
+E     - [pid=3069][err] [3069:3069:1013/152343.913848:ERROR:third_party/crashpad/crashpad/util/linux/socket.cc:45] setsockopt: Operation not permitted (1)
+E     - [pid=3069] <gracefully close start>
+E     - [pid=3069] <kill>
+E     - [pid=3069] <will force kill>
+E     - [pid=3069] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=3069] starting temporary directories cleanup
+E     - [pid=3069] finished temporary directories cleanup
+E     - [pid=3069] <gracefully close end>
+_ ERROR at setup of test_current_cost_workspace_lazy_focus_mobile_and_partial __
+tests/test_dashboard_frontend.py:40: in browser
+    instance = runtime.chromium.launch(executable_path=chromium, headless=True,
+/workspace/work/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:16702: in launch
+    self._sync(
+/workspace/work/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+
+[Repeated identical setup errors omitted from this excerpt.]
+43 errors in 8.16s

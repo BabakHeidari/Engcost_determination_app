@@ -1,0 +1,8 @@
+/workspace/work/venv/bin/python -m compileall -q app.py modules utils
+exit_code=0
+
+git diff --check
+exit_code=0
+
+backend-summary.json: source mismatches=[]; operational_inventory_unchanged=True
+editor-browser-summary.json: source mismatches=[]; operational_inventory_unchanged=True

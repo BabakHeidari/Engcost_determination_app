@@ -1,0 +1,8 @@
+Ubuntu /add_category 200 {'message': "Category 'دسته' added successfully.", 'status': 'ok'}
+Ubuntu /add_subcategory 200 {'message': "Subcategory 'زیر دسته' added successfully.", 'status': 'ok'}
+Ubuntu /add_product 500 {'message': "[Errno 2] No such file or directory: '/tmp/tmphos_kpjj/Data\\\\Overall\\\\sample_product.json'", 'status': 'error'}
+Canonical directories exist: False
+Windows helper semantics /add_category 200 {'message': "Category 'دسته' added successfully.", 'status': 'ok'}
+Windows helper semantics /add_subcategory 200 {'message': "Subcategory 'زیر دسته' added successfully.", 'status': 'ok'}
+Windows helper semantics /add_product 500 {'message': "[Errno 2] No such file or directory: '/tmp/tmphos_kpjj/Data/Factories/op/category_weights.json'", 'status': 'error'}
+BOM and capacity survive failed response: ['محصول.json', 'محصول_meta.json']

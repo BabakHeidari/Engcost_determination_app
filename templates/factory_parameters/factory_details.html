@@ -12,8 +12,37 @@
 <h3>پیش‌بینی تولید</h3><div id="predictions"></div><button id="savePredictions" class="btn btn-save">ذخیره پیش‌بینی‌ها</button>
 </div>
 <script>
-function editor(target, document) { const table=document.data, keys=document._order; target.innerHTML=`<table class="table"><thead><tr>${keys.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>${(table[keys[0]]||[]).map((_,i)=>`<tr>${keys.map(k=>`<td contenteditable="true" data-key="${k}" data-i="${i}">${table[k][i]??''}</td>`).join('')}</tr>`).join('')}</tbody></table>`; return ()=>{target.querySelectorAll('[data-key]').forEach(c=>table[c.dataset.key][Number(c.dataset.i)]=c.innerText.trim()===''?null:(isNaN(c.innerText)?c.innerText:Number(c.innerText))); return document;};}
-const weights={{ category_table|tojson }}, predictions={{ preditcionOfProductionPerCapitaData|tojson }};
+const financialLabels = {
+    "category": {{ "category"|display_value|tojson }},
+    "selling_share_of_category": {{ "selling_share_of_category"|display_value|tojson }},
+    "Product Name": {{ "Product Name"|display_value|tojson }},
+    "Predicted Production": {{ "Predicted Production"|display_value|tojson }}
+};
+function editor(target, source) {
+    const columns = source.data, keys = source._order;
+    const table = document.createElement('table'); table.className = 'table';
+    const head = table.createTHead().insertRow();
+    keys.forEach(key => { const cell = document.createElement('th'); cell.textContent = financialLabels[key] ?? key; head.appendChild(cell); });
+    const body = table.createTBody();
+    (columns[keys[0]] || []).forEach((_, index) => {
+        const row = body.insertRow();
+        keys.forEach(key => {
+            const cell = row.insertCell(); cell.textContent = columns[key][index] ?? '';
+            // Identity is catalog data; only financial cells are editable.
+            if (key !== keys[0]) { cell.contentEditable = 'true'; cell.dataset.key = key; cell.dataset.i = index; }
+        });
+    });
+    target.replaceChildren(table);
+    return () => {
+        target.querySelectorAll('[data-key]').forEach(cell => {
+            const text = cell.innerText.trim();
+            columns[cell.dataset.key][Number(cell.dataset.i)] = text === '' ? null : (isNaN(text) ? text : Number(text));
+        });
+        return source;
+    };
+}
+const weights={{ category_table|tojson }};
+const predictions={{ preditcionOfProductionPerCapitaData|tojson }};
 const getWeights=editor(document.getElementById('weights'),weights), getPredictions=editor(document.getElementById('predictions'),predictions);
 async function save(url,payload){const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok)alert('ذخیره ناموفق بود');else alert('ذخیره شد');}
 document.getElementById('saveWeights').onclick=()=>save({{ url_for('factory_parameters.save_category_table',factory_name=factory_name)|tojson }},getWeights());
