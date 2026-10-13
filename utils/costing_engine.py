@@ -704,9 +704,9 @@ class CostInputLoader:
 
     def _display_path(self, path: Path) -> str:
         try:
-            return str(Path(self.data_root.name) / path.relative_to(self.data_root))
+            return (Path(self.data_root.name) / path.relative_to(self.data_root)).as_posix()
         except ValueError:
-            return str(path)
+            return path.as_posix()
 
     def _diagnostic(self, period: PlanningPeriod, approved_sources: set[str],
                     paths: Mapping[str, Path | tuple[Path, ...]]) -> dict[str, Any]:
@@ -715,10 +715,10 @@ class CostInputLoader:
             expected = paths.get(source_name)
             if isinstance(expected, tuple):
                 found = [self._display_path(path) for path in expected if path.is_file()]
-                expected_location = str(
+                expected_location = (
                     Path(self.data_root.name) / "Factories" / "<operational-key>"
                     / "<category>" / "<subcategory>" / "<product>.json"
-                )
+                ).as_posix()
             elif expected is not None:
                 found = [self._display_path(expected)] if expected.is_file() else []
                 expected_location = self._display_path(expected)

@@ -152,7 +152,7 @@ def discover_initial_period(factory_service: FactoryService, factory_id: str, da
             if logical_source:
                 source_metadata.append({
                     "source_name": logical_source,
-                    "location": str(Path(root.name) / path.relative_to(root)),
+                    "location": (Path(root.name) / path.relative_to(root)).as_posix(),
                 })
         for parsed, identifier, raw in _dates(source):
             evidence.append({"date": parsed.isoformat(), "source_type": _source_type(path, factory_root),

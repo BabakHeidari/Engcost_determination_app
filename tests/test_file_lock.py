@@ -21,7 +21,9 @@ class WindowsAdapter:
 def test_normal_acquisition_release_and_repeated_acquisition(tmp_path):
     path = tmp_path / "migration.lock"
     with interprocess_file_lock(path):
-        assert path.read_bytes() in {b"", b"\0"}
+        assert path.is_file()
+    # Windows byte-range locks also deny reads through a second descriptor.
+    assert path.read_bytes() in {b"", b"\0"}
     with interprocess_file_lock(path):
         assert path.is_file()
 

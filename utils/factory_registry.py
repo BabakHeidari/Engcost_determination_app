@@ -33,7 +33,7 @@ def discover_factories(data_root=DEFAULT_DATA_ROOT) -> dict:
 
     def observe(value, source, *, location=None):
         if not isinstance(value, str) or not value.strip():
-            missing_names.append(str(source))
+            missing_names.append(Path(source).as_posix())
             return
         operational_key = value.strip()
         key = operational_key.casefold()
