@@ -1,4 +1,8 @@
 *.pyc
+__pycache__/
+.pytest_cache/
+work/
+.venv/
 instance/app_data.json
 instance/app_data.json.lock
 instance/backups/

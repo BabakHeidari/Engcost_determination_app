@@ -1,5 +1,12 @@
 # PR-09 / DASH-6 — رابط فارسی حساسیت
 
+این سند شواهد و قرارداد سازگار PR-09 را ثبت می‌کند. workspace فعلی
+سناریوهای مستقل A/B و آزمایش‌ها را طبق
+[PR-09A](pr09a-dashboard-visual-analytics.md) و
+[راهنمای کاربر](dashboard-visual-analytics-user-guide.md) ارائه می‌دهد.
+validator و lifecycle در [PR-10](pr10-dashboard-release-readiness.md) سخت‌تر
+شده‌اند؛ endpoint تک‌سناریوی قدیمی همچنان برای compatibility پشتیبانی می‌شود.
+
 این تغییر از `main` پس از ادغام PR-08 / GitHub #43 شروع شده است؛ commit پایه
 `0d2fe9e29ef5536895fe38eb0c96d0b81a40b0da` است. تب حساسیت صفحه `/dashboard`
 قرارداد [PR-08](pr08-dashboard-sensitivity-api.md) را به فارسی و RTL ارائه

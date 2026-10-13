@@ -1,5 +1,10 @@
 # PR-07 / DASH-4 — رابط تحلیل هزینه
 
+workspace فعلی کاوش دیداری PR-09A را با ECharts محلی 5.6.0 pin‌شده ارائه
+می‌دهد. [PR-10](pr10-dashboard-release-readiness.md) پذیرش پاسخ nested،
+fallback جدول، lifecycle و مرورگر واقعی را بررسی می‌کند. شواهد قدیمی این
+سند از نتایج فعلی انتشار جدا هستند؛ KPI و CSV همچنان گزارش کامل پذیرفته‌شده‌اند.
+
 صفحه `/dashboard` گزارش نسخه ۱ [PR-06](pr06-dashboard-cost-analysis-api.md)
 را به فارسی و RTL ارائه می‌کند. پوسته مشترک، Bootstrap، IRANSansX، مجوز
 `dashboard:READ` و فرمول و دروازه‌های G1–G4 حفظ می‌شوند. در برش PR-07 حساسیت غیرفعال بود؛

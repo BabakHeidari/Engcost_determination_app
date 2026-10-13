@@ -4,6 +4,21 @@
 رفتار legacy در [ممیزی](dash0-current-costing-audit.md) و
 [آزمون‌های مشخصه‌ای](dash0-characterization-baselines.md) باقی مانده است.
 
+## کنترل صحت PR-10
+
+[شواهد عددی/انتشار](pr10-dashboard-release-readiness.md) مقدارهای G1–G4 و
+برابری Cost Calculation، Cost Analysis، wrapper، baseline و A/B را روی
+هویت/دوره/capture مشترک بررسی می‌کند. داده‌های منبع فقط درون یک درخواست
+reuse می‌شوند و POST تازه از GET قبلی baseline نمی‌گیرد. contributionهای
+اصلی و totals authoritative تغییر نمی‌کنند؛ residue Decimal صریح باقی است.
+
+سلسله‌مراتب و پارتوی مواد از هزینه دوره جمعیت معتبر منتخب استفاده می‌کنند؛
+مخرج پارتو مجموع BOM projected همان جمعیت است. heatmap ریال/محصول و
+scatter با x=محصول/دوره و y=ریال/محصول است. اختلاف B−A از خروجی واقعی
+دو سمت و درصد از A می‌آید؛ مرجع صفر درصد null/NOT_APPLICABLE دارد. آبشار
+اختلاف اجزای خروجی است؛ تورنادو هر ورودی را مستقل از سایر ورودی‌های ثابت
+baseline تغییر می‌دهد و منحنی/ماتریس evaluation واقعی موتور هستند.
+
 ## KPIها و پوشش
 
 | KPI | صورت | مخرج | واحد | جمعیت و پوشش |

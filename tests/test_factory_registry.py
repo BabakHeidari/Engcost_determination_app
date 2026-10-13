@@ -84,8 +84,12 @@ def test_profile_view_exposes_only_safe_active_canonical_factories(tmp_path):
 
 def test_add_user_template_uses_server_registry_and_has_truthful_empty_state():
     template = Path("templates/profile/profile.html").read_text(encoding="utf-8")
+    script = Path("static/js/profile-access-manager.js").read_text(encoding="utf-8")
     assert '{% for factory in profile.factories %}' in template
-    assert 'value="{{ factory.id }}"' in template
-    assert "{{ factory.name }} ({{ factory.code }})" in template
-    assert "هیچ کارخانه‌ای در داده‌های سیستم ثبت نشده است." in template
+    assert 'profile.access_manager|tojson' in template
+    assert 'option.value = factory.id' in script
+    assert '${factory.name} (${factory.code})' in script
+    assert "کارخانه‌ای در محدوده دسترسی شما ثبت نشده است." in template
+    assert 'add.disabled = choices.options.length === 1' in script
     assert "FACTORIES =" not in template
+    assert 'config.factories' in script and 'factory.is_active' in script

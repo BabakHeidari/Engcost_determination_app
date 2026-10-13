@@ -231,12 +231,17 @@ class CostInputError(ValueError):
 
 
 def _decimal(value: Any, name: str, *, nonnegative: bool = True) -> Decimal:
-    if isinstance(value, bool) or value in (None, ""):
-        raise CostInputError(CostState.MISSING_INPUT, "MISSING_NUMERIC_INPUT", f"{name} is required")
-    try:
-        result = Decimal(str(value))
-    except (InvalidOperation, ValueError):
-        raise CostInputError(CostState.INVALID_INPUT, "INVALID_NUMBER", f"{name} must be numeric") from None
+    # Engine inputs and normalized overrides are already Decimal. Revalidating
+    # their domain is necessary; converting each one to text and back is not.
+    if isinstance(value, Decimal):
+        result = value
+    else:
+        if isinstance(value, bool) or value in (None, ""):
+            raise CostInputError(CostState.MISSING_INPUT, "MISSING_NUMERIC_INPUT", f"{name} is required")
+        try:
+            result = Decimal(str(value))
+        except (InvalidOperation, ValueError):
+            raise CostInputError(CostState.INVALID_INPUT, "INVALID_NUMBER", f"{name} must be numeric") from None
     if not result.is_finite() or (nonnegative and result < 0):
         raise CostInputError(CostState.INVALID_INPUT, "INVALID_NUMBER", f"{name} is outside its valid range")
     return result
@@ -270,6 +275,9 @@ def calculate_cost(inputs: CostInputs, overrides: CostOverrides | None = None) -
     """Calculate an approved V1 unit cost without reading or writing external state."""
     overrides = overrides or CostOverrides()
     try:
+        if len({line.row_id for line in inputs.bom_lines}) != len(inputs.bom_lines):
+            raise CostInputError(CostState.AMBIGUOUS_INPUT, "BOM_ROW_ID_NOT_UNIQUE",
+                                 "BOM row identities must be unique", "bom")
         share = _decimal(overrides.category_share if overrides.category_share is not None else inputs.category_share, "category share")
         if share <= 0 or share > 100:
             raise CostInputError(CostState.INVALID_INPUT, "INVALID_CATEGORY_SHARE", "category share must be in (0, 100]")
@@ -344,6 +352,10 @@ class CostInputLoader:
         self._factory_roots: dict[str, Path] = {}
         self._configuration_paths: dict[str, Path] = {}
         self._snapshot_paths: dict[tuple[str, ProductIdentity | None], dict[str, Path | tuple[Path, ...]]] = {}
+        # These parsed records belong to this loader's immutable capture only.
+        # A new HTTP request constructs a new loader and reads fresh inputs.
+        self._prediction_rows: dict[Path, dict[str, tuple[dict, ...]]] = {}
+        self._category_predictions: dict[tuple[str, str, Path], tuple[ProductPrediction, ...]] = {}
         self._loaded_at = datetime.now(timezone.utc)
 
     def snapshot_population(self, factory_id: str, user: dict, *,
@@ -571,6 +583,9 @@ class CostInputLoader:
                                     provenance_by_name["materials"]),
                 historical_cost_in_rial=None if historical in (None, "") else _decimal(historical, "historical cost"),
             ))
+        if len({line.row_id for line in lines}) != len(lines):
+            raise CostInputError(CostState.AMBIGUOUS_INPUT, "BOM_ROW_ID_NOT_UNIQUE",
+                                 "BOM row identities must be unique", "bom")
 
         weights = self._rows(documents["weights"], "weights", ("category", "selling_share_of_category"))
         if self.read_only:
@@ -581,18 +596,32 @@ class CostInputLoader:
             raise CostInputError(CostState.AMBIGUOUS_INPUT, "CATEGORY_SHARE_NOT_UNIQUE", "category share must resolve exactly once")
         share = _decimal(matching_weights[0]["selling_share_of_category"], "category share")
 
-        prediction_rows = self._rows(documents["predictions"], "predictions", ("Product Name", "Predicted Production"))
-        if self.read_only:
-            for row in prediction_rows:
-                _source_text(row["Product Name"], "prediction product identity")
-        category_products = (tuple(item for item in self._populations[factory_id] if item.category == identity.category)
-                             if self.read_only else self._category_products(factory_root / identity.category, factory_id, identity.category))
-        predictions = []
-        for product_identity in category_products:
-            matches = [row for row in prediction_rows if row["Product Name"] == product_identity.product]
-            if len(matches) != 1:
-                raise CostInputError(CostState.AMBIGUOUS_INPUT, "PREDICTION_NOT_UNIQUE", f"prediction must resolve exactly once: {product_identity.product}")
-            predictions.append(ProductPrediction(product_identity, _decimal(matches[0]["Predicted Production"], "prediction")))
+        prediction_path = paths["predictions"]
+        prediction_key = (factory_id, identity.category, prediction_path)
+        predictions = self._category_predictions.get(prediction_key) if self.read_only else None
+        if predictions is None:
+            indexed_rows = self._prediction_rows.get(prediction_path) if self.read_only else None
+            if indexed_rows is None:
+                prediction_rows = self._rows(documents["predictions"], "predictions", ("Product Name", "Predicted Production"))
+                if self.read_only:
+                    grouped_rows: dict[str, list[dict]] = {}
+                    for row in prediction_rows:
+                        name = _source_text(row["Product Name"], "prediction product identity")
+                        grouped_rows.setdefault(name, []).append(row)
+                    indexed_rows = {name: tuple(rows) for name, rows in grouped_rows.items()}
+                    self._prediction_rows[prediction_path] = indexed_rows
+            category_products = (tuple(item for item in self._populations[factory_id] if item.category == identity.category)
+                                 if self.read_only else self._category_products(factory_root / identity.category, factory_id, identity.category))
+            parsed_predictions = []
+            for product_identity in category_products:
+                matches = (indexed_rows.get(product_identity.product, ()) if self.read_only else
+                           [row for row in prediction_rows if row["Product Name"] == product_identity.product])
+                if len(matches) != 1:
+                    raise CostInputError(CostState.AMBIGUOUS_INPUT, "PREDICTION_NOT_UNIQUE", f"prediction must resolve exactly once: {product_identity.product}")
+                parsed_predictions.append(ProductPrediction(product_identity, _decimal(matches[0]["Predicted Production"], "prediction")))
+            predictions = tuple(parsed_predictions)
+            if self.read_only:
+                self._category_predictions[prediction_key] = predictions
         pools = []
         for pool_id in FACTORY_POOL_IDS:
             source_name = f"pool:{pool_id}"
@@ -602,7 +631,7 @@ class CostInputLoader:
         target_prediction = next((item.quantity for item in predictions if item.identity == identity), None)
         if target_prediction is None:
             raise CostInputError(CostState.MISSING_INPUT, "MISSING_PRODUCT_PREDICTION", "requested product is outside category population")
-        return CostInputs(identity, period, tuple(lines), tuple(pools), share, target_prediction, tuple(predictions),
+        return CostInputs(identity, period, tuple(lines), tuple(pools), share, target_prediction, predictions,
                           tuple(provenance), self._loaded_at if self.read_only else datetime.now(timezone.utc))
 
     def diagnose_sources(self, factory_id: str, period_id: str = "",

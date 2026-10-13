@@ -1,5 +1,10 @@
 # Dashboard Module Discovery Report
 
+This is the historical discovery snapshot. PR-10 removed the two prototype
+templates `dashboard_newer.html` and `dashboard copy.html` after confirming no
+Python route, Jinja include/extend or runtime asset references either file.
+The original audit below records their former state, not the shipped workspace.
+
 ## 1. Executive Summary
 
 This document is a read-only current-state audit of the technical module ID `dashboard`. The audit found **two registered Dashboard endpoints**, **four displayed/calculated KPI fields**, **two active charts**, one detail table, one client-side CSV export, and four visible filters. Only `modules/dashboard/routes.py` is implementation code inside `modules/dashboard/`; the active presentation and almost all behavior live in `templates/dashboard/dashboard.html`.

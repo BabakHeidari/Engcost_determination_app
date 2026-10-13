@@ -1,0 +1,36 @@
+{
+  "scope": "Exact selected product path binding using authorized option metadata; both parents ALL regression",
+  "source_sha256": {
+    "static/js/dashboard-analysis.js": "d5fd4c01a7a887601c9b24024316e7401bb04b7e91c125ccc4f4457463a9f9e9",
+    "tests/test_dashboard_release_frontend.py": "d9ef105362faaa85f0a28228857e89fec3e711c81448f8a2b3b1ff6216a5b88b"
+  },
+  "runs": {
+    "before": {
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "after": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "functional": {
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "primary_release_cases": 25,
+  "functional_deselected": "test_many_product_browser_render_opening_and_bounded_resource_churn",
+  "timing_evidence": {
+    "file": "docs/pr10-browser-performance-results.json",
+    "controller_sha256_at_capture": "37175573c377fb4274440fc723edbaceecfd2d65e46d2a8907de425a632ff9d3",
+    "rerun": false,
+    "reason": "The timed product ALL branch still short-circuits exact-product identity comparison. Option attributes are filled before timed requests.",
+    "original_evidence_and_source_hashes_preserved": true
+  }
+}

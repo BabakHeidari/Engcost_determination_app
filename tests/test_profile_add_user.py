@@ -1,5 +1,6 @@
 import json
 import threading
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -69,16 +70,18 @@ def test_authorized_creation_stores_only_hash_and_safe_audit(add_user_app):
 
 
 @pytest.mark.parametrize("user_id,changes,status", [
-    ("usr_staff", {}, 400),
+    ("usr_staff", {}, 403),
     ("usr_admin", {"initial_password_confirmation": "different"}, 400),
     ("usr_admin", {"initial_password": "   ", "initial_password_confirmation": "   "}, 400),
     ("usr_admin", {"system_role": "Unknown"}, 400),
     ("usr_admin", {"access_grants": [{"scope_type": "FACTORY", "factory_id": "missing", "module": "product", "permissions": ["READ"]}]}, 400),
-    ("usr_factory", {}, 400),
+    ("usr_factory", {}, 403),
 ])
 def test_authorization_and_validation_failures(add_user_app, user_id, changes, status):
+    before = add_user_app[1].read_bytes()
     response = client_as(add_user_app[0], user_id).post("/api/profile/users", json=payload(**changes))
     assert response.status_code == status
+    assert add_user_app[1].read_bytes() == before
 
 
 def test_duplicate_and_hostile_identity_fields_are_rejected(add_user_app):
@@ -143,4 +146,7 @@ def test_modal_password_contract_and_passwords_are_not_prefilled(add_user_app):
     assert body.count('autocomplete="new-password"') >= 2
     assert 'name="initial_password"' in body and 'name="initial_password_confirmation"' in body
     assert "localStorage" not in body and "sessionStorage" not in body
-    assert "hidden.bs.modal" in body and "clearPasswords" in body
+    script = Path("static/js/profile-page.js").read_text(encoding="utf-8")
+    assert "/static/js/profile-page.js" in body
+    assert "hidden.bs.modal" in script and "clearPasswords" in script
+    assert "localStorage" not in script and "sessionStorage" not in script

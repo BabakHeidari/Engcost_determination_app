@@ -1,0 +1,62 @@
+{
+  "base_sha": "fc373ca92e97c91d3d3b4a1a181096cbdf733c37",
+  "backend_code_sha": "d9cd07120ba5238dbaf763d7788263ecb636dcd8",
+  "passing_distinct_candidate_cases": 1114,
+  "current_source_browser_cases": 40,
+  "earlier_unchanged_all_products_timing_case": 1,
+  "negative_reproduction": "exact-reference-before.xml is an intentional before-fix failure, outside candidate totals",
+  "junit_counts": {
+    "base-backend.xml": {
+      "tests": 638,
+      "failures": 31,
+      "errors": 0,
+      "skipped": 0
+    },
+    "candidate-backend.xml": {
+      "tests": 977,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "candidate-browser.xml": {
+      "tests": 41,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "candidate-compatibility.xml": {
+      "tests": 96,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "sha256": {
+    "README.md": "96c497b147ea72cca6e9d38d7629fa5d0670e21444a0a8cbd1775c9a6a840450",
+    "base-backend.xml": "af9b34f5ec6f49197efdc7a848a15e6d71a94e11fd82f43f9e2d8b2502d6550c",
+    "base-source-integrity.json": "64a6b81daee3d4efd284ba4468edfebe135131a4abf9e442326473badec643f1",
+    "benchmark-base-final.json": "f97d9912079afa08a0d87587d2779f0bcdfa2ab5b558088454978266835de73e",
+    "benchmark-candidate.json": "3fcafe4fb201c85f4a45c989b76cbd436843823898619f93c45daa5a96a1d549",
+    "benchmark-source-freeze.json": "5b29345c4bc52541e64ba1b4fc28297f52fb60ec8ad52076c5a46f1125e35010",
+    "browser-final-source.json": "2c4994552b4fbb3640475849b1167742ff568da7a385c2066f1e0f5846cb0462",
+    "browser-lifecycle.json": "11a70637412c2fe7636b539c017766821c92eb24dc4339dc0fce0a2aeacc44b4",
+    "browser-performance.json": "5fe1e7134974af490450b0428e2edf7aa0609772a3013d383728a625ebbf4333",
+    "candidate-backend.xml": "53937761582d2adfcf2d63b704bd5845a8dfaeb4ea5506bea1ae99bd6acc2631",
+    "candidate-browser-functional.txt": "07683778500070ac6feb474a6df8937b518a93ea48408c7eed91b95f6a0d5671",
+    "candidate-browser-functional.xml": "a7e00a478f3c5143b882b7f3989eb222b238f5aaeb71753241479dcba1f7889f",
+    "candidate-browser-lifecycle.xml": "f405b243e063d0be5aead808d11e9a9aceed1876fadf15ee4e8001affc50b810",
+    "candidate-browser-release.xml": "cd0e7581a7b4de3e2affc99073450e289f034f5e2174b7e312157f5decf04227",
+    "candidate-browser-retained.txt": "36fdb351696fddfa91aebbf70ddb652dc963d71e2be92a79955c1884015d222f",
+    "candidate-browser-retained.xml": "f838fad4570b84ff7acb7520ac45980f340eb2f0f23384f46d741db9ce1215d9",
+    "candidate-browser-timing.xml": "12a6ff4c617cedd3dab0b138caffbfd7527dc15b3e32ac7f5dc5981caa3a3e88",
+    "candidate-browser.xml": "0e98d682f52fa6262559ee625a9c36c8697d064394dadca12c8beeff16f1e01c",
+    "candidate-compatibility.txt": "41c067e877bca1d9c8fd58e1d2922fa33e34907faf17fd7f9912805abb593439",
+    "candidate-compatibility.xml": "06fa0cf2c3ffb45e82d37ae3bbd03b7bef0d1a683394bc10bf0868f032a53aa2",
+    "candidate-summary.json": "29269c9c44d955d56e3ecd116343e658488de566365bd74c1402a85db3f162b5",
+    "compatibility-summary.json": "22e9a680709f7e8eefb2c126f0094508714ef204f88708f0e38b0a3c92ad39ae",
+    "exact-reference-after.xml": "bb01916306550910960034e30971c2cb5b29aeef15d7591231b26fd3de023446",
+    "exact-reference-before.txt": "fc12f8627175d28745a91af11a04ee910a077dd560c6999b92c8a5e11c4548dd",
+    "exact-reference-before.xml": "0383c11372cb209f0f780192d9d5d57f9b764d3396a7f6f387634d2835ec92bf",
+    "exact-reference-scope.json": "4c32c3d506b9658dafc99d6ff435fd8268bc6cbc39754f4d71c237b30709ea13"
+  }
+}

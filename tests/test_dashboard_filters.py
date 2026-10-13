@@ -55,7 +55,7 @@ def dashboard_app(tmp_path, monkeypatch):
     _write_hierarchy(hierarchy_root)
     monkeypatch.setattr(
         "modules.dashboard.routes.ProductHierarchyService",
-        lambda: ProductHierarchyService(hierarchy_root),
+        lambda *_args, **_kwargs: ProductHierarchyService(hierarchy_root),
     )
     path = tmp_path / "profiles.json"
     store = ProfileDataStore(path)
@@ -73,7 +73,8 @@ def dashboard_app(tmp_path, monkeypatch):
             "access_grants": grants, "is_active": True, "must_change_password": False,
             "password_hash": "unused", "password_scheme": "werkzeug", "revision": 1,
         })
-    app_module.app.config.update(TESTING=True, APP_DATA_FILE=str(path), SECRET_KEY="test")
+    for key, value in {"TESTING": True, "APP_DATA_FILE": str(path), "SECRET_KEY": "test"}.items():
+        monkeypatch.setitem(app_module.app.config, key, value)
     return app_module.app
 
 

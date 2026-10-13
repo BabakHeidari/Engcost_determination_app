@@ -1,0 +1,51 @@
+{
+  "backend_code_sha": "d9cd07120ba5238dbaf763d7788263ecb636dcd8",
+  "source_snapshot": "Final exact-product guarded source; file digests also identify the final committed tree independently of its eventual commit SHA.",
+  "source_sha256": {
+    "templates/dashboard/dashboard.html": "17f03fec776a3762300258664e32f6596d7a69782ef24c63b620a2afc43c5a6d",
+    "static/js/dashboard-analysis.js": "d5fd4c01a7a887601c9b24024316e7401bb04b7e91c125ccc4f4457463a9f9e9",
+    "static/js/dashboard-charts.js": "fbbbc38d81c6b1080ce3045ec99c253d1a16a3a2b0c6eee719eb65599466cb47",
+    "static/js/dashboard-lab-controls.js": "6c523ffb1f35d6c054f0ef182623512578a1d2f11ba720079ec62a91c71532b6",
+    "static/js/dashboard-lab.js": "507ce3eb715da78506e53b51b836cce284e43c5dbe6ba4505e1ef5fc2efba0e5",
+    "static/js/dashboard-numbers.js": "dc492e477a8d8f7e128052a47024d7736e94788a325ed2f78a7b8d61a638e3c0",
+    "static/js/dashboard-report.js": "768d1c78c8bc541e140fe1db6d047a83b7ce3dfad1aa1eae33f2e5c8216e630a",
+    "static/js/dashboard-sensitivity-model.js": "362941a1462cde869f894924c43735b21133c989a04e90610665c006c50f8a2d",
+    "static/js/dashboard-sensitivity-view.js": "58f4d6ea0f6225e05449ebf6c0aa5c9d0d5fbf227740b26aa3b6ab6a404f985d",
+    "static/js/dashboard-sensitivity.js": "d63da9100e15b3faee8fa4d344caeb166c1684d35b023e860fd5b189cf84e369",
+    "static/js/dashboard-table.js": "f9a98a718d60ca146377f2fa7cdad0388e7d5c5c59e10645237bb8490d249f5a",
+    "static/js/dashboard-tabs.js": "f190170bb87fbb301b7888813f686bae61d13e974e5e103d19467db7eff171bb",
+    "static/js/dashboard-visuals.js": "14cba762bac2cf41be9d05ec7d7ce3f0ed09ee130c7e9688eda040bbb0932a3d",
+    "tests/test_dashboard_release_frontend.py": "d9ef105362faaa85f0a28228857e89fec3e711c81448f8a2b3b1ff6216a5b88b",
+    "tests/test_dashboard_visual_frontend.py": "3b6b9c9bcf8ebc789f40cc09bbe246cc9b131f758e09bf9d862079a58616e379"
+  },
+  "current_source_runs": {
+    "candidate-browser-functional.xml": {
+      "passed": 24,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "deselected": 1,
+      "elapsed_seconds": 81.86
+    },
+    "candidate-browser-retained.xml": {
+      "passed": 16,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "elapsed_seconds": 58.85
+    }
+  },
+  "reproduction_commands": [
+    "DASHBOARD_CHROMIUM_PATH=/usr/bin/chromium DASHBOARD_REQUIRE_BROWSER=1 work/pr10-venv/bin/python -m pytest tests/test_dashboard_release_frontend.py -k \"not many_product\" -q --tb=short --junitxml=work/pr10-evidence/candidate-browser-functional.xml",
+    "DASHBOARD_CHROMIUM_PATH=/usr/bin/chromium DASHBOARD_ECHARTS_PATH=\"$PWD/static/vendor/echarts/echarts-5.6.0.min.js\" DASHBOARD_REQUIRE_BROWSER=1 work/pr10-venv/bin/python -m pytest tests/test_dashboard_visual_frontend.py -q --tb=short --junitxml=work/pr10-evidence/candidate-browser-retained-final.xml"
+  ],
+  "timing_run": {
+    "file": "candidate-browser-timing.xml",
+    "extracted_without_case_changes_from": "candidate-browser-release.xml",
+    "passed": 1,
+    "final_source_rerun": false,
+    "controller_sha256": "37175573c377fb4274440fc723edbaceecfd2d65e46d2a8907de425a632ff9d3",
+    "scope": "Product ALL short-circuits the final exact-product guard; original measurements and source hashes retained."
+  },
+  "compatibility_run": "96-case execution predates final controller path guard and remains explicitly labelled legacy compatibility evidence."
+}

@@ -1,0 +1,3 @@
+# Preserve byte-exact generated pytest/JUnit evidence, including traceback spaces.
+docs/evidence/pr10/*.xml -whitespace
+docs/evidence/pr10/*.txt -whitespace

@@ -1,0 +1,119 @@
+{
+  "cost": {
+    "browser": "154.0.8037.57",
+    "viewport": {
+      "width": 1440,
+      "height": 1100
+    },
+    "initial": {
+      "resizeListeners": 3,
+      "resizeObservers": 0,
+      "liveCharts": 0
+    },
+    "cycles": [
+      {
+        "cycle": 1,
+        "request_and_render_ms": 279.996,
+        "open_advanced_panel_ms": 223.592,
+        "resizeListeners": 5,
+        "resizeObservers": 1,
+        "liveCharts": 2
+      },
+      {
+        "cycle": 2,
+        "request_and_render_ms": 103.147,
+        "open_advanced_panel_ms": 167.451,
+        "resizeListeners": 5,
+        "resizeObservers": 1,
+        "liveCharts": 2
+      },
+      {
+        "cycle": 3,
+        "request_and_render_ms": 149.962,
+        "open_advanced_panel_ms": 117.505,
+        "resizeListeners": 5,
+        "resizeObservers": 1,
+        "liveCharts": 2
+      },
+      {
+        "cycle": 4,
+        "request_and_render_ms": 176.794,
+        "open_advanced_panel_ms": 160.003,
+        "resizeListeners": 5,
+        "resizeObservers": 1,
+        "liveCharts": 2
+      }
+    ]
+  },
+  "sensitivity": {
+    "browser": "154.0.8037.57",
+    "viewport": {
+      "width": 1440,
+      "height": 1100
+    },
+    "baseline": {
+      "resizeListeners": 4,
+      "resizeObservers": 1,
+      "liveCharts": 0
+    },
+    "cleared": {
+      "resizeListeners": 4,
+      "resizeObservers": 0,
+      "liveCharts": 0
+    },
+    "cycles": [
+      {
+        "cycle": 1,
+        "accepted": {
+          "resizeListeners": 5,
+          "resizeObservers": 1,
+          "liveCharts": 3
+        },
+        "reset": {
+          "resizeListeners": 4,
+          "resizeObservers": 1,
+          "liveCharts": 0
+        }
+      },
+      {
+        "cycle": 2,
+        "accepted": {
+          "resizeListeners": 5,
+          "resizeObservers": 1,
+          "liveCharts": 3
+        },
+        "reset": {
+          "resizeListeners": 4,
+          "resizeObservers": 1,
+          "liveCharts": 0
+        }
+      },
+      {
+        "cycle": 3,
+        "accepted": {
+          "resizeListeners": 5,
+          "resizeObservers": 1,
+          "liveCharts": 3
+        },
+        "reset": {
+          "resizeListeners": 4,
+          "resizeObservers": 1,
+          "liveCharts": 0
+        }
+      },
+      {
+        "cycle": 4,
+        "accepted": {
+          "resizeListeners": 5,
+          "resizeObservers": 1,
+          "liveCharts": 3
+        },
+        "reset": {
+          "resizeListeners": 4,
+          "resizeObservers": 1,
+          "liveCharts": 0
+        }
+      }
+    ]
+  }
+}

@@ -8,11 +8,14 @@
 | Route / action | Module | Scope / factory context | Level / rule |
 |---|---|---|---|
 | `GET /workdesk` | `desk` | GLOBAL | READ |
-| `GET /dashboard` | `dashboard` | GLOBAL؛ فهرست factory جداگانه فیلتر می‌شود | READ |
-| `GET /api/cost_analysis` بدون factory | `dashboard` | GLOBAL | READ |
+| `GET /dashboard` | `dashboard` | پذیرش mixed از کارخانه‌های فعال مجاز | READ دست‌کم یک کارخانه؛ فهرست factory و metadata فقط مجاز |
+| `GET /api/dashboard/filter-options` | `dashboard` | FACTORY canonical از query | READ همان کارخانه پیش از hierarchy lookup |
+| `GET /api/cost_analysis` بدون factory | `dashboard` | انتخاب ناقص | 400 / NOT_SELECTED؛ کارخانه پیش‌فرض ساخته نمی‌شود |
 | `GET /api/cost_analysis?factory=<id>` | `dashboard` | FACTORY از query | READ |
+| `GET /api/dashboard/cost-analysis/visuals` | `dashboard` | همان FACTORY و انتخاب/دوره canonical تحلیل هزینه | READ همان کارخانه؛ derived outputs نیازمند source-module grant تازه نیستند |
 | `GET /api/dashboard/sensitivity/parameters` | `dashboard` + گروه پارامتر مجاز | FACTORY canonical از query؛ عمومی GLOBAL و کارخانه‌ای همان FACTORY | Dashboard READ همان کارخانه؛ listing عمومی فقط با general_parameters READ و کارخانه‌ای فقط با factory_parameters READ همان کارخانه |
 | `POST /api/dashboard/sensitivity/scenario` | `dashboard` + گروه override مجاز | FACTORY canonical از JSON؛ عمومی GLOBAL و کارخانه‌ای همان FACTORY | Dashboard READ همان کارخانه + READ هر گروه استفاده‌شده؛ بررسی دوباره در POST؛ MODIFY لازم نیست و سناریو write ندارد |
+| `POST /api/dashboard/sensitivity/visual-analysis` | `dashboard` + گروه override/experiment مجاز | همان FACTORY canonical؛ هر دو A/B و تمام نقاط یک capture تازه | Dashboard READ همان کارخانه + READ هر گروه استفاده‌شده؛ draft خالی خروجی مجاز دارد؛ MODIFY لازم نیست |
 | `GET /general_parameters/` | `general_parameters` | GLOBAL | READ |
 | `POST /save_materials` | `general_parameters` | GLOBAL | MODIFY؛ جدول موجود را ویرایش می‌کند |
 | `GET /factory_parameters/` | `factory_parameters` | FACTORY؛ فقط subset مجاز | READ حداقل در یک کارخانه |
@@ -47,4 +50,8 @@ schema و migration تغییر نکرده‌اند و هیچ منبع writable �
 قرارداد کامل [PR-08 / DASH-5](pr08-dashboard-sensitivity-api.md) محدودیت انتخاب
 تک‌پیکربندی، registry متعلق به سرور، redaction پاسخ و نبود write را ثبت می‌کند.
 مجوز یک گروه الزاماً به گروه دیگر نیاز ندارد و roleهای سطح بالا همچنان از
-سیاست مرکزی implicit privilege می‌گیرند. رابط حساسیت برای PR-09 غیرفعال می‌ماند.
+سیاست مرکزی implicit privilege می‌گیرند. رابط حساسیت در PR-09 و آزمایش A/B
+در PR-09A تکمیل شده‌اند. آزمون‌های
+[PR-10](pr10-dashboard-release-readiness.md) بررسی دوباره grant، factory/user
+غیرفعال و هر دو نقش `IT_ADMIN` و `FINANCE_ECONOMIC_ADMIN` را ثبت می‌کنند.
+grant سراسری Dashboard به‌تنهایی مجوز کنش روی کارخانه مشخص ایجاد نمی‌کند.

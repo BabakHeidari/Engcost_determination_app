@@ -1,5 +1,6 @@
 import json
 import threading
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -8,6 +9,7 @@ from werkzeug.security import generate_password_hash
 import app as app_module
 from utils.profile_authorization import can_access_module
 from utils.profile_store import ProfileDataConflictError, ProfileDataStore, validate_data
+from html_contract import script_json
 
 
 def seed_user(store, user_id, role, *, job_title=""):
@@ -61,9 +63,11 @@ def test_top_level_admins_create_factory_with_identical_behavior(factory_app, ac
 def test_user_and_job_title_cannot_authorize_api_or_ui(factory_app):
     app, path = factory_app
     web = client_as(app, "usr_user")
-    assert web.post("/api/profile/factories", json=payload()).status_code == 400
+    assert web.post("/api/profile/factories", json=payload()).status_code == 403
     assert ProfileDataStore(path).list_factories() == []
-    assert "افزودن کارخانه جدید" not in web.get("/profile/profile").get_data(as_text=True)
+    page = web.get("/profile/profile")
+    assert page.status_code == 403
+    assert "افزودن کارخانه جدید" not in page.get_data(as_text=True)
 
 
 @pytest.mark.parametrize("hostile", [
@@ -82,7 +86,11 @@ def test_factory_persists_across_store_and_application_reload(factory_app):
     reloaded_store = ProfileDataStore(path)
     assert reloaded_store.list_factories()[0]["name"] == "کارخانه تهران"
     body = client_as(app, "usr_it").get("/profile/profile").get_data(as_text=True)
-    assert 'value="F4"' in body and "کارخانه تهران (F4)" in body
+    config = script_json(body, "accessManagerConfig")
+    assert config["factories"] == [{"id": "F4", "code": "F4", "name": "کارخانه تهران", "location": "تهران", "is_active": True}]
+    script = Path("static/js/profile-access-manager.js").read_text(encoding="utf-8")
+    assert 'option.value = factory.id' in script
+    assert '${factory.name} (${factory.code})' in script
 
 
 def test_duplicate_code_id_and_normalized_display_name_are_rejected_inside_lock(factory_app):
@@ -147,5 +155,10 @@ def test_admin_ui_uses_server_id_and_updates_factory_grant_options(factory_app):
     body = client_as(factory_app[0], "usr_it").get("/profile/profile").get_data(as_text=True)
     assert 'id="createFactoryModal"' in body
     assert 'name="code"' in body and 'name="name"' in body and 'name="location"' in body
-    assert "crypto.randomUUID" not in body and "addFactoryOption(factory)" in body
-    assert "grantTemplate" in body and "profile.create_factory" not in body
+    script = Path("static/js/profile-page.js").read_text(encoding="utf-8")
+    access_script = Path("static/js/profile-access-manager.js").read_text(encoding="utf-8")
+    assert "crypto.randomUUID" not in body + script + access_script
+    assert "await requestJson(config.create_factory_url" in script
+    assert "window.location.reload()" in script
+    assert 'option.value = factory.id' in access_script
+    assert 'config.factory_modules.forEach' in access_script and "profile.create_factory" not in body

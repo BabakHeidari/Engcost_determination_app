@@ -28,8 +28,10 @@ class ModulePersianLocalizationTests(unittest.TestCase):
         self.assertIn("کارخانه دین‌محمدپور", factories)
         self.assertIn('const factoryUrl = `/factory_parameters/', factories)
         self.assertIn("function displayDataValue", factories)
-        self.assertIn("ساختار هزینه با موفقیت ذخیره شد", details)
-        self.assertIn("selling_share_of_category", details)
+        self.assertIn("مبالغ و درصدها از جمع اقلام سطح نهایی محاسبه می‌شوند", details)
+        self.assertIn("ذخیره وزن دسته‌ها", details)
+        self.assertIn("category_table|tojson", details)
+        self.assertIn("save_category_table", details)
         self.assertIn("preditcionOfProductionPerCapitaData", details)
 
     def test_product_configuration_display_labels_preserve_payload_keys(self):

@@ -30,6 +30,18 @@ V1 و وابستگی‌ها دقیقاً محدود به متن زیر است؛ 
 | 023 | A+clarification | start/end از binding مالک؛ baseline legacy برابر `2026-09-27` و متمایز از actual date | APPROVED | یک period برای هر binding |
 | 024 | A | breakdown/export با KPI population/scope/unit/coverage/permission reconcile | APPROVED_WITH_OPEN_DETAIL | پس از KPIهای معتبر |
 
+## جزئیات بسته‌شده در قراردادهای اجرایی بعدی
+
+ردیف‌های 019 و 024 مانع تازهٔ تصمیم مالک نیستند: قراردادهای
+[PR-06](pr06-dashboard-cost-analysis-api.md)،
+[PR-07](pr07-dashboard-cost-analysis-ui.md) و
+[PR-09A](pr09a-dashboard-visual-analytics.md) precision فعلی ۲۸ رقم Decimal،
+گردکردن صرفاً نمایشی، جمعیت/واحد/دوره مشترک گزارش و CSV و residue صریح را
+مشخص کرده‌اند. [PR-10](pr10-dashboard-release-readiness.md) همین مصوبات را
+با آزمون‌های goldens، پاسخ واقعی و نبود write بررسی می‌کند؛ فرمول، مرز
+حسابداری یا approval تازه‌ای اختراع نمی‌کند. جزئیات رتبه‌بندی 005 طبق
+clarification مالک و قرارداد PR-06 بسته شده‌اند. UAT انتشار جدا و PENDING است.
+
 ## فرض‌های فنی NOT APPROVED
 
 شکل فعلی فایل، labelها، ترتیب آرایه، رفتار exception، مقدار صفر placeholder و

@@ -1,5 +1,10 @@
 # PR-06 / DASH-3 — قرارداد API تحلیل هزینه
 
+سخت‌سازی سازگار [PR-10](pr10-dashboard-release-readiness.md) validation پاسخ
+و گزینه‌های فیلتر را تکمیل می‌کند؛ خطای `CALCULATION_ERROR` واقعی طبق قرارداد
+500 است و ورودی/دوره unavailable همچنان 422 باقی می‌ماند. واحد، جمعیت،
+precision و API نسخه ۱ تغییر نمی‌کنند.
+
 `GET /api/cost_analysis` از ورودی‌های واقعی نصب‌شده و همان
 `CostInputLoader` و `calculate_cost` مصرف‌شده در Cost Calculation استفاده
 می‌کند. این برش شامل سرویس backend، قرارداد پاسخ و آزمون‌های API است؛ تکمیل

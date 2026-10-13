@@ -1,0 +1,111 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__ test_exact_product_with_all_parents_rejects_coherent_same_label_other_path __
+
+release_ui = {'page': <Page url='http://127.0.0.1:45083/dashboard'>, 'context': <BrowserContext browser=<Browser type=<BrowserType ...xact_product_with_all_pa0/bindings.json'), store=<utils.profile_store.ProfileDataStore object at 0x7f87e6b7dfd0>), ...}
+
+    def test_exact_product_with_all_parents_rejects_coherent_same_label_other_path(release_ui):
+        ui = release_ui; page = ui['page']; env = ui['analysis']
+        # Same label, distinct authorized paths. The installed prediction resolves A
+        # once by name in each category; both paths have valid V2 category weights.
+        other_category, other_subcategory = 'other-category', 'other-sub'
+        _write(env.factory / other_category / other_subcategory / 'A.json', _bom([2]))
+        metadata_path = env.data / 'Factories/__metadata.json'
+        metadata = json.loads(metadata_path.read_text())
+        metadata['product_hierarchy'][env.factory.name][other_category] = [other_subcategory]
+        _write(metadata_path, metadata)
+        _write(env.factory / 'configuration/category_weights.json', {'data': {
+            'category': ['category', other_category], 'selling_share_of_category': [50, 50],
+        }})
+        ui['checkpoint']()
+        _select(page)
+        # Obtain the opaque references from the actual authorized hierarchy options;
+        # neither the test nor the client decodes a product reference.
+        selected_ref = page.locator('#productSelect option').filter(
+            has_text='A | category / sub').get_attribute('value')
+        other_ref = page.locator('#productSelect option').filter(
+            has_text=f'A | {other_category} / {other_subcategory}').get_attribute('value')
+        assert selected_ref and other_ref and selected_ref != other_ref
+        page.select_option('#productSelect', selected_ref)
+        legitimate, query = analyze(ui)
+        assert query['category'] == query['subcategory'] == ['__ALL__']
+        assert legitimate['analysis']['scope']['selection']['product'] == selected_ref
+        expected = {'factory_id': FACTORY, 'category': 'category', 'subcategory': 'sub', 'product': 'A'}
+        assert legitimate['analysis']['detail_rows'][0]['identity'] == expected
+        assert page.locator('#analysisStatus').get_attribute('data-state') == 'OK'
+        assert page.locator('#costDashboard').is_visible() and page.locator('#downloadCsvBtn').is_enabled()
+        _, rows = downloaded(page, '#downloadCsvBtn')
+        assert [{key: row[key] for key in expected} for row in rows
+                if row['row_type'] == 'configuration'] == [expected]
+        intercepted = []
+        def wrong_path_transport(route):
+            url = urlparse(route.request.url)
+            params = parse_qs(url.query)
+            assert params['category'] == params['subcategory'] == ['__ALL__']
+            assert params['product'] == [selected_ref]
+            params['product'] = [other_ref]
+            # Fetch a genuine Flask visual report with its legitimate other-path
+            # reference. Every nested identity and monetary value stays coherent.
+            response = route.fetch(url=url._replace(query=urlencode(params, doseq=True)).geturl())
+            assert response.status == 200
+            actual = response.json()
+            assert actual['analysis']['state'] == 'OK'
+            assert actual['analysis']['scope']['selection']['product'] == other_ref
+            assert actual['analysis']['detail_rows'][0]['identity'] == {
+                **expected, 'category': other_category, 'subcategory': other_subcategory,
+            }
+            forged = copy.deepcopy(actual)
+            forged['analysis']['scope']['selection']['product'] = selected_ref
+            # Explicitly prove that the sole response edit is the selected reference.
+            restored = copy.deepcopy(forged)
+            restored['analysis']['scope']['selection']['product'] = other_ref
+            assert restored == actual
+            intercepted.append(forged)
+            route.fulfill(response=response, json=forged)
+        page.route('**' + VISUALS + '?*', wrong_path_transport)
+        body, _ = analyze(ui)
+        assert len(intercepted) == 1 and body == intercepted[0]
+        assert page.evaluate('body=>DashboardReport.validate(DashboardVisuals.adaptCost(body).analysis)', body)
+        received_state = (page.locator('#analysisStatus').get_attribute('data-state'),
+                          page.locator('#costDashboard').is_visible(),
+                          page.locator('#downloadCsvBtn').is_disabled(),
+                          page.evaluate('releaseResources().liveCharts'))
+>       assert received_state == ('UNAVAILABLE', False, True, 0)
+E       AssertionError: assert ('OK', True, False, 2) == ('UNAVAILABLE...alse, True, 0)
+E         
+E         At index 0 diff: 'OK' != 'UNAVAILABLE'
+E         Use -v to get more diff
+
+tests/test_dashboard_release_frontend.py:545: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /dashboard HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/css/dashboard.css HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/css/style.css HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/images/company-logo.png HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/jalali-date.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/main.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/vendor/echarts/echarts-5.6.0.min.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-numbers.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-table.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-charts.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-visuals.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-report.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-analysis.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-tabs.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-sensitivity-model.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-sensitivity-view.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-lab-controls.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-lab.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/js/dashboard-sensitivity.js HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/fonts/IRANSansX-Bold.woff2 HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:22] "GET /static/fonts/IRANSansX-Regular.woff2 HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:23] "GET /static/favicon.png HTTP/1.1" 200 -
+------------------------------ Captured log call -------------------------------
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:23] "GET /api/dashboard/filter-options?factory=factory-canonical HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:23] "GET /api/dashboard/filter-options?factory=factory-canonical&category=__ALL__ HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:23] "GET /api/dashboard/filter-options?factory=factory-canonical&category=__ALL__&subcategory=__ALL__ HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:24] "GET /api/dashboard/cost-analysis/visuals?factory=factory-canonical&category=__ALL__&subcategory=__ALL__&product=WyJsZWdhY3ktZm9sZGVyIiwiY2F0ZWdvcnkiLCJzdWIiLCJBIl0&start=2026-10-01&end=2026-12-31 HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:97 127.0.0.1 - - [12/Oct/2026 21:14:24] "GET /api/dashboard/cost-analysis/visuals?factory=factory-canonical&category=__ALL__&subcategory=__ALL__&product=WyJsZWdhY3ktZm9sZGVyIiwib3RoZXItY2F0ZWdvcnkiLCJvdGhlci1zdWIiLCJBIl0&start=2026-10-01&end=2026-12-31 HTTP/1.1" 200 -
+=========================== short test summary info ============================
+FAILED tests/test_dashboard_release_frontend.py::test_exact_product_with_all_parents_rejects_coherent_same_label_other_path
+1 failed, 24 deselected in 4.18s

@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -169,8 +170,14 @@ def test_loader_self_heals_recoverable_pool_and_calculates_normally(tmp_path):
     loader = CostInputLoader(FactoryServiceStub(), data_root=data, period_bindings_path=binding)
     inputs = loader.load("F1", {"allowed": True}, IDENTITY, "INITIAL")
     assert next(pool.raw_amount for pool in inputs.factory_pools if pool.pool_id == "Payroll") == 100
-    assert (data / "Factories" / "legacy" / "Factory_Data_Payroll.json").exists()
-    assert calculate_cost(inputs).state is CostState.OK
+    installed = data / "Factories" / "legacy" / "configuration" / "cost_pools" / "Payroll.json"
+    assert installed.exists()
+    document = json.loads(installed.read_text())
+    assert document["data"]["cost"] == [100]
+    assert document["data"]["id"] == ["LegacyMigratedTotal"]
+    assert not (data / "Factories" / "legacy" / "Factory_Data_Payroll.json").exists()
+    result = calculate_cost(inputs)
+    assert result.state is CostState.OK and result.value == Decimal("16")
 
 
 def test_loader_blocks_generated_incomplete_source_with_diagnostic(tmp_path):
@@ -182,11 +189,14 @@ def test_loader_blocks_generated_incomplete_source_with_diagnostic(tmp_path):
     loader = CostInputLoader(FactoryServiceStub(), data_root=data, period_bindings_path=binding)
     with pytest.raises(CostInputError) as caught:
         loader.load("F1", {"allowed": True}, IDENTITY, "INITIAL")
-    assert caught.value.detail.code == "LEGACY_SOURCE_NEEDS_INPUT"
-    prediction = next(item for item in caught.value.diagnostic["source_resolutions"]
-                      if item["source_name"] == "predictions")
-    assert prediction["migration_status"] == "NEEDS_INPUT"
-    assert prediction["calculation_ready"] is False
+    assert caught.value.state is CostState.MISSING_INPUT
+    assert caught.value.detail.code == "MISSING_NUMERIC_INPUT"
+    prediction = json.loads((data / "Factories" / "legacy" / "configuration" / "production_prediction.json").read_text())
+    assert prediction["status"] == "NEEDS_INPUT"
+    assert prediction["data"]["Predicted Production"] == [None]
+    diagnostic = loader.diagnose_sources("F1", "INITIAL", IDENTITY)
+    assert diagnostic["active_period"]["period_id"] == "INITIAL"
+    assert "predictions" in diagnostic["available_sources"]
 
 
 def test_missing_known_bom_is_generated_incomplete_and_never_costed_as_zero(tmp_path):
@@ -206,7 +216,7 @@ def test_missing_known_bom_is_generated_incomplete_and_never_costed_as_zero(tmp_
     assert bom["_migration"]["status"] == "NEEDS_INPUT"
 
 
-def test_loader_reports_conflict_when_healing_cannot_safely_reconcile(tmp_path):
+def test_loader_preserves_detailed_pool_and_reports_v2_summary_mismatch(tmp_path):
     data, binding = tmp_path / "Data", tmp_path / "binding.json"
     _complete_non_pool_sources(data)
     _legacy(data, [(pool, 100 if pool == "Payroll" else 0) for pool in FACTORY_POOL_IDS])
@@ -215,8 +225,12 @@ def test_loader_reports_conflict_when_healing_cannot_safely_reconcile(tmp_path):
             _canonical_pool(data, pool, 999 if pool == "Payroll" else 0)
     _binding(binding)
     loader = CostInputLoader(FactoryServiceStub(), data_root=data, period_bindings_path=binding)
-    with pytest.raises(CostInputError) as caught:
-        loader.load("F1", {"allowed": True}, IDENTITY, "INITIAL")
-    assert caught.value.detail.code == "LEGACY_SOURCE_CONFLICT"
-    assert "pool:Payroll" in caught.value.diagnostic["legacy_migration"]["conflicts"]
+    inputs = loader.load("F1", {"allowed": True}, IDENTITY, "INITIAL")
+    assert next(pool.raw_amount for pool in inputs.factory_pools if pool.pool_id == "Payroll") == 999
+    result = calculate_cost(inputs)
+    assert result.state is CostState.OK and result.value == Decimal("105.9")
+    manifest = json.loads((data / "Factories" / "legacy" / "configuration" / "manifest.json").read_text())
+    payroll = manifest["migration"]["components"]["pool:Payroll"]
+    assert payroll["result"] == "WARNING_SUMMARY_MISMATCH"
+    assert payroll["warnings"] == ["LEGACY_SUMMARY_MISMATCH"]
     assert json.loads((data / "Factories" / "legacy" / "Factory_Data_Payroll.json").read_text())["data"]["cost"] == [999]

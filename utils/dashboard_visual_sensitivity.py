@@ -48,7 +48,7 @@ class DashboardVisualSensitivityService(DashboardSensitivityService):
         """Validate shape, grammar, authorization and work bounds before capture."""
         if spec is None:
             return None, []
-        if not isinstance(spec, dict):
+        if not isinstance(spec, dict) or not isinstance(spec.get('type'), str):
             raise SensitivityRequestError('INVALID_REQUEST', 'INVALID_EXPERIMENT_SCHEMA')
         kind = spec.get('type')
         points = []

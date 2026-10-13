@@ -40,17 +40,24 @@ def _sensitivity_request(*, scenario, visual=False):
     if scenario:
         if request.args or not request.is_json:
             raise SensitivityRequestError("INVALID_REQUEST", "EXPECTED_SCENARIO_JSON")
-        if request.content_length is not None and request.content_length > SENSITIVITY_MAX_BODY_BYTES:
-            raise SensitivityRequestError("INVALID_REQUEST", "PAYLOAD_TOO_LARGE", status=413)
         # Preserve a stricter application limit and cached body reads performed
         # by authentication/CSRF middleware. Flask also bounds chunked bodies.
         existing_limit = request.max_content_length
-        request.max_content_length = (
+        body_limit = (
             min(existing_limit, SENSITIVITY_MAX_BODY_BYTES)
             if existing_limit is not None else SENSITIVITY_MAX_BODY_BYTES
         )
+        request.max_content_length = body_limit
+        if request.content_length is not None and request.content_length > body_limit:
+            raise SensitivityRequestError("INVALID_REQUEST", "PAYLOAD_TOO_LARGE", status=413)
         raw = request.get_data(cache=True)
-        if len(raw) > SENSITIVITY_MAX_BODY_BYTES:
+        if len(raw) > body_limit:
+            raise SensitivityRequestError("INVALID_REQUEST", "PAYLOAD_TOO_LARGE", status=413)
+        # A maximum-length Werkzeug stream stops exactly at its limit. With a
+        # terminated WSGI body that prefix might already be valid
+        # JSON, so inspect one bounded byte to distinguish EOF from truncation.
+        if (request.environ.get("wsgi.input_terminated")
+                and len(raw) == body_limit and request.input_stream.read(1)):
             raise SensitivityRequestError("INVALID_REQUEST", "PAYLOAD_TOO_LARGE", status=413)
         try:
             payload = json.loads(raw, object_pairs_hook=_sensitivity_json_object,
@@ -194,29 +201,46 @@ def dashboard():
 @login_required
 def filter_options():
     """Return v1 hierarchy options for one authorized canonical factory."""
+    allowed = {"factory", "category", "subcategory", "product"}
+    if (set(request.args) - allowed
+            or any(len(request.args.getlist(key)) != 1 for key in request.args)):
+        return jsonify({"version": "1", "state": "INVALID_SELECTION",
+                        "message": "پارامترهای انتخاب معتبر نیستند."}), 400
     factory_id = request.args.get("factory")
-    if not factory_id:
+    if factory_id is None:
         return jsonify({"version": "1", "state": "NOT_SELECTED", "message": "انتخاب کارخانه الزامی است."}), 400
+    if (factory_id == "__ALL__" or any(
+            not value or value != value.strip() or len(value) > 2048
+            or any(ord(char) < 32 or ord(char) == 127 for char in value)
+            for value in request.args.values())):
+        return jsonify({"version": "1", "state": "INVALID_SELECTION",
+                        "message": "انتخاب کارخانه یا محصول معتبر نیست."}), 400
     service = FactoryService(get_profile_store())
     try:
         factory = service.require_access(factory_id, g.current_user, "dashboard")
         # Resolve operational data only after canonical existence, active-state,
         # and Dashboard-specific access checks have all succeeded.
         operational_key = service.operational_key(factory)
-        result = ProductHierarchyService().options(
+        data_root = current_app.config.get("COSTING_DATA_ROOT")
+        hierarchy = (ProductHierarchyService(Path(data_root) / "Factories")
+                     if data_root else ProductHierarchyService())
+        result = hierarchy.options(
             operational_key,
             category=request.args.get("category"),
             subcategory=request.args.get("subcategory"),
             product=request.args.get("product"),
         )
-    except FactoryNotFoundError as exc:
-        return jsonify({"version": "1", "state": "UNKNOWN_FACTORY", "message": str(exc)}), 404
-    except (FactoryAccessDeniedError, FactoryInactiveError) as exc:
-        return jsonify({"version": "1", "state": "FORBIDDEN", "message": str(exc)}), 403
-    except HierarchySelectionError as exc:
-        return jsonify({"version": "1", "state": "INVALID_SELECTION", "message": str(exc)}), 400
-    except HierarchyMetadataError as exc:
-        return jsonify({"version": "1", "state": "UNAVAILABLE", "message": str(exc)}), 503
+    except FactoryNotFoundError:
+        return jsonify({"version": "1", "state": "UNKNOWN_FACTORY", "message": "کارخانه در رجیستری سامانه وجود ندارد."}), 404
+    except (FactoryAccessDeniedError, FactoryInactiveError):
+        return jsonify({"version": "1", "state": "FORBIDDEN", "message": "دسترسی به این کارخانه مجاز نیست."}), 403
+    except HierarchySelectionError:
+        return jsonify({"version": "1", "state": "INVALID_SELECTION", "message": "انتخاب در دامنه والد وجود ندارد."}), 400
+    except HierarchyMetadataError:
+        return jsonify({"version": "1", "state": "UNAVAILABLE", "message": "سلسله‌مراتب محصول در دسترس یا معتبر نیست."}), 503
+    except Exception:
+        LOGGER.exception("Dashboard filter options failed")
+        return jsonify({"version": "1", "state": "CALCULATION_ERROR", "message": "دریافت گزینه‌های محصول انجام نشد."}), 500
     result.update({"version": "1", "factory": factory})
     return jsonify(result)
 
@@ -247,7 +271,7 @@ def _cost_analysis_response(*, visual=False):
     if factory_id == "__ALL__":
         return respond(empty_report("INVALID_SELECTION", issues=[safe_issue(
             "INVALID_INPUT", "ONE_FACTORY_REQUIRED")])), 400
-    if any(not value or value != value.strip() or len(value) > 2048 or any(ord(char) < 32 for char in value)
+    if any(not value or value != value.strip() or len(value) > 2048 or any(ord(char) < 32 or ord(char) == 127 for char in value)
            for value in request.args.values()):
         return respond(empty_report("INVALID_SELECTION", issues=[safe_issue(
             "INVALID_INPUT", "EMPTY_OR_MALFORMED_SELECTION")])), 400
@@ -285,7 +309,8 @@ def _cost_analysis_response(*, visual=False):
             period_id=request.args.get("period", ""), start=request.args.get("start"), end=request.args.get("end"),
         )
         status = 400 if report["state"] == "NOT_SELECTED" else (
-            200 if report["state"] in {"OK", "PARTIAL", "NO_MATCH"} else 422)
+            200 if report["state"] in {"OK", "PARTIAL", "NO_MATCH"} else (
+                500 if report["state"] == "CALCULATION_ERROR" else 422))
         return respond(report), status
     except FactoryNotFoundError:
         return respond(empty_report("UNKNOWN_FACTORY", issues=[safe_issue(
@@ -300,7 +325,8 @@ def _cost_analysis_response(*, visual=False):
         return respond(empty_report("UNAVAILABLE", issues=[safe_issue(
             "MISSING_INPUT", "HIERARCHY_UNAVAILABLE")])), 503
     except CostInputError as exc:
-        return respond(empty_report(exc.state.value, issues=[safe_issue(exc.state.value, exc.detail.code)])), 422
+        return respond(empty_report(exc.state.value, issues=[safe_issue(exc.state.value, exc.detail.code)])), (
+            500 if exc.state.value == "CALCULATION_ERROR" else 422)
     except Exception:
         LOGGER.exception("Dashboard analysis failed")
         return respond(empty_report("CALCULATION_ERROR", issues=[safe_issue(

@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites name="one case extracted from retained original release run"><testsuite name="earlier all-products timing capture" errors="0" failures="0" skipped="0" tests="1" time="517.321" timestamp="2026-10-12T20:33:40.804060+00:00" hostname="42e15902fe64"><testcase classname="tests.test_dashboard_release_frontend" name="test_many_product_browser_render_opening_and_bounded_resource_churn[benchmark]" time="517.321" /></testsuite></testsuites>

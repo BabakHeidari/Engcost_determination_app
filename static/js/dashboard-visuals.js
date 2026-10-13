@@ -17,7 +17,7 @@
     function numeric(value) { const n = value === null ? NaN : Number(value); if (!Number.isFinite(n)) throw Error('NON_FINITE_COORDINATE'); return n; }
     function shell(container) {
         const doc = container.ownerDocument, panels = [], listeners = [];
-        let destroyed = false, active = true;
+        let destroyed = false, active = !container.closest('[role="tabpanel"]')?.hidden;
         function panel(title, scope, rows, columns, options, action, lazy = false) {
             const box = el(doc, lazy ? 'details' : 'section', undefined, 'report-chart-card visual-panel');
             box.append(el(doc, lazy ? 'summary' : 'h2', title));
@@ -161,26 +161,92 @@
         return {destroy(){focusView?.destroy();workspace.destroy();},resize:workspace.resize,clearFocus,setActive(v){workspace.setActive(v);focusView?.setActive(v);}};
     }
     function adaptCost(raw) {
-        const dec=v=>v===null||typeof v==='string'&&/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(v);
-        const v=raw?.visuals,r=raw?.analysis;
-        if(raw?.version!=='1'||!w.DashboardReport.validate(r)||v?.version!=='1'||v.population!=='selected_calculated_configurations'||
-            JSON.stringify(v.coverage)!==JSON.stringify(r.coverage)||JSON.stringify(v.period)!==JSON.stringify(r.period)||
-            !Array.isArray(v.factor_ids)||v.factor_ids.length!==7||!v.factor_ids.every(id=>FACTORS[id]&&id!=='OTHER')||
-            !Array.isArray(v.products)||v.products.length!==r.coverage.calculated||!Array.isArray(v.excluded)||v.excluded.length!==r.coverage.excluded||
-            !Array.isArray(v.composition)||v.composition.length>5||!v.composition.every(p=>FACTORS[p.id]&&dec(p.value)&&dec(p.share))||
-            !Array.isArray(v.hierarchy)||!Array.isArray(v.materials)||!dec(v.pareto_denominator)||!dec(v.material_reconciliation))throw Error('VISUAL_SCHEMA');
-        for(const p of v.products){
-            const original=r.breakdowns.products.find(x=>key(x.identity)===key(p.identity));
-            if(!original||!['unit_cost','prediction','projected_cost','reconciliation'].every(k=>dec(p[k]))||
-                p.unit_cost!==original.unit_cost||p.prediction!==original.prediction||p.projected_cost!==original.projected_cost||
-                !v.factor_ids.every(id=>dec(p.unit_components?.[id])&&dec(p.projected_components?.[id])))throw Error('VISUAL_SCHEMA');
+        const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
+        const keys = (x, required, optional = []) => object(x) && required.every(k => Object.hasOwn(x, k)) && Object.keys(x).every(k => required.includes(k) || optional.includes(k));
+        const dec = x => typeof x === 'string' && /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(x);
+        const nullable = x => x === null || dec(x);
+        const unique = xs => new Set(xs).size === xs.length;
+        const factors = Object.keys(FACTORS).filter(id => !['OTHER', 'TECHNICAL_RECONCILIATION'].includes(id));
+        const same = (a, b, fields) => object(a) && object(b) && fields.every(k => a[k] === b[k]);
+        const id = x => keys(x, ['factory_id', 'category', 'subcategory', 'product']) && Object.values(x).every(x => typeof x === 'string' && x.length > 0);
+        const invalid = () => { throw Error('VISUAL_SCHEMA'); };
+        const v = raw?.visuals, r = raw?.analysis;
+        if (!keys(raw, ['version', 'analysis', 'visuals']) || raw.version !== '1' || !w.DashboardReport.validate(r) ||
+            !keys(v, ['version', 'population', 'coverage', 'period', 'factor_ids', 'composition', 'composition_mode', 'products', 'hierarchy', 'hierarchy_unit',
+                'treemap_available', 'materials', 'pareto_denominator', 'pareto_denominator_scope', 'pareto_mode', 'material_reconciliation', 'excluded']) ||
+            v.version !== '1' || v.population !== 'selected_calculated_configurations' || !same(v.coverage, r.coverage, ['configured', 'calculated', 'excluded', 'percentage']) ||
+            !(v.period === null && r.period === null || same(v.period, r.period, ['id', 'start', 'end'])) ||
+            !Array.isArray(v.factor_ids) || v.factor_ids.length !== 7 || !unique(v.factor_ids) || !v.factor_ids.every(x => factors.includes(x)) ||
+            !Array.isArray(v.products) || v.products.length !== r.coverage.calculated || !Array.isArray(v.excluded) || v.excluded.length !== r.coverage.excluded ||
+            !Array.isArray(v.composition) || v.composition.length !== (r.coverage.calculated ? 5 : 0) || !unique(v.composition.map(x => x?.id)) ||
+            !['bar', 'donut'].includes(v.composition_mode) || !['pareto', 'signed_bar'].includes(v.pareto_mode) || typeof v.treemap_available !== 'boolean' ||
+            v.hierarchy_unit !== 'IRR/period' || v.pareto_denominator_scope !== 'selected_calculated_projected_BOM_total' ||
+            !Array.isArray(v.hierarchy) || !Array.isArray(v.materials) || !nullable(v.pareto_denominator) || !nullable(v.material_reconciliation)) invalid();
+        const originals = new Map(r.breakdowns.products.map(p => [key(p.identity), p]));
+        if (!unique(v.products.map(p => id(p?.identity) ? key(p.identity) : null))) invalid();
+        for (const p of v.products) {
+            const original = id(p?.identity) && originals.get(key(p.identity));
+            if (!original || !keys(p, ['identity', 'unit_cost', 'prediction', 'projected_cost', 'unit_components', 'projected_components', 'reconciliation']) ||
+                !['unit_cost', 'prediction', 'projected_cost', 'reconciliation'].every(k => dec(p[k])) ||
+                !same(p, original, ['unit_cost', 'prediction', 'projected_cost']) ||
+                !keys(p.unit_components, factors) || !keys(p.projected_components, factors) || !factors.every(k => dec(p.unit_components[k]) && dec(p.projected_components[k])) ||
+                p.unit_components.BOM !== original.bom_total || original.driver_components.some(d =>
+                    p.unit_components[d.pool_id] !== d.per_unit_contribution || p.projected_components[d.pool_id] !== d.product_period_contribution)) invalid();
         }
-        for(const m of v.materials){if(typeof m.material!=='string'||!['value','share','cumulative_share'].every(k=>dec(m[k]))||
-            !Array.isArray(m.rows)||!m.rows.every(p=>typeof p.row_id==='string'&&p.identity&&dec(p.unit_contribution)&&dec(p.projected_contribution)))throw Error('VISUAL_SCHEMA');}
-        function hierarchy(nodes){return nodes.every(n=>dec(n.value)&&(n.identity||typeof n.name==='string'&&Array.isArray(n.children)&&hierarchy(n.children)));}
-        if(!hierarchy(v.hierarchy))throw Error('VISUAL_SCHEMA');
-        const accepted=JSON.parse(JSON.stringify(raw));
-        function freeze(value){if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;}
+        const excluded = new Map(r.detail_rows.filter(p => p.state !== 'OK').map(p => [key(p.identity), p]));
+        if (!unique(v.excluded.map(p => id(p?.identity) ? key(p.identity) : null)) || v.excluded.some(p =>
+            !id(p?.identity) || !excluded.has(key(p.identity)) || JSON.stringify(p) !== JSON.stringify(excluded.get(key(p.identity))))) invalid();
+        const members = [];
+        for (const p of v.composition) {
+            if (!nullable(p?.share) || !dec(p?.value) || p.unit !== 'IRR/period') invalid();
+            if (p.id === 'OTHER') {
+                if (!keys(p, ['id', 'value', 'share', 'unit', 'members']) || !Array.isArray(p.members) || p.members.length !== 3 || !unique(p.members) || !p.members.every(id => factors.includes(id))) invalid();
+                members.push(...p.members);
+            } else {
+                const original = r.breakdowns.drivers.find(d => d.id === p.id);
+                if (!keys(p, ['id', 'value', 'share', 'unit', 'population']) || !original || !same(p, original, ['value', 'share', 'unit', 'population'])) invalid();
+                members.push(p.id);
+            }
+        }
+        if (r.coverage.calculated && (members.length !== 7 || !unique(members))) invalid();
+        const positive = x => w.DashboardNumbers.compare(x, '0') > 0;
+        const nonnegative = x => w.DashboardNumbers.compare(x, '0') >= 0;
+        const total = r.kpis.partial_total ?? r.kpis.projected_total;
+        if (v.composition_mode !== (total !== null && positive(total) && r.breakdowns.drivers.every(p => nonnegative(p.value)) ? 'donut' : 'bar') ||
+            v.treemap_available !== (v.products.every(p => nonnegative(p.projected_cost)) && v.products.some(p => positive(p.projected_cost)))) invalid();
+        const leaves = [], categories = new Set();
+        for (const category of v.hierarchy) {
+            if (!keys(category, ['name', 'value', 'children']) || typeof category.name !== 'string' || !dec(category.value) || !Array.isArray(category.children) || !category.children.length || categories.has(category.name)) invalid();
+            categories.add(category.name); const subs = new Set();
+            for (const sub of category.children) {
+                if (!keys(sub, ['name', 'value', 'children']) || typeof sub.name !== 'string' || !dec(sub.value) || !Array.isArray(sub.children) || !sub.children.length || subs.has(sub.name)) invalid();
+                subs.add(sub.name);
+                for (const p of sub.children) {
+                    const original = id(p?.identity) && originals.get(key(p.identity));
+                    if (!keys(p, ['identity', 'value']) || !original || p.identity.category !== category.name || p.identity.subcategory !== sub.name || p.value !== original.projected_cost) invalid();
+                    leaves.push(key(p.identity));
+                }
+            }
+        }
+        if (leaves.length !== v.products.length || !unique(leaves)) invalid();
+        const bomRows = new Map(r.breakdowns.products.flatMap(p => p.bom_components.map(b => [JSON.stringify([key(p.identity), b.row_id]), b])));
+        const materialRows = [];
+        if (!unique(v.materials.map(p => p?.material))) invalid();
+        for (const m of v.materials) {
+            if (!keys(m, ['material', 'value', 'rows', 'share', 'cumulative_share']) || typeof m.material !== 'string' || !dec(m.value) || !nullable(m.share) || !nullable(m.cumulative_share) || !Array.isArray(m.rows) || !m.rows.length) invalid();
+            for (const p of m.rows) {
+                const rowKey = id(p?.identity) && JSON.stringify([key(p.identity), p.row_id]), original = bomRows.get(rowKey);
+                if (!keys(p, ['identity', 'row_id', 'unit_contribution', 'projected_contribution']) || !original || original.material !== m.material ||
+                    p.unit_contribution !== original.live_cost_in_rial || !dec(p.projected_contribution)) invalid();
+                materialRows.push(rowKey);
+            }
+        }
+        const bomTotal = r.breakdowns.drivers.find(p => p.id === 'BOM')?.value ?? null;
+        if (materialRows.length !== bomRows.size || !unique(materialRows) || v.pareto_denominator !== bomTotal ||
+            (bomTotal === null ? v.material_reconciliation !== null : v.material_reconciliation === null) ||
+            v.pareto_mode !== (bomTotal !== null && positive(bomTotal) && v.materials.every(p => nonnegative(p.value)) ? 'pareto' : 'signed_bar')) invalid();
+        const accepted = JSON.parse(JSON.stringify(raw));
+        function freeze(value) { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; }
         return freeze(accepted);
     }
     w.DashboardVisuals=Object.freeze({cost,shell,bars,FACTORS,label,color,identity,numeric,textCol,amountCol,adaptCost});

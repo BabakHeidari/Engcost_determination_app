@@ -1,6 +1,7 @@
 import json
 
 from utils.product_catalog import build_product_catalog, build_product_hierarchy, product_catalog_document
+from html_contract import javascript_json
 
 
 POOLS = ("Overhead", "Payroll", "AdministrativeandResearch", "FinancialCosts",
@@ -75,44 +76,41 @@ def test_production_selection_and_options_exclude_v2_configuration(tmp_path, mon
     store_path = tmp_path / "app_data.json"
     store = ProfileDataStore(store_path)
     store.initialize({})
-    store.create_user({
-        "id": "admin", "username": "admin", "email": "admin@example.com", "full_name": "مدیر",
-        "system_role": "IT_ADMIN", "job_title": "مدیر", "access_grants": [], "is_active": True,
-        "must_change_password": False, "password_hash": "unused", "password_scheme": "werkzeug", "revision": 1,
-    })
     # Profile state is isolated before importing the module-level Flask app, so
     # startup initialization cannot touch the checkout's real profile data.
     monkeypatch.setenv("APP_DATA_FILE", str(store_path))
     app_module = __import__("app")
     product_routes = __import__("modules.product.routes", fromlist=["routes"])
     updaters = __import__("utils.updaters", fromlist=["updaters"])
-    class RouteFactoryService:
-        def __init__(self, _store):
-            pass
-
-        def get_accessible_factories(self, _user, _module):
-            return [{"id": "factory-canonical", "name": "کارخانه آزمون"}]
-
-        def list_factories(self):
-            return [{"id": "factory-canonical", "name": "کارخانه آزمون"}]
-
-        def operational_key(self, _factory):
-            return "DinMohamadpour"
-
+    # Import with an empty registry first: startup initialization has no
+    # registered factory to migrate. Route authorization uses the real service.
+    store.create_factory({"id": "factory-canonical", "code": "F1", "name": "کارخانه آزمون",
+                          "operational_key": "DinMohamadpour", "is_active": True})
+    store.create_factory({"id": "factory-secret", "code": "F2", "name": "محرمانه",
+                          "operational_key": "OtherOperational", "is_active": True})
+    store.create_user({
+        "id": "product-reader", "username": "reader", "email": "reader@example.com", "full_name": "کاربر",
+        "system_role": "USER", "job_title": "کاربر", "is_active": True,
+        "access_grants": [{"scope_type": "FACTORY", "factory_id": "factory-canonical",
+                           "module": "product", "permissions": ["READ"]}],
+        "must_change_password": False, "password_hash": "unused", "password_scheme": "werkzeug", "revision": 1,
+    })
     monkeypatch.setattr(product_routes, "parent_path", data)
-    monkeypatch.setattr(product_routes, "FactoryService", RouteFactoryService)
     monkeypatch.setattr(updaters, "parent_path", data)
     app_module.app.config.update(TESTING=True, APP_DATA_FILE=str(store_path), SECRET_KEY="test")
 
     client = app_module.app.test_client()
     with client.session_transaction() as session:
-        session["user_id"] = "admin"
+        session["user_id"] = "product-reader"
     page = client.get("/product/production_selection")
     assert page.status_code == 200
     body = page.get_data(as_text=True)
     assert "RealProduct" in body and "MalformedProduct" in body and "ثبت نشده" in body
     assert "factory-canonical" in body
-    assert "محصول\\u0027ایمن" in body
+    shipped = javascript_json(body, "rawData")
+    assert "محصول'ایمن" in shipped["Product_Name"].values()
+    assert "\\u0027" in body
+    assert set(shipped["Factory"].values()) == {"factory-canonical"}
     assert "</script><script>alert(true)</script>" not in body
     assert "SecretProduct" not in body and "OtherOperational" not in body
     assert all(pool not in body for pool in POOLS)

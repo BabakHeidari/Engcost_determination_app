@@ -1,8 +1,10 @@
-"""Real Chromium checks of PR-09 against the installed, authorized PR-08 API.
+"""Legacy PR-09 Chromium compatibility checks of the authorized PR-08 API.
 
 The PR-07 Flask/browser harness and PR-08 V2 fixture are deliberately reused:
 no app.py import, operational Data access, source-save route, or mock costing
 formula is needed. Every test retains fixture inventory/SHA-256/mtime evidence.
+Explicit test-only caller adapters preserve the pre-PR09A contract; the PR-10
+release suite validates the shipped assets and visual-analysis endpoints.
 Optional DASHBOARD_UI_EVIDENCE_DIR captures actual desktop/mobile views.
 """
 

@@ -51,7 +51,7 @@ def test_peer_roles_equally_edit_ordinary_user_and_job_title_has_no_authority(ma
     response = client_as(app, actor).patch("/api/profile/users/usr_user", json={
         "expected_revision": revision(path, "usr_user"), "job_title": "مدیر کل IT",
         "access_grants": [{"scope_type": "FACTORY", "factory_id": "fac_active",
-                           "module": "product", "permissions": ["WRITE", "READ", "READ"]}],
+                           "module": "product", "permissions": ["READ", "WRITE"]}],
     })
     assert response.status_code == 200
     user = ProfileDataStore(path).get_user_by_id("usr_user")
@@ -63,7 +63,9 @@ def test_peer_roles_equally_edit_ordinary_user_and_job_title_has_no_authority(ma
 def test_user_cannot_edit_and_unknown_or_inactive_grants_fail_closed(managed_app):
     app, path = managed_app
     payload = {"expected_revision": revision(path, "usr_user"), "job_title": "admin"}
-    assert client_as(app, "usr_user").patch("/api/profile/users/usr_it", json=payload).status_code == 400
+    before = path.read_bytes()
+    assert client_as(app, "usr_user").patch("/api/profile/users/usr_it", json=payload).status_code == 403
+    assert path.read_bytes() == before
     admin = client_as(app, "usr_it")
     for factory_id in ("missing", "fac_inactive"):
         response = admin.patch("/api/profile/users/usr_user", json={
@@ -72,6 +74,16 @@ def test_user_cannot_edit_and_unknown_or_inactive_grants_fail_closed(managed_app
                                "module": "product", "permissions": ["READ"]}],
         })
         assert response.status_code == 400
+    # Persisted grant arrays use the strict hierarchical canonical grammar;
+    # an out-of-order or duplicate array cannot bypass storage validation.
+    for permissions in (["WRITE", "READ"], ["READ", "WRITE", "READ"]):
+        before = path.read_bytes()
+        response = admin.patch("/api/profile/users/usr_user", json={
+            "expected_revision": revision(path, "usr_user"),
+            "access_grants": [{"scope_type": "FACTORY", "factory_id": "fac_active",
+                               "module": "product", "permissions": permissions}],
+        })
+        assert response.status_code == 400 and path.read_bytes() == before
 
 
 def test_peer_sensitive_changes_and_last_admin_guarantee(managed_app):
@@ -102,7 +114,10 @@ def test_password_reset_is_separate_safe_and_stale_edits_conflict(managed_app):
         "expected_revision": old_revision,
     })
     assert response.status_code == 200
-    assert "password" not in json.dumps(response.get_json()).casefold()
+    returned = response.get_json()["user"]
+    assert "password_hash" not in returned and "password" not in returned
+    assert "Replacement-Password-456" not in json.dumps(response.get_json())
+    assert returned["must_change_password"] is True and returned["revision"] == old_revision + 1
     raw = ProfileDataStore(path).get_user_by_id("usr_user", include_secret=True)
     assert check_password_hash(raw["password_hash"], "Replacement-Password-456")
     assert not check_password_hash(raw["password_hash"], PASSWORD)

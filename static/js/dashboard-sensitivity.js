@@ -93,7 +93,8 @@
             !baselineAvailable() || !draftValidation().valid;
         runButton.textContent = scenarioLoading ? 'در حال اجرای سناریو…' : 'اجرای سناریو';
         resetButton.disabled = !draftSets.A.size && !draftSets.B.size && !accepted && !scenarioLoading && experiments.prepare().spec === null;
-        refreshButton.disabled = !complete() || hierarchyLoading || registryLoading || scenarioLoading;
+        // Refresh invalidates any pending scenario before loading a fresh baseline.
+        refreshButton.disabled = !complete() || hierarchyLoading || registryLoading;
         exportButton.disabled = !accepted || acceptedScope !== scopeKey() || acceptedRevision !== revision;
         form.setAttribute('aria-busy', String(hierarchyLoading || registryLoading || scenarioLoading));
     }
@@ -432,7 +433,9 @@
                 body: prepared.json, cache: 'no-store', signal: scenarioRequest.signal});
             const received = await readResponse(response);
             if (generation !== scenarioGeneration || scope !== scopeKey() || draftRevision !== revision) return;
-            const visual = window.DashboardLab.adapt(received.data);
+            let visual;
+            try { visual = window.DashboardLab.adapt(received.data); }
+            catch (_) { throw {kind: 'SCHEMA', status: received.status}; }
             const snapshot = visual.context;
             if (snapshot.identity && snapshot.period && !model.matchesScope(snapshot, selection())) throw {kind:'SCHEMA',status:received.status};
             if (received.status === 200 && visual.lab && snapshot.state === 'OK' && snapshot.baseline?.state === 'OK' &&

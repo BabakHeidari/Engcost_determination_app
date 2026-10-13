@@ -34,7 +34,7 @@ def test_startup_store_access_is_inside_application_context(tmp_path):
 
     def context_bound_store():
         assert has_app_context()
-        assert current_app is application
+        assert current_app._get_current_object() is application
         assert current_app.config["PROFILE_STORE_PATH"].endswith("profiles.json")
         assert Path(current_app.instance_path).name == "instance"
         return object()
