@@ -1,0 +1,115 @@
+{
+  "build": {
+    "abi": {
+      "maximum_glibc_symbol": "2.35",
+      "package_minimum_glibc": "2.35",
+      "target_baseline_gate": "2.35"
+    },
+    "dirty": true,
+    "source_sha": "ea1f954dbdaed7b8b7e9576371df2a5218e0adf6",
+    "version": "0.11.0"
+  },
+  "checksums": {
+    "build-info.json": "d40d97ed6ea1da2f3d236f62dd062f15d082230152c034eb1d968a502fcc6ae6",
+    "engcost_0.11.0_amd64.deb": "fe86117ff119ee9ae323ea971f95421a69e69544864519fef5a1afc78f364d2d"
+  },
+  "native": {
+    "executable_sha256": "c4b0f6db04f2d2da7ea6f6eb05844b7f22cb55451325f917d6ade2bb203f49df",
+    "host": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.35",
+    "isolated_runtime_path": true,
+    "native_installer_environment": "see CI job/validation report",
+    "first_setup_server_ready_seconds": 0.28027223699996284,
+    "setup_to_business_ready_seconds": 0.3845528849999482,
+    "restart_server_ready_seconds": [
+      0.2794702059999281,
+      0.2871400010000116,
+      0.28874657000005755,
+      0.2794696380000232,
+      0.28653365800005304
+    ],
+    "restart_business_additional_seconds": [
+      0.4071509689999857,
+      0.3594003050000083,
+      0.3863245590000588,
+      0.39840396300007797,
+      0.3923756269999785
+    ],
+    "requests_seconds": {
+      "cost-analysis": [
+        0.0857490669999379,
+        0.08319823800002268,
+        0.08291615199993885,
+        0.08365196599993396,
+        0.10808155200004421,
+        0.08187629100007143,
+        0.08210529699999825,
+        0.08219421900002999,
+        0.08346613300000172,
+        0.08207936899998458
+      ],
+      "A-B": [
+        0.0884166670000468,
+        0.0894429789999549,
+        0.08632571600003303,
+        0.08618398699991303,
+        0.08661651499994605,
+        0.11045446899993294,
+        0.08602260899999692,
+        0.08566852699993888,
+        0.08544293500006006,
+        0.08621857899993302
+      ],
+      "matrix": [
+        0.09814464099997622,
+        0.09890695400008553,
+        0.12750084499998593,
+        0.10039388500001678,
+        0.10010334699995838,
+        0.10019058499995026,
+        0.10015192799994566,
+        0.10054425600003469,
+        0.11311560000001464,
+        0.0988547770000423
+      ]
+    },
+    "browser": [
+      {
+        "width": 1440,
+        "first_usable_navigation_seconds": 0.8255010209999227,
+        "external_requests": 0,
+        "failed_requests": 0,
+        "javascript_errors": 0
+      },
+      {
+        "width": 390,
+        "first_usable_navigation_seconds": 0.9006131030000688,
+        "external_requests": 0,
+        "failed_requests": 0,
+        "javascript_errors": 0
+      }
+    ],
+    "checks": "fresh setup/login, V2-only factory/category/subcategory/product/retry, general material/BOM/financial edits, costing and Profile Excel, simultaneous clicks, occupied port, stale record, unrelated CWD, Persian paths, existing workspace/auth preservation, secret persistence/uniqueness, setup disabled, corrupt/incomplete recovery, restart/stop, real Cost Analysis/A-B/matrix, analytical data hashes, local fonts/charts/CSV and chart fallback"
+  },
+  "backend": {
+    "command": [
+      "/home/runner/work/Engcost_determination_app/Engcost_determination_app/work/ci-venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "--tb=short",
+      "--junitxml=/home/runner/work/Engcost_determination_app/Engcost_determination_app/work/pr11-artifacts/validation/native-ubuntu-backend.xml",
+      "tests",
+      "--ignore=tests/test_dashboard_frontend.py",
+      "--ignore=tests/test_dashboard_sensitivity_frontend.py",
+      "--ignore=tests/test_dashboard_visual_frontend.py",
+      "--ignore=tests/test_dashboard_release_frontend.py",
+      "--ignore=tests/test_product_creation_frontend.py"
+    ],
+    "exit_code": 0,
+    "junit": "/home/runner/work/Engcost_determination_app/Engcost_determination_app/work/pr11-artifacts/validation/native-ubuntu-backend.xml",
+    "tests": 1062,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

@@ -1,79 +1,67 @@
-# PR-11 validation status
+# PR-11 validation and installer delivery
 
-Base verified through current GitHub main: `c18dec9c673d33f1afa6ced1efc292cdb721d412`.
-Merged #46 and #47 are present. Artifact source SHA, exact dependency versions,
-resource hashes, source hashes and unsigned status are recorded in build-info.json.
+Version **0.11.0**, x64, unsigned. [Draft PR #48](https://github.com/BabakHeidari/Engcost_determination_app/pull/48) remains unmerged.
+Implementation started from verified main `c18dec9c673d33f1afa6ced1efc292cdb721d412`, including merged #46 and #47.
+Validated code head: `5815f1fded5b0074283354d39f1d542700e36919`.
+Native CI built PR merge ref `ea1f954dbdaed7b8b7e9576371df2a5218e0adf6`.
+The final handover commit changes documentation/evidence only.
 
-| Platform | Target / minimum baseline | Current validation |
+## Delivered installers
+
+[Successful native run 38446908358](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38446908358) contains these downloadable archives. Extract the archive for the actual installer, `SHA256SUMS`, `build-info.json`, screenshots and validation reports. GitHub authentication may be required; Actions artifacts have limited retention.
+
+| Installer | Download | Installer SHA-256 |
 |---|---|---|
-| Linux x64 executor | Debian 13, glibc 2.41, CPython 3.12.14 | Actual .deb built; frozen payload extracted and exercised from a read-only installation path with Persian/spaces. This local binary requires GLIBC 2.38. OS-level installation/reinstall/uninstall is delegated to native CI. This is not Ubuntu Desktop acceptance. |
-| Ubuntu x64 | Ubuntu Desktop 22.04 LTS or later, standard browser/OS libraries | Native ubuntu-22.04 build/install/smoke/retention CI supplied; pending actual job results. No minimum Ubuntu version is claimed validated before those jobs run; stock Desktop UAT remains pending. |
-| Windows x64 | Windows 10/11 desktop; Windows Server 2022 CI | NSIS build/install/frozen/offline/retention CI supplied; native execution pending actual jobs. Desktop minimum OS/UAT remains pending. Linux success does not establish Windows success. |
+| `Engcost-0.11.0-Setup.exe` | [Windows x64 archive](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38446908358/artifacts/11838598703) | `0f742fe50960f89a95358c72c7512ddce66aa2e14b96987752e2e2a42f547599` |
+| `engcost_0.11.0_amd64.deb` | [Ubuntu 22.04 x64 archive](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38446908358/artifacts/11838209153) | `fe86117ff119ee9ae323ea971f95421a69e69544864519fef5a1afc78f364d2d` |
 
-The Linux smoke launches the **frozen executable extracted from the real deb**,
-from an unrelated directory containing spaces and Persian names. Its PATH points
-to `/nonexistent`; no PYTHONPATH, system Python packages, Git, Node or source
-checkout is available to it. Waitress binds loopback only. Linux validation injects
-a test-only connect/DNS blocker; browser routes abort and count all external
-requests. This test library is not included in production packages. CI runs the
-same smoke against an OS-installed, system-owned, read-only Linux application.
-Windows validation uses a native outbound firewall rule plus browser interception.
-The Ubuntu 22.04 job rejects any bundled ELF requiring GLIBC newer than 2.35.
-Every Linux build audits its actual symbols and writes the real minimum into
-the package dependency and build-info.json; the Debian candidate is not falsely
-advertised as an Ubuntu 22.04 binary.
+Both shipping runtimes are CPython **3.12.14**, Waitress **3.0.2**, PyInstaller **6.16.0** onedir; runtime/build dependencies are pinned. Windows CPython is built natively from verified source `2abcf904b8dac8c999d2b3aac76681abb333798a`; 3.12.10 is only its build bootstrap. Metadata records dependency, source and resource hashes and unsigned status. Both native builds report `dirty: true`; these are not clean-checkout or bit-identical reproducibility proof. Per-file fingerprints are retained. The Windows contract report matches all reported application/module/utility/template/JavaScript hashes at the validated code head; test-file differences are checkout line endings.
 
-Current local results: 1,061 backend cases passed with zero failures/errors/skips,
-including twelve bootstrap/path/control/drain/credential-access tests. A native smoke run passed fresh
-admin/login, V2-only new factory/category/subcategory/product and destructive retry
-protection, simultaneous clicks, occupied port, stale instance record, unrelated
-CWD, Persian paths, existing workspace/auth preservation, persistent/unique
-secrets, setup disabled after users exist, graceful restart, actual Cost Analysis,
-A/B and matrix requests, and analytical source hash checks. Desktop 1440 and
-mobile 390 pages (login, Desk, Profile, Product, Factory/General Parameters, Cost,
-Dashboard) made zero external/failed requests and zero JavaScript errors, with
-local fonts and ECharts 5.6.0 verified. The final expanded run also passed material/BOM/financial saves, Profile Excel,
-CSV and chart fallback, corrupt/incomplete recovery and a 200-product/500-row
-representative fixture. [Raw results](evidence/pr11/linux-frozen-summary.json)
-retain every timing sample and identify the exact frozen executable hash.
+## Tested platform matrix
 
-Reference executor: AMD EPYC 9V74 virtual CPU, 3 visible logical CPUs, cgroup
-quota 2 CPUs, 8 GiB memory limit, Debian 13 container on Linux 6.18.44. Timings are
-process restarts with warm filesystem caches, not power-on cold boot or a desktop
-icon/browser end-to-end SLA. Setup-server readiness precedes business import;
-business-ready time is separately measured. All samples are kept; distributions
-must be assessed from native-summary.json, not interpreted as universal promises.
-No persistent financial cache or changed calculation precision was added.
+| Platform | Actual execution | Result and limit |
+|---|---|---|
+| Ubuntu x64 | Hosted Ubuntu 22.04, glibc 2.35, Python 3.12.14 | Real dpkg installation; installed frozen smoke, running reinstall/uninstall retention and 1,062 backend tests passed. Bundled ELF passes the GLIBC 2.35 gate; package minimum is 2.35. Stock Ubuntu Desktop GUI/icon acceptance remains pending. |
+| Windows x64 | Hosted Windows Server 2022, Python 3.12.14 | Real NSIS per-user installation; installed frozen smoke, running reinstall/uninstall retention and 1,062 backend tests passed. Stock Windows 10/11 ordinary-user Desktop acceptance remains pending; those OS versions are targets, not validated minimums. |
+| Local Linux reference | Debian 13, glibc 2.41, Python 3.12.14 | Actual deb frozen payload tested read-only; local 1,062 backend and 43 existing browser cases passed. This separate local binary requires GLIBC 2.38 and is not the delivered Ubuntu package. |
 
-Remaining gates: native Windows jobs, Ubuntu jobs and stock Desktop checks;
-actual installer dialogs/desktop icon evidence on those systems; previous-version
-rollback (this is the first package); signing; proprietary font/Handsontable
-entitlement; owner UAT. Existing schema-v1 or damaged workspaces require approved
-recovery instead of being silently migrated/reset by the setup selector. The
-development/HTTPS deployment defaults and supported Flask configuration injection
-remain available. Build/test artifact delivery is authorized; no public release,
-deployment, merging, telemetry, updater, history capture or persisted scenarios.
+All reported suites have zero failures, errors and skips. Native Windows bootstrap-contract diagnostics also pass independently; shipping acceptance uses compiled 3.12.14. Raw summaries: [Windows](evidence/pr11/native-windows-summary.json), [Ubuntu](evidence/pr11/native-ubuntu-summary.json).
+
+## Installed offline and preservation checks
+
+The actual installed executable runs from an unrelated CWD with Persian/spaces in workspace/config paths, isolated PATH and no PYTHONPATH, system Python packages, Git, Node or source checkout dependency. Ubuntu installation is system-owned/read-only; Windows tests also exercise read-only application resources. Linux injects a test-only external connect/DNS blocker, excluded from production. Windows blocks non-loopback outbound application traffic through its firewall. Browser external requests are independently aborted and counted. Hosted runners contain development tools; isolating the application is distinct from a clean end-user Desktop test.
+
+Both native smokes pass fresh administrator creation/login; existing authentication and workspace selection; setup disabled after users exist; secret continuity/uniqueness; corrupt/incomplete recovery; repeated simultaneous clicks; occupied port; stale records; verified graceful stop and five restarts. Actual installers stop the verified owned service during same-package reinstall, retain Data/instance and secrets, and retain them after uninstall.
+
+Installed integration checks cover V2-only factory/category/subcategory/product creation and destructive retry protection, material/BOM/financial saves, costing, Profile Excel, Cost Analysis, A/B and matrix requests. The synthetic fixture has 200 products and 500 BOM rows. Desktop 1440 px and mobile 390 px pages (setup/login, Desk, Profile, Product, factory/general parameters, Cost, Dashboard) have zero external/failed requests and JavaScript errors; local fonts, ECharts 5.6.0, CSV and exact-table chart fallback are checked. Native archives include screenshots. No stock installer-dialog/Desktop-icon capture is claimed.
+
+Analytical request source hashes remain unchanged; setup/edit writes use isolated fixture data. Local operational Data/instance inventory: all 114 entries, bytes and mtimes unchanged. Native regression jobs also verify their checkout inventories unchanged. Operational stores, credentials, capabilities and private diagnostic logs are excluded from evidence.
+
+## Native measurements
+
+Seconds, all samples retained in raw summaries. Readiness starts at executable process launch, excluding desktop icon handling and browser process startup. Five restarts use warm filesystem caches; these are not power-on cold boot SLAs. Business readiness includes asynchronous application import after controller readiness. Request samples are ten actual requests per route with the representative fixture.
+
+| Platform / measurement | Median | Min–max | p95 (nearest rank) |
+|---|---:|---:|---:|
+| Windows controller readiness (5) | 0.614 | 0.592–0.616 | 0.616 |
+| Windows business readiness (5) | 1.311 | 1.286–1.314 | 1.314 |
+| Windows Cost Analysis (10) | 0.187 | 0.184–0.210 | 0.210 |
+| Windows A/B (10) | 0.187 | 0.180–0.212 | 0.212 |
+| Windows matrix (10) | 0.205 | 0.199–0.224 | 0.224 |
+| Ubuntu controller readiness (5) | 0.287 | 0.279–0.289 | 0.289 |
+| Ubuntu business readiness (5) | 0.678 | 0.647–0.687 | 0.687 |
+| Ubuntu Cost Analysis (10) | 0.083 | 0.082–0.108 | 0.108 |
+| Ubuntu A/B (10) | 0.086 | 0.085–0.110 | 0.110 |
+| Ubuntu matrix (10) | 0.100 | 0.098–0.128 | 0.128 |
+
+First setup-controller readiness: Windows 0.757 s, Ubuntu 0.280 s. Administrator submission to business readiness: 0.537 s / 0.385 s, excluding human input. First usable navigation to an already-ready server: Windows 0.810 s desktop / 0.737 s mobile; Ubuntu 0.826 s / 0.901 s. Native reference hosts are GitHub-hosted Windows Server 2022 and Ubuntu 22.04 VMs identified in raw reports; CPU/quota details were not captured, so timings should not be generalized.
+
+Local reference: AMD EPYC 9V74, three visible logical CPUs, two-CPU cgroup quota, 8 GiB memory, Debian 13 container on Linux 6.18.44. Earlier [local frozen measurements](evidence/pr11/linux-frozen-summary.json) identify their own executable/source revision. No financial cache or calculation precision change was introduced.
+
+## Remaining acceptance gates
+
+Stock Ubuntu Desktop and Windows 10/11 GUI installation, branded icon/default-browser launch and ordinary-user UAT; signing (no certificate supplied); owner verification of proprietary IRANSansX and Handsontable redistribution entitlement; and independent previous-compatible-version downgrade. This first package proves same-package running reinstall and uninstall preservation, not two-version rollback. Schema-v1 or damaged existing workspaces require approved recovery rather than automatic reset/migration. Public release, deployment and merge remain outside scope.
 
 ## Runtime/path audit
 
-All active feature loaders bind `utils.paths`, now selected by RuntimePaths before
-app import. Flask instance/resources, APP_DATA_FILE, costing Data and period
-bindings are explicitly connected. Factory registry and the folder-tracer entry
-point no longer derive writable roots independently. Legacy unused loader helpers
-in load_data.py retain their development behavior; active routes do not invoke
-their XLSX/fallback/category-invention paths. Old template/desk CSS copies are
-excluded from the production template allowlist; shared Font Awesome supplies
-icons. All current template script/style references use local URLs and reviewed
-font paths. No customer dependency/cache preparation is performed.
-
-## Local frozen measurements
-
-| Measurement | Median seconds | Min–max seconds | p95 seconds |
-|---|---:|---:|---:|
-| Controller readiness (5 restarts) | 0.259 | 0.205–0.267 | 0.267 |
-| Business readiness from process launch (5) | 0.590 | 0.534–0.629 | 0.629 |
-| cost-analysis request (10) | 0.049 | 0.045–0.075 | 0.075 |
-| A-B request (10) | 0.052 | 0.046–0.071 | 0.071 |
-| matrix request (10) | 0.061 | 0.055–0.106 | 0.106 |
-
-First setup controller ready: 0.232 s; after admin submit to business-ready: 0.355 s. First usable browser navigation to an already ready service: 0.999 s (1440 px), 0.961 s (390 px). This excludes human setup time and desktop/browser process launch.
+Active loaders use centralized RuntimePaths selected before application import. Flask resources/instance, APP_DATA_FILE, costing Data and period bindings are explicitly connected. Factory registry and folder-tracer entry no longer derive writable roots independently. Development/HTTPS defaults and supported configuration injection remain available. Legacy unused helpers in load_data.py retain development behavior; active routes do not call their XLSX/fallback/category-invention paths. Production templates/assets use reviewed local resources; obsolete Desk stylesheet copies are excluded. Customer startup performs no dependency preparation, downloads, update checks or telemetry.

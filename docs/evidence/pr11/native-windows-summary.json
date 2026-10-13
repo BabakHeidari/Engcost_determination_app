@@ -1,0 +1,111 @@
+{
+  "build": {
+    "abi": null,
+    "dirty": true,
+    "source_sha": "ea1f954dbdaed7b8b7e9576371df2a5218e0adf6",
+    "version": "0.11.0"
+  },
+  "checksums": {
+    "build-info.json": "ff8838a2dd8107a0c380b790d6c0713aaf0c66357c9393ab1881dfbc111835af",
+    "Engcost-0.11.0-Setup.exe": "0f742fe50960f89a95358c72c7512ddce66aa2e14b96987752e2e2a42f547599"
+  },
+  "native": {
+    "executable_sha256": "33cb7408150f51ec2f38acb6d12631b90efa33189b31e5597978add9018b5d3e",
+    "host": "Windows-2022Server-10.0.20348-SP0",
+    "isolated_runtime_path": true,
+    "native_installer_environment": "see CI job/validation report",
+    "first_setup_server_ready_seconds": 0.7574732999999014,
+    "setup_to_business_ready_seconds": 0.5371543999999631,
+    "restart_server_ready_seconds": [
+      0.6135409000000891,
+      0.5924243000000615,
+      0.6155483000000004,
+      0.6159679999999526,
+      0.5932780999999068
+    ],
+    "restart_business_additional_seconds": [
+      0.7001899000000549,
+      0.7184174999999868,
+      0.6705206999999973,
+      0.6711627999999337,
+      0.7205203999999412
+    ],
+    "requests_seconds": {
+      "cost-analysis": [
+        0.194514799999979,
+        0.1836974000000282,
+        0.1884099999999762,
+        0.18701590000000579,
+        0.209511500000076,
+        0.18408839999995052,
+        0.18398120000006202,
+        0.18849299999999403,
+        0.18422529999998005,
+        0.18763179999996282
+      ],
+      "A-B": [
+        0.17963979999990443,
+        0.18397379999998975,
+        0.18705099999999675,
+        0.19232950000002802,
+        0.2118052999999236,
+        0.19218450000005305,
+        0.18662670000003345,
+        0.18648209999992105,
+        0.18807029999993574,
+        0.1878126000000293
+      ],
+      "matrix": [
+        0.20129229999997733,
+        0.19921160000001237,
+        0.22448029999998198,
+        0.19909590000008848,
+        0.20959590000006756,
+        0.22132640000006631,
+        0.2048619999999346,
+        0.20128399999998692,
+        0.20501469999999244,
+        0.2047247000000425
+      ]
+    },
+    "browser": [
+      {
+        "width": 1440,
+        "first_usable_navigation_seconds": 0.809763500000031,
+        "external_requests": 0,
+        "failed_requests": 0,
+        "javascript_errors": 0
+      },
+      {
+        "width": 390,
+        "first_usable_navigation_seconds": 0.7369604999998955,
+        "external_requests": 0,
+        "failed_requests": 0,
+        "javascript_errors": 0
+      }
+    ],
+    "checks": "fresh setup/login, V2-only factory/category/subcategory/product/retry, general material/BOM/financial edits, costing and Profile Excel, simultaneous clicks, occupied port, stale record, unrelated CWD, Persian paths, existing workspace/auth preservation, secret persistence/uniqueness, setup disabled, corrupt/incomplete recovery, restart/stop, real Cost Analysis/A-B/matrix, analytical data hashes, local fonts/charts/CSV and chart fallback"
+  },
+  "backend": {
+    "command": [
+      "D:\\a\\Engcost_determination_app\\Engcost_determination_app\\work\\ci-venv\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "-q",
+      "--tb=short",
+      "--junitxml=D:\\a\\Engcost_determination_app\\Engcost_determination_app\\work\\pr11-artifacts\\validation\\native-windows-backend.xml",
+      "tests",
+      "--ignore=tests/test_dashboard_frontend.py",
+      "--ignore=tests/test_dashboard_sensitivity_frontend.py",
+      "--ignore=tests/test_dashboard_visual_frontend.py",
+      "--ignore=tests/test_dashboard_release_frontend.py",
+      "--ignore=tests/test_product_creation_frontend.py"
+    ],
+    "exit_code": 0,
+    "junit": "D:\\a\\Engcost_determination_app\\Engcost_determination_app\\work\\pr11-artifacts\\validation\\native-windows-backend.xml",
+    "tests": 1062,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}
