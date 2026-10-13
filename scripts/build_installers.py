@@ -78,7 +78,7 @@ def main():
     bundle = output / 'bundle/Engcost'
     if sys.platform == 'win32':
         makensis = shutil.which('makensis') or str(Path(os.environ['ProgramFiles(x86)']) / 'NSIS/makensis.exe')
-        run(makensis, f'/DBUNDLE={bundle}', f'/DOUTPUT={output / "Engcost-"}{app_version}-Setup.exe',
+        run(makensis, '/INPUTCHARSET', 'UTF8', f'/DBUNDLE={bundle}', f'/DOUTPUT={output / "Engcost-"}{app_version}-Setup.exe',
             ROOT / 'packaging/windows/engcost.nsi')
     elif sys.platform == 'linux':
         symbols = set()

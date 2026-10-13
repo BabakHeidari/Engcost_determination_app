@@ -1,8 +1,6 @@
 name: Offline native installers
 on:
   pull_request:
-  push:
-    branches: [packaging-pr11-offline-installers]
   workflow_dispatch:
 permissions:
   contents: read
@@ -87,7 +85,7 @@ jobs:
       - name: Frozen Windows and browser smoke
         shell: pwsh
         run: |
-          $exe = "$env:LOCALAPPDATA/Programs/Engcost/Engcost.exe"
+          $exe = (Resolve-Path "$env:LOCALAPPDATA\Programs\Engcost\Engcost.exe").Path
           $rule = 'Engcost offline native fixture'
           New-NetFirewallRule -DisplayName $rule -Direction Outbound -Program $exe -Action Block -RemoteAddress '0.0.0.0-126.255.255.255','128.0.0.0-255.255.255.255','::2-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'
           try {

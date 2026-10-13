@@ -87,7 +87,7 @@ def checked_root(value):
         getattr(os.sys, "frozen", False) and (root == installation or installation in root.parents)
     ):
         raise ValueError("پوشه داده باید بیرون از محل نصب باشد.")
-    for part in (root / "Data", root / "instance", root / "runtime"):
+    for part in (root / "Data", root / "instance", root / "runtime", root / "logs"):
         if part.is_symlink():
             raise ValueError("پیوند پوشه برای فضای کاری پشتیبانی نمی‌شود.")
     for part in (root / '.engcost-setup.json', root / '.engcost-instance.lock'):
@@ -127,6 +127,11 @@ def prepare(root, *, fresh=False):
             raise ValueError("پوشه خالی نیست؛ هیچ داده‌ای بازنویسی نشد.")
         if marker.exists() and json.loads(marker.read_text()) != {"schema": 1, "mode": "fresh"}:
             raise ValueError("نشان راه‌اندازی نامعتبر است.")
+        # Preflight before mkdir/chmod: a nested link must not change access
+        # rights on a directory outside this explicitly selected workspace.
+        for tree in (root / 'Data', root / 'instance'):
+            if any(path.is_symlink() for path in tree.rglob('*')):
+                raise ValueError("فضای کاری دارای پیوند فایل است؛ راه‌اندازی متوقف شد.")
         private_directory(root)
         if not marker.exists():
             atomic_json(marker, {"schema": 1, "mode": "fresh"})
