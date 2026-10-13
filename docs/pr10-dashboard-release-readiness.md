@@ -129,3 +129,26 @@ Use the [manual owner checklist](dashboard-release-uat.md) and
 prior code/dependencies while preserving operational profile, V2 data and bindings.
 Two prototype templates were removed only after proving no runtime references.
 Leave this candidate unmerged for review; production approval is PENDING.
+
+## Owner-UAT finding: Product creation after V2 activation
+
+The owner reported `[Errno 2] ... Data/Factories/f2/category_weights.json` after
+creating a category and subcategory, then a product. Product creation still ran a
+legacy zero-share update after writing BOM/capacity, and its creation helpers used
+literal Windows separators. This is a release finding outside the earlier
+Dashboard analytical checks. #46 had already merged when the fix started, so the
+focused follow-up branches from merged PR-10 on latest main.
+
+The fix removes financial writes from creation, validates authorized native paths,
+stages/locks related writes and compensates ordinary failures, and preserves
+existing BOM/capacity files on retries. The authorized financial editor presents
+new same-factory identities with blank values without saving them on read. Only
+Factory Parameters MODIFY can save financial inputs; typed unavailable costing
+and V2 authority are preserved. See the
+[resolution and safe inspection guide](product-creation-owner-uat.md) and
+[actual follow-up evidence](evidence/product-creation-owner-uat/README.md).
+
+**Technical resolution: implemented and regression-tested in the follow-up. Owner
+retest, native Windows smoke and production acceptance: PENDING.** Earlier PR-10
+results remain historical evidence; this finding does not mark the original UAT
+checklist accepted. No operational Data or instance changes are part of the fix.

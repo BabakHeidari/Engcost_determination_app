@@ -40,3 +40,12 @@ the application should start without an `fcntl` import error, complete V2
 migration, and load `/factory_parameters/<factory>` normally. Atomic directory
 replacement assumes a local filesystem with normal `os.replace` semantics;
 network filesystems should be validated for the deployment environment.
+
+## Product identities added after activation
+
+Product creation does not edit V2 shares or predictions and requires only Product
+WRITE. The authorized Factory Parameters editor derives missing same-factory
+category/product rows in memory with blank financial cells. GET does not persist
+those rows; explicit canonical saves still require Factory Parameters MODIFY.
+Existing values and V2 metadata remain intact, and capacity never substitutes for
+predicted production. See the [owner-UAT fix and inspection guide](product-creation-owner-uat.md).
