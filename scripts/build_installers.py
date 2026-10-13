@@ -129,6 +129,8 @@ def main():
         if path.is_file() and path.name != 'SHA256SUMS':
             checksums.append(f'{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}')
     (output / 'SHA256SUMS').write_text('\n'.join(checksums) + '\n')
+    print(json.dumps({'version': app_version, 'source_sha': sha, 'dirty': dirty, 'abi': info.get('abi')}, sort_keys=True))
+    print('\n'.join(checksums))
 
 
 if __name__ == '__main__':

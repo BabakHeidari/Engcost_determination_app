@@ -92,6 +92,14 @@ def main():
                         totals[key] += int(child.attrib.get(key, 0))
             results[suite] = {"command": command, "exit_code": process.returncode, "junit": str(report), **totals}
             print(json.dumps({suite: results[suite]}, ensure_ascii=False), flush=True)
+            if process.returncode and report.exists():
+                failures = []
+                for case in ET.parse(report).getroot().iter('testcase'):
+                    for error in list(case):
+                        if error.tag in {'failure', 'error'}:
+                            failures.append({'test':case.attrib.get('classname','') + '::' + case.attrib.get('name',''),
+                                             'message':error.attrib.get('message','').splitlines()[0][:400]})
+                print(json.dumps({'failed_cases':failures}, ensure_ascii=False), flush=True)
             overall = max(overall, process.returncode)
             # A missing optional browser must not turn a release gate green.
             if suite in {"browser", "compatibility"} and (totals["skipped"] or not totals["tests"]):

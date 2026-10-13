@@ -10,6 +10,28 @@ concurrency:
   group: offline-installers-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
+  windows-contracts:
+    # Fast platform diagnostics use the bootstrap interpreter. Shipping/native
+    # acceptance still requires the independent CPython 3.12.14 job below.
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+      - shell: pwsh
+        run: |
+          python -m venv work/contracts-venv
+          work/contracts-venv/Scripts/python -m pip install -r requirements-test.txt
+          work/contracts-venv/Scripts/python scripts/validate_dashboard_release.py --suite backend --name windows-contracts --evidence-dir work/contracts-evidence
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: windows-backend-contract-diagnostics
+          path: work/contracts-evidence
+          if-no-files-found: error
   ubuntu:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
