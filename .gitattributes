@@ -1,3 +1,20 @@
-# Preserve byte-exact generated pytest/JUnit evidence, including traceback spaces.
-docs/evidence/pr10/*.xml -whitespace
-docs/evidence/pr10/*.txt -whitespace
+# Preserve reviewed resource hashes on native Windows and Linux checkouts.
+/app.py text eol=lf
+/engcost_launcher.py text eol=lf
+/requirements*.txt text eol=lf
+/utils/** text eol=lf
+/modules/** text eol=lf
+/standalone/** text eol=lf
+/scripts/** text eol=lf
+/templates/** text eol=lf
+/packaging/** text=auto eol=lf
+/static/**/*.js text eol=lf
+/static/**/*.css text eol=lf
+/static/**/LICENSE* text eol=lf
+/static/**/NOTICE text eol=lf
+/static/**/README.md text eol=lf
+*.png binary
+*.ico binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary

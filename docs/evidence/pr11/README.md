@@ -8,7 +8,7 @@ real deb into a Persian/spaces installation path, made read-only, then exercised
 with external TCP/DNS blocked and browser external requests aborted/counted.
 These results do not establish stock Ubuntu Desktop or Windows acceptance.
 
-* [Backend: 1,059 passed, zero skipped](backend.txt), [JUnit](backend.xml).
+* [Backend: 1,061 passed, zero skipped](backend.txt), [JUnit](backend.xml).
 * [Existing primary browser: 43 passed, zero skipped](browser.txt), [JUnit](browser.xml).
 * [Actual private first-admin screen](setup-admin.png).
 * [Actual frozen Dashboard desktop](dashboard-1440.png) and [mobile](dashboard-390.png),

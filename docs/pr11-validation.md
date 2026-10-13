@@ -23,8 +23,8 @@ Every Linux build audits its actual symbols and writes the real minimum into
 the package dependency and build-info.json; the Debian candidate is not falsely
 advertised as an Ubuntu 22.04 binary.
 
-Current local results: 1,059 backend cases passed with zero failures/errors/skips,
-including ten bootstrap/path/control/drain tests. A native smoke run passed fresh
+Current local results: 1,061 backend cases passed with zero failures/errors/skips,
+including twelve bootstrap/path/control/drain/credential-access tests. A native smoke run passed fresh
 admin/login, V2-only new factory/category/subcategory/product and destructive retry
 protection, simultaneous clicks, occupied port, stale instance record, unrelated
 CWD, Persian paths, existing workspace/auth preservation, persistent/unique

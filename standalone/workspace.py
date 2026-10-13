@@ -1,6 +1,7 @@
 """Explicit, resumable preparation. Importing this module never imports app.py."""
 import csv
 from datetime import datetime, timezone
+from functools import lru_cache
 import json
 import os
 from pathlib import Path
@@ -12,27 +13,37 @@ from utils.profile_store import ProfileDataStore, validate_data
 from utils.runtime_paths import RuntimePaths
 
 
-def private_directory(path):
-    path = Path(path)
-    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+@lru_cache(maxsize=1)
+def _windows_owner():
+    system32 = Path(os.environ["SystemRoot"]) / "System32"
+    output = subprocess.check_output(
+        [str(system32 / "whoami.exe"), "/user", "/fo", "csv", "/nh"],
+        text=True, creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    sid = next(csv.reader([output.strip()]))[1]
+    if not sid.startswith("S-1-"):
+        raise ValueError("Cannot establish workspace owner")
+    return system32, sid
+
+
+def _private_access(path, *, directory):
     if os.name == "nt":
-        system32 = Path(os.environ["SystemRoot"]) / "System32"
-        output = subprocess.check_output(
-            [str(system32 / "whoami.exe"), "/user", "/fo", "csv", "/nh"],
-            text=True, creationflags=subprocess.CREATE_NO_WINDOW,
-        )
-        sid = next(csv.reader([output.strip()]))[1]
-        if not sid.startswith("S-1-"):
-            raise ValueError("Cannot establish workspace owner")
+        system32, sid = _windows_owner()
         subprocess.run([str(system32 / "icacls.exe"), str(path), "/reset"], check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                        creationflags=subprocess.CREATE_NO_WINDOW)
         subprocess.run([str(system32 / "icacls.exe"), str(path), "/inheritance:r",
-                        "/grant:r", f"*{sid}:(OI)(CI)F"], check=True,
+                        "/grant:r", f"*{sid}:" + ("(OI)(CI)F" if directory else "F")], check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                        creationflags=subprocess.CREATE_NO_WINDOW)
     else:
-        path.chmod(0o700)
+        path.chmod(0o700 if directory else 0o600)
+
+
+def private_directory(path):
+    path = Path(path)
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _private_access(path, directory=True)
 
 
 def atomic_json(path, value):
@@ -79,6 +90,9 @@ def checked_root(value):
     for part in (root / "Data", root / "instance", root / "runtime"):
         if part.is_symlink():
             raise ValueError("پیوند پوشه برای فضای کاری پشتیبانی نمی‌شود.")
+    for part in (root / '.engcost-setup.json', root / '.engcost-instance.lock'):
+        if part.is_symlink():
+            raise ValueError("پیوند فایل برای فضای کاری پشتیبانی نمی‌شود.")
     return root
 
 
@@ -118,6 +132,9 @@ def prepare(root, *, fresh=False):
             atomic_json(marker, {"schema": 1, "mode": "fresh"})
         for relative in ("Data/Overall", "Data/Factories", "instance", "runtime", "logs"):
             private_directory(root / relative)
+        for tree in (root / 'Data', root / 'instance'):
+            if any(path.is_symlink() for path in tree.rglob('*')):
+                raise ValueError("فضای کاری دارای پیوند فایل است؛ راه‌اندازی متوقف شد.")
         resources = RuntimePaths.from_environment({}).resources
         for source in sorted((resources / "packaging/blank/Overall").glob("*.json")):
             target = root / "Data/Overall" / source.name
@@ -145,6 +162,9 @@ def prepare(root, *, fresh=False):
     else:
         settings = {"schema": 1, "secret": secrets.token_hex(32)}
         atomic_json(settings_path, settings)
+    # Existing explicit file ACLs must not defeat the private parent directory.
+    for credential_file in (root / 'instance/app_data.json', settings_path):
+        _private_access(credential_file, directory=False)
     return root, settings
 
 

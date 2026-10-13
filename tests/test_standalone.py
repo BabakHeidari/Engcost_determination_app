@@ -85,6 +85,30 @@ def test_existing_preflight_is_readonly_and_rejects_missing_profile_and_links(tm
         validate_existing(root)
 
 
+def test_resumed_setup_rejects_symlink_profile_without_touching_target(tmp_path):
+    if __import__('os').name == 'nt':
+        # Native Windows link creation may require developer privileges; the
+        # same packaged preflight is exercised in native smoke for ordinary files.
+        return
+    root,_=prepare(tmp_path/'workspace',fresh=True)
+    profile=root/'instance/app_data.json'
+    target=tmp_path/'outside-profile.json';target.write_bytes(profile.read_bytes())
+    before=target.read_bytes();profile.unlink();profile.symlink_to(target)
+    with pytest.raises(ValueError):prepare(root,fresh=True)
+    assert target.read_bytes()==before
+
+
+def test_preparation_restricts_existing_credential_files(tmp_path):
+    import os
+    root,_=prepare(tmp_path/'workspace',fresh=True);first_admin(root,admin())
+    profile=root/'instance/app_data.json';settings=root/'instance/standalone.json'
+    if os.name!='nt':
+        profile.chmod(0o644);settings.chmod(0o644)
+    prepare(root,fresh=False)
+    if os.name!='nt':
+        assert profile.stat().st_mode & 0o777 == settings.stat().st_mode & 0o777 == 0o600
+
+
 def test_private_setup_control_requires_capability_host_origin_and_csrf(tmp_path):
     controller = Controller(tmp_path, tmp_path / 'workspace')
     controller.host = '127.0.0.1:5555'
