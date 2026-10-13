@@ -18,7 +18,9 @@ approval is included.
 
 PR-11 implements offline native packaging, per-user workspace separation, private
 first-admin setup and a single-instance loopback Waitress launcher. Actual Windows
-Server 2022 and Ubuntu 22.04 installer/offline/retention CI passed; stock Desktop,
+Server 2022 and Ubuntu 22.04 installer/offline/retention CI passed. Version 0.11.1
+corrects the setup-form Origin rejection and tests real browser form clicks;
+stock Desktop,
 signing/licensing and owner acceptance remain distinct gates. See
 [installation guide](offline-installers.md) and [actual validation status](pr11-validation.md).
 It does not add an updater, shared hosting, history capture or persisted scenarios.

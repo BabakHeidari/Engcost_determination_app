@@ -1,13 +1,13 @@
 # PR-11 evidence
 
-[Native run 38446908358](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38446908358) passed Windows Server 2022 and Ubuntu 22.04 builds, actual installer execution, offline frozen/browser checks, running reinstall/uninstall preservation and all 1,062 backend cases on each platform (zero failures/errors/skips).
-Validated code head `5815f1fded5b0074283354d39f1d542700e36919`; packages record PR merge SHA `ea1f954dbdaed7b8b7e9576371df2a5218e0adf6` and `dirty: true`. Per-source/resource hashes are in each archive's build-info.json.
+[Native run 38463009134](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38463009134) passed version 0.11.1 Windows Server 2022 and Ubuntu 22.04 builds, actual installer execution, offline frozen/browser checks including actual setup/admin/stop form clicks, running reinstall/uninstall preservation and all 1,062 backend cases on each platform (zero failures/errors/skips).
+Validated code head `3c206eeef7df95ea8a681f08808bcf0583cbbc79`; packages record PR merge SHA `5eb25a6db0792dd27d1b5727ccebe54d0a46b3ec` and `dirty: true`. Per-source/resource hashes are in each archive's build-info.json.
 
-* [Windows installer and native reports](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38446908358/artifacts/11838598703).
-* [Ubuntu installer and native reports](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38446908358/artifacts/11838209153).
+* [Windows installer and native reports](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38463009134/artifacts/11848591222).
+* [Ubuntu installer and native reports](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38463009134/artifacts/11847451795).
 * [Native Windows raw summary](native-windows-summary.json) and [Ubuntu raw summary](native-ubuntu-summary.json), including installer/executable checksums and every timing sample.
 * [Local backend: 1,062 passed, zero skipped](backend.txt), [JUnit](backend.xml).
-* [Existing primary browser: 43 passed, zero skipped](browser.txt), [JUnit](browser.xml).
+* [Existing primary browser: 43 passed, zero skipped](browser.txt), [JUnit](browser.xml); retained report predates this controller-only fix. Refreshed packaged browser checks now cover actual setup form clicks on both platforms.
 * [Local private first-admin screen](setup-admin.png).
 * [Local frozen Dashboard desktop](dashboard-1440.png) and [mobile](dashboard-390.png), synthetic 200-product fixture with exact-table fallback exercised.
 

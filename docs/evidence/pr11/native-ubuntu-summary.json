@@ -6,83 +6,128 @@
       "target_baseline_gate": "2.35"
     },
     "dirty": true,
-    "source_sha": "ea1f954dbdaed7b8b7e9576371df2a5218e0adf6",
-    "version": "0.11.0"
+    "source_sha": "5eb25a6db0792dd27d1b5727ccebe54d0a46b3ec",
+    "version": "0.11.1"
   },
   "checksums": {
-    "build-info.json": "d40d97ed6ea1da2f3d236f62dd062f15d082230152c034eb1d968a502fcc6ae6",
-    "engcost_0.11.0_amd64.deb": "fe86117ff119ee9ae323ea971f95421a69e69544864519fef5a1afc78f364d2d"
+    "build-info.json": "da57d1eb543bb30de7dd0839f8e9882f64f00649d7ef5d734ca703f80aafd661",
+    "engcost_0.11.1_amd64.deb": "af83405fcc801be239f93e3fc3076e1ee14da179740d89eaf93bfc982c67e007"
   },
   "native": {
-    "executable_sha256": "c4b0f6db04f2d2da7ea6f6eb05844b7f22cb55451325f917d6ade2bb203f49df",
+    "executable_sha256": "d7259701eb146bdd8b54c3975524f9250d01e36aedac94d47e40c488794959df",
     "host": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.35",
     "isolated_runtime_path": true,
     "native_installer_environment": "see CI job/validation report",
-    "first_setup_server_ready_seconds": 0.28027223699996284,
-    "setup_to_business_ready_seconds": 0.3845528849999482,
+    "first_setup_server_ready_seconds": 0.28127916599999025,
+    "setup_browser": [
+      {
+        "mode": "fresh",
+        "form_posts": [
+          {
+            "path": "/_local/workspace",
+            "status": 302,
+            "origin": "http://127.0.0.1:38585"
+          },
+          {
+            "path": "/_local/admin",
+            "status": 302,
+            "origin": "http://127.0.0.1:38585"
+          },
+          {
+            "path": "/_local/stop",
+            "status": 200,
+            "origin": "http://127.0.0.1:38585"
+          }
+        ],
+        "admin_submit_to_login_seconds": 0.7444669400000521,
+        "external_requests": 0,
+        "failed_requests": 0,
+        "javascript_errors": 0
+      },
+      {
+        "mode": "existing",
+        "form_posts": [
+          {
+            "path": "/_local/workspace",
+            "status": 302,
+            "origin": "http://127.0.0.1:5000"
+          },
+          {
+            "path": "/_local/stop",
+            "status": 200,
+            "origin": "http://127.0.0.1:5000"
+          }
+        ],
+        "admin_submit_to_login_seconds": null,
+        "external_requests": 0,
+        "failed_requests": 0,
+        "javascript_errors": 0
+      }
+    ],
+    "setup_to_business_ready_seconds": 0.7444669400000521,
     "restart_server_ready_seconds": [
-      0.2794702059999281,
-      0.2871400010000116,
-      0.28874657000005755,
-      0.2794696380000232,
-      0.28653365800005304
+      0.2802750899999751,
+      0.2906299039999567,
+      0.28370349099998293,
+      0.2895604290000051,
+      0.28277132099998425
     ],
     "restart_business_additional_seconds": [
-      0.4071509689999857,
-      0.3594003050000083,
-      0.3863245590000588,
-      0.39840396300007797,
-      0.3923756269999785
+      0.39586632499998586,
+      0.4051735720000238,
+      0.4053236130000073,
+      0.3908002080000301,
+      0.39077669499999956
     ],
     "requests_seconds": {
       "cost-analysis": [
-        0.0857490669999379,
-        0.08319823800002268,
-        0.08291615199993885,
-        0.08365196599993396,
-        0.10808155200004421,
-        0.08187629100007143,
-        0.08210529699999825,
-        0.08219421900002999,
-        0.08346613300000172,
-        0.08207936899998458
+        0.08808678200000486,
+        0.0852874619999966,
+        0.0861046900000133,
+        0.08586790500004327,
+        0.12203394699997716,
+        0.08486532799997804,
+        0.08544310700000324,
+        0.08603040999997802,
+        0.08489470899996832,
+        0.0857697670000448
       ],
       "A-B": [
-        0.0884166670000468,
-        0.0894429789999549,
-        0.08632571600003303,
-        0.08618398699991303,
-        0.08661651499994605,
-        0.11045446899993294,
-        0.08602260899999692,
-        0.08566852699993888,
-        0.08544293500006006,
-        0.08621857899993302
+        0.08950932599998396,
+        0.09166511500001207,
+        0.08888172899997926,
+        0.08921074200003432,
+        0.08936688800002912,
+        0.10903138800000534,
+        0.08861999800001286,
+        0.0894486579999807,
+        0.08926177000000735,
+        0.08892570900002283
       ],
       "matrix": [
-        0.09814464099997622,
-        0.09890695400008553,
-        0.12750084499998593,
-        0.10039388500001678,
-        0.10010334699995838,
-        0.10019058499995026,
-        0.10015192799994566,
-        0.10054425600003469,
-        0.11311560000001464,
-        0.0988547770000423
+        0.10209564699999873,
+        0.10334253100000979,
+        0.12625127600000496,
+        0.10286643999995704,
+        0.10183453499996631,
+        0.1034095669999715,
+        0.10208724300002814,
+        0.10289619600001743,
+        0.10482661700001472,
+        0.10417933299999049
       ]
     },
     "browser": [
       {
         "width": 1440,
-        "first_usable_navigation_seconds": 0.8255010209999227,
+        "first_usable_navigation_seconds": 0.8249609299999747,
         "external_requests": 0,
         "failed_requests": 0,
         "javascript_errors": 0
       },
       {
         "width": 390,
-        "first_usable_navigation_seconds": 0.9006131030000688,
+        "first_usable_navigation_seconds": 0.7096083810000096,
         "external_requests": 0,
         "failed_requests": 0,
         "javascript_errors": 0
