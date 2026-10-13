@@ -137,6 +137,67 @@ def fixture(root):
     return f.selection
 
 
+def browser_setup(native, workspace, output, chromium, *, fresh):
+    """Submit the shipped HTML forms; do not synthesize an Origin header."""
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as runtime:
+        browser = runtime.chromium.launch(executable_path=str(chromium) if chromium else None, headless=True,
+                                          args=['--no-sandbox','--disable-dev-shm-usage','--disable-background-networking'])
+        context = browser.new_context(timezone_id='Asia/Tehran')
+        external, failures, errors, posts = [], [], [], []
+        def network(route):
+            if not route.request.url.startswith(native.base + '/'):
+                external.append(route.request.url); route.abort()
+            else:
+                route.continue_()
+        context.route('**/*', network)
+        page = context.new_page()
+        page.on('pageerror', lambda error: errors.append(str(error)))
+        page.on('response', lambda response: failures.append(response.status) if response.status >= 400 else None)
+        def submit(path):
+            with page.expect_response(lambda r: r.url == native.base + path and r.request.method == 'POST') as pending:
+                page.locator(f'form[action="{path}"] button').click()
+            response = pending.value
+            origin = response.request.all_headers().get('origin')
+            assert response.status in (200, 302), (path, response.status, origin)
+            assert origin == native.base, (path, origin)
+            posts.append({'path':path, 'status':response.status, 'origin':origin})
+        page.goto(native.base + '/_local/#' + native.record['token'])
+        page.wait_for_url('**/panel')
+        assert page.locator('form[action="/_local/workspace"]').count() == 1
+        page.locator('[name=workspace]').fill(str(workspace))
+        page.locator('[name=mode][value=' + ('fresh' if fresh else 'existing') + ']').check()
+        page.screenshot(path=str(output / ('setup-workspace.png' if fresh else 'setup-existing-workspace.png')), full_page=True)
+        submit('/_local/workspace')
+        if fresh:
+            page.locator('form[action="/_local/admin"]').wait_for()
+            page.screenshot(path=str(output / 'setup-admin.png'), full_page=True)
+            for name, value in {'username':'native-owner','full_name':'مدیر آزمایشی','email':'native@example.test',
+                                'password':PASSWORD,'confirmation':PASSWORD}.items():
+                page.locator(f'[name={name}]').fill(value)
+            started = time.perf_counter()
+            submit('/_local/admin')
+        else:
+            started = time.perf_counter()
+        page.wait_for_url('**/login', timeout=60000)
+        ready_seconds = time.perf_counter() - started
+        page.locator('[name=username]').fill('native-owner')
+        page.locator('[name=password]').fill(PASSWORD)
+        page.locator('form button').click()
+        page.wait_for_load_state('networkidle')
+        assert page.locator('body').inner_text().find('خوش آمدید') >= 0
+        page.goto(native.base + '/_local/panel')
+        submit('/_local/stop')
+        page.wait_for_load_state('networkidle')
+        assert not external and not failures and not errors, (external, failures, errors)
+        browser.close()
+    native.process.wait(timeout=60)
+    assert native.process.returncode == 0
+    return {'mode':'fresh' if fresh else 'existing', 'form_posts':posts,
+            'admin_submit_to_login_seconds':ready_seconds if fresh else None,
+            'external_requests':len(external),'failed_requests':len(failures),'javascript_errors':len(errors)}
+
+
 def browser_evidence(native, output, chromium):
     from playwright.sync_api import sync_playwright
     with sync_playwright() as runtime:
@@ -221,19 +282,22 @@ def main():
             assert native.record['port'] != 5000
             assert native.call('/_local/admin', {'csrf':native.csrf(), 'username':'bad'})[0] == 409
             workspace=root/'فضای کاری'
-            assert native.call('/_local/workspace', {'csrf':native.csrf(),'workspace':str(workspace),'mode':'fresh'})[0] == 200
-            assert native.call('/_local/status')[1]['state']=='admin'
-            if args.browser:
-                from playwright.sync_api import sync_playwright
-                with sync_playwright() as p:
-                    browser=p.chromium.launch(executable_path=str(args.chromium) if args.chromium else None, headless=True,args=['--no-sandbox'])
-                    page=browser.new_page();page.goto(native.base+'/_local/#'+native.record['token']);page.wait_for_url('**/panel')
-                    page.screenshot(path=str(output/'setup-admin.png'),full_page=True);browser.close()
             values={'csrf':native.csrf(),'username':'native-owner','full_name':'مدیر آزمایشی','email':'native@example.test',
                     'password':PASSWORD,'confirmation':PASSWORD}
-            assert native.call('/_local/admin',values)[0]==200
-            summary['setup_to_business_ready_seconds']=native.wait_business();native.login()
-            assert native.call('/_local/admin',values)[0]==409
+            if args.browser:
+                summary['setup_browser']=[browser_setup(native,workspace,output,args.chromium,fresh=True)]
+                native.launch()
+            else:
+                assert native.call('/_local/workspace', {'csrf':native.csrf(),'workspace':str(workspace),'mode':'fresh'})[0] == 200
+                assert native.call('/_local/status')[1]['state']=='admin'
+                assert native.call('/_local/admin',values)[0]==200
+            ready_seconds=native.wait_business()
+            if args.browser:
+                summary['setup_to_business_ready_seconds']=summary['setup_browser'][0]['admin_submit_to_login_seconds']
+            else:
+                summary['setup_to_business_ready_seconds']=ready_seconds
+            native.login()
+            assert native.call('/_local/admin',values | {'csrf':native.csrf()})[0]==409
             assert native.call('/api/profile/factories', {'code':'FRESH','name':'کارخانه تازه','location':'تهران'}, json_body=True)[0]==201
             assert native.call('/add_category', {'factory':'FRESH','category_name':'دسته'}, json_body=True)[0]==200
             assert native.call('/add_subcategory', {'factory':'FRESH','category':'دسته','subcategory_name':'زیر دسته'},json_body=True)[0]==200
@@ -282,7 +346,11 @@ def main():
             native.stop()
             # New selection controller; existing authentication is retained.
             native=Native(executable,root/'تنظیمات دوم',cwd,env);native.launch()
-            assert native.call('/_local/workspace', {'csrf':native.csrf(),'workspace':str(existing),'mode':'existing'})[0]==200
+            if args.browser:
+                summary['setup_browser'].append(browser_setup(native,existing,output,args.chromium,fresh=False))
+                native.launch()
+            else:
+                assert native.call('/_local/workspace', {'csrf':native.csrf(),'workspace':str(existing),'mode':'existing'})[0]==200
             native.wait_business();native.login()
             assert native.call('/_local/admin',values | {'csrf':native.csrf()})[0]==409
             assert all(snapshot(existing).get(key)==value for key,value in baseline.items() if key.startswith('Data/'))

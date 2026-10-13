@@ -120,7 +120,13 @@ def test_private_setup_control_requires_capability_host_origin_and_csrf(tmp_path
     assert request('GET', '/_local/health').status_code == 403
     assert request('POST', '/_local/authorize', json={'capability': controller.token}, headers={'Origin':'https://evil.test'}).status_code == 403
     assert request('POST', '/_local/authorize', json={'capability': controller.token}, headers={'Origin':origin}).status_code == 200
-    assert request('GET', '/_local/panel').status_code == 200
+    panel = request('GET', '/_local/panel')
+    assert panel.status_code == 200
+    assert panel.headers['Referrer-Policy'] == 'same-origin'
+    for rejected_origin in (None, 'null', 'https://evil.test'):
+        headers = {} if rejected_origin is None else {'Origin': rejected_origin}
+        assert request('POST', '/_local/stop', data={'csrf':controller.csrf}, headers=headers).status_code == 403
+        assert not controller.stop.is_set()
     assert request('POST', '/_local/stop', data={'csrf':'bad'}, headers={'Origin':origin}).status_code == 403
     assert not controller.stop.is_set()
     assert request('POST', '/_local/admin', data={'csrf':controller.csrf}, headers={'Origin':origin}).status_code == 409

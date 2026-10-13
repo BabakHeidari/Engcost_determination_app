@@ -61,7 +61,11 @@ class Controller:
         @app.after_request
         def protect(response):
             response.headers["Cache-Control"] = "no-store"
-            response.headers["Referrer-Policy"] = "no-referrer"
+            # no-referrer makes browser form POSTs send Origin: null. Retain
+            # the same-origin value required by boundary(), while still keeping
+            # local URLs out of cross-origin referrers. Capabilities are removed
+            # from the fragment by standalone-entry.js before navigation.
+            response.headers["Referrer-Policy"] = "same-origin"
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'"
             return response

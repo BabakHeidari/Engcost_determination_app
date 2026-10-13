@@ -1,5 +1,10 @@
 # PR-11 validation and installer delivery
 
+**Superseded package notice:** 0.11.0 has a real-browser setup-form 403 defect.
+Its results below did not exercise setup form clicks. Version 0.11.1 fixes the
+referrer policy and adds installed browser submission coverage; replacement native
+builds are being validated. See [cause, correction and recovery](pr11-setup-form-fix.md).
+
 Version **0.11.0**, x64, unsigned. [Draft PR #48](https://github.com/BabakHeidari/Engcost_determination_app/pull/48) remains unmerged.
 Implementation started from verified main `c18dec9c673d33f1afa6ced1efc292cdb721d412`, including merged #46 and #47.
 Validated code head: `5815f1fded5b0074283354d39f1d542700e36919`.
