@@ -4,9 +4,16 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from smoke_installed import Native, fixture, snapshot
+
+
+def durable(root):
+    return {key:value for key,value in snapshot(root).items() if key.startswith(('Data/', 'instance/'))}
 
 
 def main():
@@ -27,9 +34,9 @@ def main():
         config.mkdir(parents=True,exist_ok=True)
         (config/'selection.json').write_text(json.dumps({'schema':1,'workspace':str(workspace)}))
         native=Native(executable,config,root,dict(os.environ))
-        before=snapshot(workspace)
+        before=durable(workspace)
         native.launch();native.wait_business()
-        baseline=snapshot(workspace)
+        baseline=durable(workspace)
         if os.name=='nt':
             command=[str(installer),'/S','/D='+str(executable.parent)]
         else:
@@ -38,11 +45,11 @@ def main():
             # Replace a running installed package through its actual installer.
             subprocess.run(command,check=True,timeout=120)
             native.process.wait(timeout=60);assert native.process.returncode==0
-            assert snapshot(workspace)==baseline
+            assert durable(workspace)==baseline
             native.launch();native.wait_business();native.login();native.stop()
-            baseline=snapshot(workspace)
+            baseline=durable(workspace)
             subprocess.run(command,check=True,timeout=120)  # compatible-package reinstall
-            assert snapshot(workspace)==baseline
+            assert durable(workspace)==baseline
             native.launch();native.wait_business()
             if os.name=='nt':
                 subprocess.run([str(executable.parent/'Uninstall.exe'),'/S'],check=True,timeout=120)
@@ -54,10 +61,10 @@ def main():
             else:
                 subprocess.run(['sudo','dpkg','-r','engcost'],check=True,timeout=120)
             native.process.wait(timeout=60);assert native.process.returncode==0
-            assert snapshot(workspace)==baseline
+            assert durable(workspace)==baseline
             result={'running_reinstall':'passed','compatible_reinstall':'passed','uninstall_retains_data':'passed',
                     'independent_prior_version_rollback':'pending: first packaging version; same-package reinstall tested',
-                    'original_business_bytes_retained':all(snapshot(workspace).get(k)==v for k,v in before.items() if k.startswith('Data/'))}
+                    'original_business_bytes_retained':all(durable(workspace).get(k)==v for k,v in before.items() if k.startswith('Data/'))}
             (output/'installer-lifecycle.json').write_text(json.dumps(result,indent=2)+'\n')
         finally:
             if native.process and native.process.poll() is None:

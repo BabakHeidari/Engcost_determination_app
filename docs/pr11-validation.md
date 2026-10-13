@@ -32,9 +32,10 @@ secrets, setup disabled after users exist, graceful restart, actual Cost Analysi
 A/B and matrix requests, and analytical source hash checks. Desktop 1440 and
 mobile 390 pages (login, Desk, Profile, Product, Factory/General Parameters, Cost,
 Dashboard) made zero external/failed requests and zero JavaScript errors, with
-local fonts and ECharts 5.6.0 verified. Final expanded results and raw timing
-distributions are retained in the evidence artifact, including corrupt/incomplete
-recovery and a 200-product/500-row representative fixture.
+local fonts and ECharts 5.6.0 verified. The final expanded run also passed material/BOM/financial saves, Profile Excel,
+CSV and chart fallback, corrupt/incomplete recovery and a 200-product/500-row
+representative fixture. [Raw results](evidence/pr11/linux-frozen-summary.json)
+retain every timing sample and identify the exact frozen executable hash.
 
 Reference executor: AMD EPYC 9V74 virtual CPU, 3 visible logical CPUs, cgroup
 quota 2 CPUs, 8 GiB memory limit, Debian 13 container on Linux 6.18.44. Timings are
@@ -64,3 +65,15 @@ their XLSX/fallback/category-invention paths. Old template/desk CSS copies are
 excluded from the production template allowlist; shared Font Awesome supplies
 icons. All current template script/style references use local URLs and reviewed
 font paths. No customer dependency/cache preparation is performed.
+
+## Local frozen measurements
+
+| Measurement | Median seconds | Min–max seconds | p95 seconds |
+|---|---:|---:|---:|
+| Controller readiness (5 restarts) | 0.259 | 0.205–0.267 | 0.267 |
+| Business readiness from process launch (5) | 0.590 | 0.534–0.629 | 0.629 |
+| cost-analysis request (10) | 0.049 | 0.045–0.075 | 0.075 |
+| A-B request (10) | 0.052 | 0.046–0.071 | 0.071 |
+| matrix request (10) | 0.061 | 0.055–0.106 | 0.106 |
+
+First setup controller ready: 0.232 s; after admin submit to business-ready: 0.355 s. First usable browser navigation to an already ready service: 0.999 s (1440 px), 0.961 s (390 px). This excludes human setup time and desktop/browser process launch.

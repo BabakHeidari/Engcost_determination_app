@@ -1,0 +1,77 @@
+{
+  "executable_sha256": "d0f23f2fab4711187b224fdc37d2a3bd5f13dd3b7b7bb3173e33f28c4b7db998",
+  "host": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "isolated_runtime_path": true,
+  "native_installer_environment": "see CI job/validation report",
+  "first_setup_server_ready_seconds": 0.2319550120000713,
+  "setup_to_business_ready_seconds": 0.35456588100032604,
+  "restart_server_ready_seconds": [
+    0.23020076100010556,
+    0.2669037410000783,
+    0.20532729100023062,
+    0.26212621400009084,
+    0.25938291100010247
+  ],
+  "restart_business_additional_seconds": [
+    0.3657208670001637,
+    0.36216030199966553,
+    0.3282859959999769,
+    0.3072640450000108,
+    0.3304827260003549
+  ],
+  "requests_seconds": {
+    "cost-analysis": [
+      0.05415977499978908,
+      0.04965409899978113,
+      0.04490223299990248,
+      0.0497915779997129,
+      0.07476514900008624,
+      0.045645866000086244,
+      0.05137860400009231,
+      0.04843053200011127,
+      0.04856187499990483,
+      0.04725387400003456
+    ],
+    "A-B": [
+      0.049806264000380907,
+      0.05226440200021898,
+      0.05480245099988679,
+      0.05462707600008798,
+      0.05426505900004486,
+      0.07114152100029969,
+      0.047922965999987355,
+      0.05172812299997531,
+      0.05096913699981087,
+      0.046245271999850956
+    ],
+    "matrix": [
+      0.05960437900012039,
+      0.06521901499991145,
+      0.1059556860000157,
+      0.06665121299965904,
+      0.05527322800026013,
+      0.07174793600006524,
+      0.06129713099971923,
+      0.06070912799987127,
+      0.054847244000029605,
+      0.05673822000017026
+    ]
+  },
+  "browser": [
+    {
+      "width": 1440,
+      "first_usable_navigation_seconds": 0.9987082790003114,
+      "external_requests": 0,
+      "failed_requests": 0,
+      "javascript_errors": 0
+    },
+    {
+      "width": 390,
+      "first_usable_navigation_seconds": 0.9605399600000055,
+      "external_requests": 0,
+      "failed_requests": 0,
+      "javascript_errors": 0
+    }
+  ],
+  "checks": "fresh setup/login, V2-only factory/category/subcategory/product/retry, general material/BOM/financial edits, costing and Profile Excel, simultaneous clicks, occupied port, stale record, unrelated CWD, Persian paths, existing workspace/auth preservation, secret persistence/uniqueness, setup disabled, corrupt/incomplete recovery, restart/stop, real Cost Analysis/A-B/matrix, analytical data hashes, local fonts/charts/CSV and chart fallback"
+}

@@ -238,7 +238,7 @@ def entrypoint():
     try:
         raise SystemExit(main())
     except Exception as exc:
-        if '--installer-stop' in sys.argv:
+        if '--installer-stop' in sys.argv or '--no-browser' in sys.argv:
             # Package scripts must never open a browser or prepare root's profile.
             if sys.stderr is not None:
                 print('Engcost installer stop failed: ' + type(exc).__name__, file=sys.stderr)

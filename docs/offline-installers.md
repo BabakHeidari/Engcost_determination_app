@@ -112,6 +112,13 @@ Data، instance، work، evidence، cache، backup و credential checkout در b
 وجود ندارند. ساخت تکرارپذیر به معنی ورودی/فرمان pin شده است؛ برابری بیت‌به‌بیت
 بین میزبان‌ها یا فایل‌های امضاشده ادعا نمی‌شود.
 
+برای Python 3.12.14 ویندوز، CI منبع CPython با SHA
+`2abcf904b8dac8c999d2b3aac76681abb333798a` را با `PCbuild/build.bat -p x64 -c Release`
+می‌سازد. نسخه 3.12.10 فقط ابزار bootstrap سازنده است؛ runtime مشتری 3.12.14 است.
+فایل workflow فرمان‌های کامل را نگه می‌دارد. ساخت Ubuntu 22.04 از گزینه
+`--max-glibc 2.35` برای جلوگیری از ABI جدیدتر استفاده می‌کند؛ بسته ساخته‌شده در
+Debian این executor به GLIBC 2.38 نیاز دارد و برای Ubuntu 22.04 اعلام نمی‌شود.
+
 CI مستقل Windows/Ubuntu بسته را نصب، executable نصب‌شده را اجرا، شبکه خارجی
 را مسدود، صفحات desktop/mobile را ثبت و reinstall/uninstall را بررسی می‌کند.
 تست harness به Python/Playwright نیاز دارد؛ فرایند مشتری با PATH جداشده و بدون

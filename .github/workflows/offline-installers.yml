@@ -8,6 +8,9 @@ permissions:
   contents: read
 env:
   PYTHONUTF8: '1'
+concurrency:
+  group: offline-installers-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
   ubuntu:
     runs-on: ubuntu-22.04
@@ -52,13 +55,24 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
-          python-version: '3.12.14'
+          # Last upstream Windows binary is a build bootstrap only. The bundled
+          # validated 3.12.14 security release is built natively below.
+          python-version: '3.12.10'
           architecture: x64
+      - name: Build pinned CPython 3.12.14 natively
+        shell: pwsh
+        run: |
+          git clone --depth 1 --branch v3.12.14 https://github.com/python/cpython.git work/cpython
+          $source = git -C work/cpython rev-parse HEAD
+          if ($source -ne '2abcf904b8dac8c999d2b3aac76681abb333798a') { throw 'CPython source integrity mismatch' }
+          cmd /c 'work\cpython\PCbuild\build.bat -p x64 -c Release'
+          if ($LASTEXITCODE -ne 0) { throw 'CPython native build failed' }
+          work/cpython/PCbuild/amd64/python.exe -c 'import sys; assert sys.version_info[:3] == (3,12,14)'
       - name: Pinned native build tools
         shell: pwsh
         run: |
           choco install nsis --version=3.11 -y --no-progress
-          python -m venv work/ci-venv
+          work/cpython/PCbuild/amd64/python.exe -m venv work/ci-venv
           work/ci-venv/Scripts/python -m pip install -r requirements-packaging.txt -r requirements-test.txt -r requirements-browser.txt
           work/ci-venv/Scripts/python -m playwright install chromium
       - name: Native Windows build
