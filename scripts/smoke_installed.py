@@ -45,7 +45,7 @@ class Native:
         deadline = time.monotonic() + 45
         while time.monotonic() < deadline:
             try:
-                self.record = json.loads((self.config / 'instance.json').read_text())
+                self.record = json.loads((self.config / 'instance.json').read_text(encoding='utf-8'))
                 self.base = 'http://127.0.0.1:' + str(self.record['port'])
                 status, data = self.call('/_local/health', headers={'X-Engcost-Capability': self.record['token']})
                 if status == 200 and data['instance_id'] == self.record['instance_id']:
@@ -129,7 +129,7 @@ def fixture(root):
     for p in f.factory.glob('Factory_Data_*.json'): p.unlink()
     (f.factory / 'category_weights.json').unlink(); (f.factory / 'ProductionPrediction.json').unlink()
     for p in [f.data / 'Overall/material_costs.json', *f.factory.glob('category/sub/*.json')]:
-        document = json.loads(p.read_text()); document['_order'] = list(document['data'])
+        document = json.loads(p.read_text(encoding='utf-8')); document['_order'] = list(document['data'])
         p.write_text(json.dumps(document))
     for p in (ROOT / 'packaging/blank/Overall').glob('*.json'):
         if not (f.data / 'Overall' / p.name).exists():
@@ -255,6 +255,92 @@ def browser_evidence(native, output, chromium):
     return results
 
 
+def browser_material_bom(native, workspace, output, chromium):
+    """Save/reload/edit a Persian material, then resolve and save it in BOM."""
+    from playwright.sync_api import sync_playwright
+    name = 'اسید "سرب"\u200cدار'
+    materials = workspace / 'Data/Overall/material_costs.json'
+    bom = workspace / 'Data/Factories/FRESH/دسته/زیر دسته/محصول.json'
+    with sync_playwright() as runtime:
+        browser = runtime.chromium.launch(executable_path=str(chromium) if chromium else None, headless=True,
+                                          args=['--no-sandbox','--disable-dev-shm-usage','--disable-background-networking'])
+        context = browser.new_context(timezone_id='Asia/Tehran')
+        external, failures, errors = [], [], []
+        def network(route):
+            if not route.request.url.startswith(native.base + '/'):
+                external.append(route.request.url); route.abort()
+            else:
+                route.continue_()
+        context.route('**/*', network)
+        page = context.new_page()
+        page.on('pageerror', lambda error: errors.append(str(error)))
+        page.on('response', lambda response: failures.append(response.status) if response.status >= 400 else None)
+        page.on('dialog', lambda dialog: dialog.accept())
+        page.goto(native.base + '/_local/#' + native.record['token'])
+        page.wait_for_url('**/login')
+        page.locator('[name=username]').fill('native-owner')
+        page.locator('[name=password]').fill(PASSWORD)
+        page.locator('form button').click()
+        page.wait_for_load_state('networkidle')
+        page.goto(native.base + '/general_parameters/', wait_until='networkidle')
+        page.locator('#addRowBtn').click()
+        page.locator('#add_field_material').fill(name)
+        page.locator('#add_field_unit').select_option('Kilogram (kg)')
+        page.locator('#add_field_currency').select_option('IRR - Iranian Rial')
+        page.locator('#add_field_cost_per_unit_in_currency').fill('125')
+        page.locator('#addRowModal .modal-actions .btn-save').click()
+        def save_materials():
+            with page.expect_response(lambda r:r.url.endswith('/save_materials') and r.request.method=='POST') as pending:
+                page.locator('#saveBtn').click()
+            assert pending.value.status == 200
+            page.wait_for_function('!document.getElementById("saveBtn").disabled')
+        save_materials()
+        assert json.loads(materials.read_text(encoding='utf-8'))['data']['material'] == ['fixture-lead', name]
+        page.reload(wait_until='networkidle')
+        row = page.locator('#dataTable tbody tr').filter(has_text=name)
+        assert row.count() == 1
+        row.locator('.btn-edit-row').click()
+        assert page.locator('#edit_field_material').input_value() == name
+        page.locator('#edit_field_cost_per_unit_in_currency').fill('150')
+        page.locator('#editRowModal .modal-actions .btn-save').click()
+        save_materials()
+        document = json.loads(materials.read_text(encoding='utf-8'))['data']
+        assert document['material'] == ['fixture-lead', name] and document['cost_per_unit_in_currency'] == [100, 150]
+        page.reload(wait_until='networkidle')
+        assert page.locator('#dataTable tbody tr').filter(has_text=name).count() == 1
+        page.screenshot(path=str(output / 'persian-material-general.png'), full_page=True)
+        def open_bom():
+            with page.expect_navigation(wait_until='networkidle'):
+                page.evaluate('''() => {
+                    const form = document.createElement('form');
+                    form.method = 'POST'; form.action = '/product/محصول';
+                    for (const [key,value] of Object.entries({factory:'FRESH',category:'دسته',subcategory:'زیر دسته'})) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden'; input.name = key; input.value = value; form.appendChild(input);
+                    }
+                    document.body.appendChild(form); form.submit();
+                }''')
+            page.locator('#bomTable').wait_for()
+        open_bom()
+        page.locator('#tableBody tr').first.locator('select').select_option(name)
+        usage = page.locator('#tableBody tr').first.locator('input[type="number"]').first
+        usage.fill('2'); usage.press('Tab')
+        with page.expect_response(lambda r:r.url.endswith('/save_bom') and r.request.method=='POST') as pending:
+            page.locator('#saveBtn').click()
+        assert pending.value.status == 200
+        stored = json.loads(bom.read_text(encoding='utf-8'))['data']
+        assert stored['materials'] == [name] and stored['cost_per_unit_in_currency'] == [150]
+        assert stored['cost_of_material_in_rial'] == [300]
+        open_bom()
+        assert page.locator('#tableBody tr').first.locator('select').input_value() == name
+        page.screenshot(path=str(output / 'persian-material-bom.png'), full_page=True)
+        assert not external and not failures and not errors, (external, failures, errors)
+        browser.close()
+    return {'material':name, 'material_price':150, 'bom_live_cost_in_rial':300,
+            'general_add_reload_edit_reload':True, 'bom_select_save_reload':True,
+            'external_requests':len(external),'failed_requests':len(failures),'javascript_errors':len(errors)}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--executable', type=Path, required=True)
@@ -308,16 +394,18 @@ def main():
             material={'material':'fixture-lead','unit':'kg','currency':'IRR - Iranian Rial','cost_per_unit_in_currency':100}
             assert native.call('/save_materials',{'added':[material],'edited':[],'deleted':[],
                                'last_modification_date':'2026-10-13T00:00:00Z'},json_body=True)[0]==200
-            assert json.loads((workspace/'Data/Overall/material_costs.json').read_text())['data']['material']==['fixture-lead']
+            assert json.loads((workspace/'Data/Overall/material_costs.json').read_text(encoding='utf-8'))['data']['material']==['fixture-lead']
             assert native.call('/product/محصول',{'factory':'FRESH','category':'دسته','subcategory':'زیر دسته'})[0]==200
             live={'_order':['materials','usage','lost_percentage','recycability_percentage'],
                   'data':{'materials':['fixture-lead'],'usage':[1],'lost_percentage':[0],'recycability_percentage':[0]}}
             assert native.call('/save_bom',live,json_body=True)[0]==200
+            if args.browser:
+                summary['persian_material_browser']=browser_material_bom(native,workspace,output,args.chromium)
             import io,zipfile
             status,excel=native.call('/api/profile/export.xlsx',raw_body=True)
             assert status==200 and 'xl/workbook.xml' in zipfile.ZipFile(io.BytesIO(excel)).namelist()
             for file,endpoint in [('category_weights.json','category-weights'),('production_prediction.json','production-prediction')]:
-                document=json.loads((workspace/'Data/Factories/FRESH/configuration'/file).read_text())
+                document=json.loads((workspace/'Data/Factories/FRESH/configuration'/file).read_text(encoding='utf-8'))
                 document['data']={'category':['دسته'],'selling_share_of_category':[50]} if endpoint=='category-weights' else {'Product Name':['محصول'],'Predicted Production':[10]}
                 assert native.call('/factory_parameters/FRESH/'+endpoint,document,json_body=True,method='PUT')[0]==200
             for pool in sorted((workspace/'Data/Factories/FRESH/configuration/cost_pools').glob('*.json')):
@@ -325,7 +413,7 @@ def main():
                 assert native.call('/factory_parameters/FRESH/cost-pools/'+pool.stem,document,json_body=True,method='PUT')[0]==200
             status,cost=native.call('/cost/get_cost',{'Factory':'FRESH','Category':'دسته','Subcategory':'زیر دسته','Product_Name':'محصول'},json_body=True)
             assert status==200 and cost['state'] in {'OK','MISSING_INPUT','AMBIGUOUS_INPUT','INVALID_INPUT'}
-            secret=json.loads((workspace/'instance/standalone.json').read_text())['secret']
+            secret=json.loads((workspace/'instance/standalone.json').read_text(encoding='utf-8'))['secret']
             from concurrent.futures import ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers=4) as clicks:
                 results=list(clicks.map(lambda _:subprocess.run([str(executable),'--config-root',str(native.config),'--no-browser'],cwd=cwd,env=env,timeout=40).returncode, range(4)))
@@ -334,7 +422,7 @@ def main():
             warm=[];business=[]
             for _ in range(5):
                 warm.append(native.launch());business.append(native.wait_business());native.stop()
-                assert json.loads((workspace/'instance/standalone.json').read_text())['secret']==secret
+                assert json.loads((workspace/'instance/standalone.json').read_text(encoding='utf-8'))['secret']==secret
             summary['restart_server_ready_seconds']=warm;summary['restart_business_additional_seconds']=business
             # A stale record must not redirect to a port or keep a nonexistent owner alive.
             (native.config/'instance.json').write_text(json.dumps({'application':'unrelated','port':5000}))
@@ -354,7 +442,7 @@ def main():
             native.wait_business();native.login()
             assert native.call('/_local/admin',values | {'csrf':native.csrf()})[0]==409
             assert all(snapshot(existing).get(key)==value for key,value in baseline.items() if key.startswith('Data/'))
-            assert json.loads((existing/'instance/standalone.json').read_text())['secret'] != secret
+            assert json.loads((existing/'instance/standalone.json').read_text(encoding='utf-8'))['secret'] != secret
             times={}
             for name,path,body in [('cost-analysis','/api/cost_analysis?'+urlencode(selection),None),
                                    ('A-B','/api/dashboard/sensitivity/visual-analysis',selection|{'scenarios':[{'id':'A','overrides':[]},{'id':'B','overrides':[]}], 'experiment':None})]:

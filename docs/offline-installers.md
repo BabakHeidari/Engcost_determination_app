@@ -1,5 +1,9 @@
 # نصب و اجرای محلی و آفلاین (PR-11)
 
+نسخه ۰٫۱۱٫۲ خواندن نام فارسی مواد در ویندوز و حفظ نام در ویرایش/BOM را اصلاح
+می‌کند. [علت و بررسی داده‌های قبلی](pr11-material-encoding-fix.md) را بخوانید.
+پیوندهای نسخه ۰٫۱۱٫۱ پایین این صفحه تا پایان آزمون بسته جدید، سابقه نسخه قبلی هستند.
+
 نسخه بسته‌بندی: `0.11.1`. این راهنما برای بسته آزمایشی بدون امضا است.
 بسته‌های واقعی [ویندوز](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38463009134/artifacts/11848591222)
 و [اوبونتو](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38463009134/artifacts/11847451795)

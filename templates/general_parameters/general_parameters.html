@@ -158,7 +158,7 @@ const units = [
 ];
 
 // ===== DATA FROM FLASK =====
-const tableJSON = {{ table_json | safe }};
+const tableJSON = {{ table_json | tojson }};
 
 const COLUMN_DISPLAY_LABELS = {
     material: "ماده", materials: "مواد", unit: "واحد", currency: "ارز",
@@ -818,13 +818,14 @@ function openEditRowModal(row) {
                 <input type="text"
                        id="edit_field_${h}"
                        class="modal-input"
-                       value="${row[h] || ''}"
                        placeholder="مقدار ${displayHeader(h)} را وارد کنید"
                        required>
             `;
         }
 
         fieldGroup.innerHTML = inputHtml;
+        const textInput = fieldGroup.querySelector('input[type="text"]');
+        if (textInput) textInput.value = row[h] ?? '';
         modalFields.appendChild(fieldGroup);
     });
 

@@ -49,13 +49,13 @@ jobs:
       - name: Build on oldest target ABI
         run: work/ci-venv/bin/python scripts/build_installers.py --max-glibc 2.35
       - name: Install the actual offline deb
-        run: sudo dpkg -i work/pr11-artifacts/engcost_0.11.1_amd64.deb
+        run: sudo dpkg -i work/pr11-artifacts/engcost_0.11.2_amd64.deb
       - name: Frozen native smoke with external networking blocked
         run: |
           cc -shared -fPIC packaging/tests/block_external.c -ldl -o work/block_external.so
           work/ci-venv/bin/python scripts/smoke_installed.py --executable /opt/engcost/Engcost --output work/pr11-artifacts/validation --browser --network-block-library work/block_external.so
       - name: Actual installer reinstall and uninstall retention
-        run: work/ci-venv/bin/python scripts/validate_installer_lifecycle.py --executable /opt/engcost/Engcost --installer work/pr11-artifacts/engcost_0.11.1_amd64.deb --output work/pr11-artifacts/validation
+        run: work/ci-venv/bin/python scripts/validate_installer_lifecycle.py --executable /opt/engcost/Engcost --installer work/pr11-artifacts/engcost_0.11.2_amd64.deb --output work/pr11-artifacts/validation
       - name: Existing backend regressions and operational inventory
         run: work/ci-venv/bin/python scripts/validate_dashboard_release.py --suite backend --name native-ubuntu --evidence-dir work/pr11-artifacts/validation
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -101,7 +101,7 @@ jobs:
       - name: Install actual NSIS package
         shell: pwsh
         run: |
-          $installer = (Resolve-Path work/pr11-artifacts/Engcost-0.11.1-Setup.exe).Path
+          $installer = (Resolve-Path work/pr11-artifacts/Engcost-0.11.2-Setup.exe).Path
           Start-Process $installer -ArgumentList '/S' -Wait
           if (!(Test-Path "$env:LOCALAPPDATA/Programs/Engcost/Engcost.exe")) { throw 'Native installation failed' }
       - name: Frozen Windows and browser smoke
@@ -116,7 +116,7 @@ jobs:
           } finally { Remove-NetFirewallRule -DisplayName $rule }
       - name: Actual installer reinstall and uninstall retention
         shell: pwsh
-        run: work/ci-venv/Scripts/python scripts/validate_installer_lifecycle.py --executable "$env:LOCALAPPDATA/Programs/Engcost/Engcost.exe" --installer work/pr11-artifacts/Engcost-0.11.1-Setup.exe --output work/pr11-artifacts/validation
+        run: work/ci-venv/Scripts/python scripts/validate_installer_lifecycle.py --executable "$env:LOCALAPPDATA/Programs/Engcost/Engcost.exe" --installer work/pr11-artifacts/Engcost-0.11.2-Setup.exe --output work/pr11-artifacts/validation
       - name: Existing backend regressions and operational inventory
         shell: pwsh
         run: work/ci-venv/Scripts/python scripts/validate_dashboard_release.py --suite backend --name native-windows --evidence-dir work/pr11-artifacts/validation

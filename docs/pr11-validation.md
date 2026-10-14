@@ -1,5 +1,12 @@
 # PR-11 validation and installer delivery
 
+**0.11.2 correction underway:** General Parameters' default-code-page read could
+garble UTF-8 material names on Windows and persist them during a later edit.
+Explicit UTF-8 reads, safe JSON/input serialization and real Persian material/BOM
+browser roundtrips replace that path. Local 1,066 backend regressions pass;
+replacement native installers are being validated. The 0.11.1 links below are
+historical until replaced. See [cause and data-recovery steps](pr11-material-encoding-fix.md).
+
 Version 0.11.1 corrects 0.11.0's real-browser setup-form 403 defect. Both
 replacement native jobs now submit the shipped workspace, administrator and stop
 forms in a browser, without supplying Origin manually. See

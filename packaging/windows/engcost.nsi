@@ -5,10 +5,10 @@ OutFile "${OUTPUT}"
 InstallDir "$LOCALAPPDATA\Programs\Engcost"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-VIProductVersion "0.11.1.0"
+VIProductVersion "0.11.2.0"
 VIAddVersionKey "ProductName" "Engcost"
-VIAddVersionKey "FileVersion" "0.11.1"
-VIAddVersionKey "ProductVersion" "0.11.1"
+VIAddVersionKey "FileVersion" "0.11.2"
+VIAddVersionKey "ProductVersion" "0.11.2"
 VIAddVersionKey "FileDescription" "Offline local Engcost installer"
 !define MUI_ICON "..\icons\engcost.ico"
 !define MUI_UNICON "..\icons\engcost.ico"
@@ -43,7 +43,7 @@ Section "Engcost"
   File /r "${BUNDLE}\*"
   WriteUninstaller "$INSTDIR.next\Uninstall.exe"
   FileOpen $0 "$INSTDIR.next\.engcost-install" w
-  FileWrite $0 "Engcost 0.11.1"
+  FileWrite $0 "Engcost 0.11.2"
   FileClose $0
   IfErrors stagingfailed
   SetOutPath "$TEMP"
@@ -67,7 +67,7 @@ Section "Engcost"
   CreateShortCut "$DESKTOP\Engcost.lnk" "$INSTDIR\Engcost.exe"
   CreateShortCut "$SMPROGRAMS\Engcost\توقف سامانه.lnk" "$INSTDIR\Engcost.exe" "--stop"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Engcost" "DisplayName" "Engcost"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Engcost" "DisplayVersion" "0.11.1"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Engcost" "DisplayVersion" "0.11.2"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Engcost" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Engcost" "DisplayIcon" "$INSTDIR\Engcost.exe"
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Engcost" "NoModify" 1
