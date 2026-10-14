@@ -3,6 +3,7 @@
 <div class="d-flex gap-4 app-header__meta">
 <div><small>آخرین ورود:</small> <span id="lastLogin" class="date-value" dir="ltr">{{ "2026-04-21"|jalali_date }}</span></div>
 <div><small>زمان:</small> <span id="currentTime" class="date-value" dir="ltr"></span>
+{% if config.get('ENGCOST_STANDALONE') %}<a href="/_local/panel" class="btn btn-outline-secondary btn-sm">کنترل و توقف سامانه</a>{% endif %}
 <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">
 خروج
 </a>

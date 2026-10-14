@@ -1,0 +1,8 @@
+@font-face{font-family:IRANSansX;src:url('../fonts/IRANSansX-Regular.woff2') format('woff2');font-display:swap}
+body{font-family:IRANSansX,Tahoma,sans-serif;background:#eff3f8;color:#183047;margin:0;line-height:1.9}
+main{max-width:650px;margin:3rem auto;padding:2rem;background:white;border-radius:12px;box-shadow:0 3px 20px #18304720}
+h1{font-size:1.4rem}h2{font-size:1.15rem}label{display:block;margin:.7rem 0}
+input:not([type=radio]){box-sizing:border-box;display:block;width:100%;font:inherit;padding:.45rem;border:1px solid #8d9baa;border-radius:5px}
+button,.button{font:inherit;background:#175c99;color:white;border:0;border-radius:5px;padding:.5rem 1rem;cursor:pointer;text-decoration:none}
+.stop{background:#973937;margin-top:1.5rem}[role=alert]{background:#ffeae4;padding:.7rem}
+@media(max-width:700px){main{margin:1rem;padding:1.25rem}}

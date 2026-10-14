@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, jsonify, request, session
+from flask import Blueprint, render_template, jsonify, request
 from utils.auth import login_required, require_access
 from utils.paths import material_path
-import json
+from utils.load_data import load_json
 from utils.updaters import material_data_updater
 
 general_parameters_bp = Blueprint("general_parameters", __name__)
@@ -10,9 +10,8 @@ general_parameters_bp = Blueprint("general_parameters", __name__)
 @login_required
 @require_access("general_parameters", "READ")
 def general_parameters():
-    with open(material_path+".json", "r") as f:
-        data = json.load(f)
-    # LOGGED_IN_USER = session.get("user")
+    # Use the same explicit UTF-8 reader as BOM and the material updater.
+    data = load_json(material_path + ".json")
     return render_template("general_parameters/general_parameters.html",table_json = data)
 
 

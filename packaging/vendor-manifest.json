@@ -1,0 +1,224 @@
+[
+  {
+    "path": "static/vendor/bootstrap/bootstrap.min.css",
+    "sha256": "3017df4a76db5f01c2b99b603d88b03106df13bcfe18e67b7c13c2341d3a67df",
+    "source": "https://registry.npmjs.org/bootstrap/-/bootstrap-5.3.2.tgz",
+    "archive_sha256": "6eeae8894f91f0a557f1bbe0ad8eb104bba7a4d8fb1164e37f3113614ebb6c7f",
+    "member": "package/dist/css/bootstrap.min.css",
+    "package": "bootstrap",
+    "version": "5.3.2"
+  },
+  {
+    "path": "static/vendor/bootstrap/bootstrap.bundle.min.js",
+    "sha256": "82f64f62bb03c1bc1824b0f9c9e05f70dba33e146818e63cdf5c306c8cf3dedd",
+    "source": "https://registry.npmjs.org/bootstrap/-/bootstrap-5.3.2.tgz",
+    "archive_sha256": "6eeae8894f91f0a557f1bbe0ad8eb104bba7a4d8fb1164e37f3113614ebb6c7f",
+    "member": "package/dist/js/bootstrap.bundle.min.js",
+    "package": "bootstrap",
+    "version": "5.3.2"
+  },
+  {
+    "path": "static/vendor/bootstrap/LICENSE",
+    "sha256": "3d0b0c88216e4752b9afd3d24e36faaf27873b5a45a61458bb3c83e794c26832",
+    "source": "https://registry.npmjs.org/bootstrap/-/bootstrap-5.3.2.tgz",
+    "archive_sha256": "6eeae8894f91f0a557f1bbe0ad8eb104bba7a4d8fb1164e37f3113614ebb6c7f",
+    "member": "package/LICENSE",
+    "package": "bootstrap",
+    "version": "5.3.2"
+  },
+  {
+    "path": "static/vendor/fontawesome/css/all.min.css",
+    "sha256": "c22cfb6520a7fdbb738632834019acf47c78b1279462c0eb4cb83bae83ecb5a7",
+    "source": "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-6.5.1.tgz",
+    "archive_sha256": "6b659a2f6596db8403e3761c81e64179383ee9476a9c4f09f4bcca929f94661e",
+    "member": "package/css/all.min.css",
+    "package": "@fortawesome/fontawesome-free",
+    "version": "6.5.1"
+  },
+  {
+    "path": "static/vendor/fontawesome/LICENSE.txt",
+    "sha256": "0aa8f86525273b2efa4f40f4272a188e187704252170e979dc06879adf68d43c",
+    "source": "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-6.5.1.tgz",
+    "archive_sha256": "6b659a2f6596db8403e3761c81e64179383ee9476a9c4f09f4bcca929f94661e",
+    "member": "package/LICENSE.txt",
+    "package": "@fortawesome/fontawesome-free",
+    "version": "6.5.1"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-brands-400.woff2",
+    "sha256": "3a8924cd5203a28628716aedb5cef0943da4c3b44e3ffcee90ab06387b41c490",
+    "source": "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-6.5.1.tgz",
+    "archive_sha256": "6b659a2f6596db8403e3761c81e64179383ee9476a9c4f09f4bcca929f94661e",
+    "member": "package/webfonts/fa-brands-400.woff2",
+    "package": "@fortawesome/fontawesome-free",
+    "version": "6.5.1"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-brands-400.ttf",
+    "sha256": "5656d596bc597165a42182f67b2b9f17d2ae47a9e3ef1b042b9a729739730705",
+    "source": "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-6.5.1.tgz",
+    "archive_sha256": "6b659a2f6596db8403e3761c81e64179383ee9476a9c4f09f4bcca929f94661e",
+    "member": "package/webfonts/fa-brands-400.ttf",
+    "package": "@fortawesome/fontawesome-free",
+    "version": "6.5.1"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-regular-400.woff2",
+    "sha256": "2bccecf0bc7e96cd5ce4003abeb3ae9ee4a3d19158c4e6edfd2df32d2f0d5721",
+    "source": "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-6.5.1.tgz",
+    "archive_sha256": "6b659a2f6596db8403e3761c81e64179383ee9476a9c4f09f4bcca929f94661e",
+    "member": "package/webfonts/fa-regular-400.woff2",
+    "package": "@fortawesome/fontawesome-free",
+    "version": "6.5.1"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-regular-400.ttf",
+    "sha256": "5d02dc9b858e3c85a794f87e379857f4fedc4e26cf15001714a9a0e0b1d2294d",
+    "source": "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-6.5.1.tgz",
+    "archive_sha256": "6b659a2f6596db8403e3761c81e64179383ee9476a9c4f09f4bcca929f94661e",
+    "member": "package/webfonts/fa-regular-400.ttf",
+    "package": "@fortawesome/fontawesome-free",
+    "version": "6.5.1"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-solid-900.woff2",
+    "sha256": "9fc85f3a4544ab0d570c7f8f9bbb88db8d92c359b2707580ea8b07c75673eae2",
+    "source": "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-6.5.1.tgz",
+    "archive_sha256": "6b659a2f6596db8403e3761c81e64179383ee9476a9c4f09f4bcca929f94661e",
+    "member": "package/webfonts/fa-solid-900.woff2",
+    "package": "@fortawesome/fontawesome-free",
+    "version": "6.5.1"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-solid-900.ttf",
+    "sha256": "fbbf06d7437aa30f3cd44c968380193545a8fc3eadfb7ad897bbb101eefec5a2",
+    "source": "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-6.5.1.tgz",
+    "archive_sha256": "6b659a2f6596db8403e3761c81e64179383ee9476a9c4f09f4bcca929f94661e",
+    "member": "package/webfonts/fa-solid-900.ttf",
+    "package": "@fortawesome/fontawesome-free",
+    "version": "6.5.1"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-v4compatibility.woff2",
+    "sha256": "4d4a2d7fd1c6684845cb174fdd7fc073bd64cb741286fb247f8b76c2b7b852c4",
+    "source": "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-6.5.1.tgz",
+    "archive_sha256": "6b659a2f6596db8403e3761c81e64179383ee9476a9c4f09f4bcca929f94661e",
+    "member": "package/webfonts/fa-v4compatibility.woff2",
+    "package": "@fortawesome/fontawesome-free",
+    "version": "6.5.1"
+  },
+  {
+    "path": "static/vendor/fontawesome/webfonts/fa-v4compatibility.ttf",
+    "sha256": "09663a36fc05e7190af8324b855105c5bb511ad94f94b81b34afee503279eca2",
+    "source": "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-6.5.1.tgz",
+    "archive_sha256": "6b659a2f6596db8403e3761c81e64179383ee9476a9c4f09f4bcca929f94661e",
+    "member": "package/webfonts/fa-v4compatibility.ttf",
+    "package": "@fortawesome/fontawesome-free",
+    "version": "6.5.1"
+  },
+  {
+    "path": "static/vendor/sheetjs/xlsx.full.min.js",
+    "sha256": "c9506197caf809a075b6dee1da0d36fb19da7158ffe8a88e7b0c96c5d8623c99",
+    "source": "https://registry.npmjs.org/xlsx/-/xlsx-0.18.5.tgz",
+    "archive_sha256": "5b23e25faa2472e50679e5f6ee52fced3ae4c4b1e46e8dfebb221c59747461ee",
+    "member": "package/dist/xlsx.full.min.js",
+    "package": "xlsx",
+    "version": "0.18.5"
+  },
+  {
+    "path": "static/vendor/sheetjs/LICENSE",
+    "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64",
+    "source": "https://registry.npmjs.org/xlsx/-/xlsx-0.18.5.tgz",
+    "archive_sha256": "5b23e25faa2472e50679e5f6ee52fced3ae4c4b1e46e8dfebb221c59747461ee",
+    "member": "package/LICENSE",
+    "package": "xlsx",
+    "version": "0.18.5"
+  },
+  {
+    "path": "static/vendor/handsontable/handsontable.full.min.js",
+    "sha256": "32d7dadf64e6eb6257a268290d99b4160928d27f7baf244be5626befdda6f784",
+    "source": "https://registry.npmjs.org/handsontable/-/handsontable-17.0.1.tgz",
+    "archive_sha256": "f52fdf46592a4e7d3a8890e4c80739ecd53de7227333231eb08d11bd30c0b6cb",
+    "member": "package/dist/handsontable.full.min.js",
+    "package": "handsontable",
+    "version": "17.0.1"
+  },
+  {
+    "path": "static/vendor/handsontable/LICENSE.txt",
+    "sha256": "5eaa63bb3ae5327dbf8fa3b9fae39c4cc2713a68e0e9344577286b0eddc17f12",
+    "source": "https://registry.npmjs.org/handsontable/-/handsontable-17.0.1.tgz",
+    "archive_sha256": "f52fdf46592a4e7d3a8890e4c80739ecd53de7227333231eb08d11bd30c0b6cb",
+    "member": "package/LICENSE.txt",
+    "package": "handsontable",
+    "version": "17.0.1"
+  },
+  {
+    "path": "static/vendor/handsontable/handsontable.full.min.css",
+    "sha256": "ff443e757e220023d7bf3c3db081d507c6ad4622e8a4408984f5b1b781527906",
+    "source": "repository:c18dec9c673d33f1afa6ced1efc292cdb721d412",
+    "version": "existing-repository-asset"
+  },
+  {
+    "path": "static/vendor/echarts/LICENSE",
+    "sha256": "634293835b43a6dd2094fa39182a3d9a6b9ca43b7fdb9ac354e8037af2a3093a",
+    "source": "repository:c18dec9c673d33f1afa6ced1efc292cdb721d412",
+    "version": "5.6.0"
+  },
+  {
+    "path": "static/vendor/echarts/NOTICE",
+    "sha256": "fa99ac3af859d0e13166906dc53a73ad34a08898da7e8ae83407275496e9e30c",
+    "source": "repository:c18dec9c673d33f1afa6ced1efc292cdb721d412",
+    "version": "5.6.0"
+  },
+  {
+    "path": "static/vendor/echarts/README.md",
+    "sha256": "bea834a8e33c0ab8ff5c22569caae86a5e03c37931a23138d1ac16b9ebba6e66",
+    "source": "repository:c18dec9c673d33f1afa6ced1efc292cdb721d412",
+    "version": "5.6.0"
+  },
+  {
+    "path": "static/vendor/echarts/echarts-5.6.0.min.js",
+    "sha256": "bf4a223524e40b77c304bec67e1222cf551f14880cf42c69dc046558e11c07b1",
+    "source": "repository:c18dec9c673d33f1afa6ced1efc292cdb721d412",
+    "version": "5.6.0"
+  },
+  {
+    "path": "static/fonts/IRANSansX-Bold.woff2",
+    "sha256": "bbd6d49ba961d78e139ca30446f37e448aba0728c920e9f240acbb3e304876dc",
+    "source": "repository:c18dec9c673d33f1afa6ced1efc292cdb721d412",
+    "version": "existing-repository-asset"
+  },
+  {
+    "path": "static/fonts/IRANSansX-Light.woff2",
+    "sha256": "d671fb110e1b2902bec883fcfecb59e1829c03c09f852072146d1c07041c359a",
+    "source": "repository:c18dec9c673d33f1afa6ced1efc292cdb721d412",
+    "version": "existing-repository-asset"
+  },
+  {
+    "path": "static/fonts/IRANSansX-Medium.woff2",
+    "sha256": "7e9c5c08877c6a1c291e7846b25598c234da00cd834198dfc17b303c4fe27618",
+    "source": "repository:c18dec9c673d33f1afa6ced1efc292cdb721d412",
+    "version": "existing-repository-asset"
+  },
+  {
+    "path": "static/fonts/IRANSansX-Regular.woff2",
+    "sha256": "13812a30ddb5f43dee6b08795045e14f2463e6a54b0153f94c87d78e0ae2ca11",
+    "source": "repository:c18dec9c673d33f1afa6ced1efc292cdb721d412",
+    "version": "existing-repository-asset"
+  },
+  {
+    "path": "static/fonts/IRANSansX-UltraLight.woff2",
+    "sha256": "35a5b4bc5a590513f06f52c8202856c04e830c8d6b217a30f81db6013221c568",
+    "source": "repository:c18dec9c673d33f1afa6ced1efc292cdb721d412",
+    "version": "existing-repository-asset"
+  },
+  {
+    "path": "static/vendor/handsontable/handsontable-non-commercial-license.pdf",
+    "sha256": "1b2ca9bd01c9928c184ee96f034d82af2c1e55a58f9d32517a321ddf33486660",
+    "source": "https://registry.npmjs.org/handsontable/-/handsontable-17.0.1.tgz",
+    "archive_sha256": "f52fdf46592a4e7d3a8890e4c80739ecd53de7227333231eb08d11bd30c0b6cb",
+    "member": "package/handsontable-non-commercial-license.pdf",
+    "package": "handsontable",
+    "version": "17.0.1"
+  }
+]

@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from flask import Blueprint, g, jsonify, render_template, request, send_file
+from flask import Blueprint, current_app, g, jsonify, render_template, request, send_file
 
 from utils.auth import get_profile_store, login_required, require_access, require_top_level_admin
 from utils.profile_factories import prepare_new_factory
@@ -98,6 +98,11 @@ def create_factory():
     try:
         candidate = prepare_new_factory(request.get_json(silent=True))
         factory = get_profile_store().create_factory_as_actor(g.current_user["id"], candidate)
+        if current_app.config.get("ENGCOST_STANDALONE"):
+            # An explicit factory-create edit prepares an empty V2 workspace.
+            # Reuse approved initialization: no financial values are invented.
+            from utils.factory_configuration import ensure_factory_configuration_v2
+            ensure_factory_configuration_v2(factory["id"], factory["id"], persist=True)
     except ProfileDataConflictError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 409
     except ProfileDataValidationError as exc:

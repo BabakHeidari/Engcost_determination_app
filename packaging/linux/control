@@ -1,0 +1,9 @@
+Package: engcost
+Version: @VERSION@
+Section: office
+Priority: optional
+Architecture: amd64
+Maintainer: Engcost project <74657416+BabakHeidari@users.noreply.github.com>
+Depends: libc6 (>= @GLIBC@), libgcc-s1, libstdc++6, xdg-utils
+Description: Local offline engineering cost determination application
+ Includes its Python runtime and Persian browser interface.

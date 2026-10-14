@@ -4,6 +4,11 @@ Flask application for factory configuration, product BOMs, production costing,
 and a Persian RTL Dashboard. The Dashboard analyzes current operational inputs
 and non-persistent hypothetical scenarios. It does not capture cost history.
 
+For offline desktop installers and one-click local launch, see the
+[Persian installation/setup/backup guide](docs/offline-installers.md) and
+[platform validation status](docs/pr11-validation.md). Native installer CI keeps
+unsigned packages, checksums and validation reports as review artifacts.
+
 Use Python 3.12 and Node.js 20 or newer (validated with 24.19.0). From this
 repository root:
 

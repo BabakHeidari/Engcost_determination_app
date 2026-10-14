@@ -55,7 +55,7 @@ def main():
         checkout = Path(folder) / "checkout"
         checkout.mkdir()
         excluded = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache", "work")
-        for name in ("app.py", "AGENTS.md", "README.md", "modules", "utils", "templates",
+        for name in ("app.py", "engcost_launcher.py", "standalone", "packaging", "AGENTS.md", "README.md", "modules", "utils", "templates",
                      "static", "tests", "docs", "scripts", "Data", "Data_Better_Structure"):
             source = ROOT / name
             if source.is_dir():
@@ -92,6 +92,14 @@ def main():
                         totals[key] += int(child.attrib.get(key, 0))
             results[suite] = {"command": command, "exit_code": process.returncode, "junit": str(report), **totals}
             print(json.dumps({suite: results[suite]}, ensure_ascii=False), flush=True)
+            if process.returncode and report.exists():
+                failures = []
+                for case in ET.parse(report).getroot().iter('testcase'):
+                    for error in list(case):
+                        if error.tag in {'failure', 'error'}:
+                            failures.append({'test':case.attrib.get('classname','') + '::' + case.attrib.get('name',''),
+                                             'message':error.attrib.get('message','').splitlines()[0][:400]})
+                print(json.dumps({'failed_cases':failures}, ensure_ascii=False), flush=True)
             overall = max(overall, process.returncode)
             # A missing optional browser must not turn a release gate green.
             if suite in {"browser", "compatibility"} and (totals["skipped"] or not totals["tests"]):

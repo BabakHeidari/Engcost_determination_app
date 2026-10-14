@@ -1,0 +1,170 @@
+{
+  "build": {
+    "abi": {
+      "maximum_glibc_symbol": "2.35",
+      "package_minimum_glibc": "2.35",
+      "target_baseline_gate": "2.35"
+    },
+    "dirty": true,
+    "source_sha": "ecd4a1fb41e72d0ad48cd032e8ed96d55e9b126e",
+    "version": "0.11.2"
+  },
+  "checksums": {
+    "build-info.json": "2a1eef1df413a19b88cc227b9001804390d1916e943beb8cf3da353b72101f8d",
+    "engcost_0.11.2_amd64.deb": "5b07ab44caaa569981b1e4001b126d70154feae6bd3328761bd1124058c32c2b"
+  },
+  "native": {
+    "executable_sha256": "d6e80ff3db85b89b6f8fb185e97c9965139a1b7633877ebfbde7aa3a0c99540d",
+    "host": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.35",
+    "isolated_runtime_path": true,
+    "native_installer_environment": "see CI job/validation report",
+    "first_setup_server_ready_seconds": 0.23009378899999433,
+    "setup_browser": [
+      {
+        "mode": "fresh",
+        "form_posts": [
+          {
+            "path": "/_local/workspace",
+            "status": 302,
+            "origin": "http://127.0.0.1:43921"
+          },
+          {
+            "path": "/_local/admin",
+            "status": 302,
+            "origin": "http://127.0.0.1:43921"
+          },
+          {
+            "path": "/_local/stop",
+            "status": 200,
+            "origin": "http://127.0.0.1:43921"
+          }
+        ],
+        "admin_submit_to_login_seconds": 0.7039480660000095,
+        "external_requests": 0,
+        "failed_requests": 0,
+        "javascript_errors": 0
+      },
+      {
+        "mode": "existing",
+        "form_posts": [
+          {
+            "path": "/_local/workspace",
+            "status": 302,
+            "origin": "http://127.0.0.1:5000"
+          },
+          {
+            "path": "/_local/stop",
+            "status": 200,
+            "origin": "http://127.0.0.1:5000"
+          }
+        ],
+        "admin_submit_to_login_seconds": null,
+        "external_requests": 0,
+        "failed_requests": 0,
+        "javascript_errors": 0
+      }
+    ],
+    "setup_to_business_ready_seconds": 0.7039480660000095,
+    "persian_material_browser": {
+      "material": "اسید \"سرب\"‌دار",
+      "material_price": 150,
+      "bom_live_cost_in_rial": 300,
+      "general_add_reload_edit_reload": true,
+      "bom_select_save_reload": true,
+      "external_requests": 0,
+      "failed_requests": 0,
+      "javascript_errors": 0
+    },
+    "restart_server_ready_seconds": [
+      0.25313960999997676,
+      0.20320375399998625,
+      0.2026292070000011,
+      0.203026594999983,
+      0.22886644599998363
+    ],
+    "restart_business_additional_seconds": [
+      0.3264678980000042,
+      0.4098016659999928,
+      0.3234959709999998,
+      0.32943634899999097,
+      0.32011681500000577
+    ],
+    "requests_seconds": {
+      "cost-analysis": [
+        0.06632804699998474,
+        0.06339173800000708,
+        0.06414301800000999,
+        0.06401883199998792,
+        0.08544835099999659,
+        0.0642138849999867,
+        0.06347666599998547,
+        0.06358151399999201,
+        0.06325468099998943,
+        0.06384128399997735
+      ],
+      "A-B": [
+        0.06845367599999008,
+        0.068202317000015,
+        0.06679745400001025,
+        0.06789696800001366,
+        0.06717047500001172,
+        0.08632322700000827,
+        0.06613854200000446,
+        0.0663437599999952,
+        0.06673920500000463,
+        0.06645222299999887
+      ],
+      "matrix": [
+        0.07643117099999586,
+        0.07699729300000513,
+        0.09758908100002373,
+        0.07703256599998554,
+        0.07623405499998626,
+        0.07700340199997413,
+        0.07628368899997895,
+        0.0768577819999905,
+        0.07627352299999757,
+        0.07693185400000857
+      ]
+    },
+    "browser": [
+      {
+        "width": 1440,
+        "first_usable_navigation_seconds": 0.7879371010000114,
+        "external_requests": 0,
+        "failed_requests": 0,
+        "javascript_errors": 0
+      },
+      {
+        "width": 390,
+        "first_usable_navigation_seconds": 0.8161696640000002,
+        "external_requests": 0,
+        "failed_requests": 0,
+        "javascript_errors": 0
+      }
+    ],
+    "checks": "fresh setup/login, V2-only factory/category/subcategory/product/retry, general material/BOM/financial edits, costing and Profile Excel, simultaneous clicks, occupied port, stale record, unrelated CWD, Persian paths, existing workspace/auth preservation, secret persistence/uniqueness, setup disabled, corrupt/incomplete recovery, restart/stop, real Cost Analysis/A-B/matrix, analytical data hashes, local fonts/charts/CSV and chart fallback"
+  },
+  "backend": {
+    "command": [
+      "/home/runner/work/Engcost_determination_app/Engcost_determination_app/work/ci-venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "--tb=short",
+      "--junitxml=/home/runner/work/Engcost_determination_app/Engcost_determination_app/work/pr11-artifacts/validation/native-ubuntu-backend.xml",
+      "tests",
+      "--ignore=tests/test_dashboard_frontend.py",
+      "--ignore=tests/test_dashboard_sensitivity_frontend.py",
+      "--ignore=tests/test_dashboard_visual_frontend.py",
+      "--ignore=tests/test_dashboard_release_frontend.py",
+      "--ignore=tests/test_product_creation_frontend.py"
+    ],
+    "exit_code": 0,
+    "junit": "/home/runner/work/Engcost_determination_app/Engcost_determination_app/work/pr11-artifacts/validation/native-ubuntu-backend.xml",
+    "tests": 1066,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

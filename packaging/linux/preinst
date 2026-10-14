@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+if [ "$1" = upgrade ] && [ -x /opt/engcost/Engcost ]; then
+    touch /opt/engcost/.engcost-upgrading
+    /opt/engcost/Engcost --installer-stop
+fi

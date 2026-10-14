@@ -1,6 +1,7 @@
 import os
 import json
 from pathlib import Path
+from utils.paths import parent_path
 
 def get_directory_structure(root_path):
     """
@@ -189,7 +190,7 @@ def create_detailed_metadata(root_path, output_file="__metadata.json"):
 if __name__ == "__main__":
     # print(f"{os.getcwd()}\\Data\\Factories")
     # Specify your root directory
-    root_directory = f"{os.getcwd()}\\Data\\Factories"  # Current directory, change to your path
+    root_directory = Path(parent_path) / "Factories"
     
     # Method 1: Basic metadata (3 levels only)
     print("Creating basic metadata...")

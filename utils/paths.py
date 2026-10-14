@@ -1,7 +1,6 @@
-from pathlib import Path
-from os.path import abspath
+from utils.runtime_paths import RuntimePaths
 
-parent_path = Path(str(abspath(__file__))).parent.parent/"Data"
+parent_path = RuntimePaths.from_environment().data
 product_path = str(parent_path / "Overall" / "ProductsLater")
 material_path = str(parent_path / "Overall" / "material_costs")
 factories_path = str(parent_path / "Overall" / "factories")

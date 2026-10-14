@@ -1,0 +1,14 @@
+{
+  "_order": [
+    "factory name",
+    "manager",
+    "city",
+    "address"
+  ],
+  "data": {
+    "factory name": [],
+    "manager": [],
+    "city": [],
+    "address": []
+  }
+}

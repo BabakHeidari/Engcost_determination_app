@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -6,12 +7,16 @@ import pytest
 from utils.product_hierarchy_service import ALL, HierarchyMetadataError, HierarchySelectionError, ProductHierarchyService
 from utils.profile_store import ProfileDataStore
 
+# Retain literal-tag coverage on POSIX and entity-escaping coverage on Windows,
+# where angle brackets cannot be written into an actual filesystem name.
+HOSTILE_NAME = "same<script>" if os.name != "nt" else "same&lt;script&gt;"
+
 
 def _write_hierarchy(root: Path):
     (root / "OpA" / "CatA" / "SubA").mkdir(parents=True)
     (root / "OpA" / "CatB" / "SubB").mkdir(parents=True)
-    (root / "OpA" / "CatA" / "SubA" / "same<script>.json").write_text("{}", encoding="utf-8")
-    (root / "OpA" / "CatB" / "SubB" / "same<script>.json").write_text("{}", encoding="utf-8")
+    (root / "OpA" / "CatA" / "SubA" / f"{HOSTILE_NAME}.json").write_text("{}", encoding="utf-8")
+    (root / "OpA" / "CatB" / "SubB" / f"{HOSTILE_NAME}.json").write_text("{}", encoding="utf-8")
     (root / "OpA" / "CatA" / "SubA" / "ignored_meta.json").write_text("{}", encoding="utf-8")
     (root / "__metadata.json").write_text(json.dumps({
         "product_hierarchy": {"OpA": {"CatB": ["SubB"], "CatA": ["SubA"]}, "OpB": {"Secret": ["Hidden"]}}
@@ -27,7 +32,7 @@ def test_hierarchy_service_is_parent_scoped_deterministic_and_preserves_same_nam
 
     result = service.options("OpA", category=ALL, subcategory=ALL)
     products = result["options"]["products"]
-    assert [item["label"] for item in products] == ["same<script>", "same<script>"]
+    assert [item["label"] for item in products] == [HOSTILE_NAME, HOSTILE_NAME]
     assert len({item["id"] for item in products}) == 2
     assert {item["category"] for item in products} == {"CatA", "CatB"}
     assert all(item["category"] != "Secret" for item in products)
@@ -92,7 +97,7 @@ def test_dashboard_only_grant_works_without_product_grant_and_is_factory_isolate
     assert b"fac_a" in page.data and b"fac_b" not in page.data
     response = client.get("/api/dashboard/filter-options?factory=fac_a&category=CatA&subcategory=SubA")
     assert response.status_code == 200
-    assert response.get_json()["options"]["products"][0]["label"] == "same<script>"
+    assert response.get_json()["options"]["products"][0]["label"] == HOSTILE_NAME
     assert client.get("/api/dashboard/filter-options?factory=fac_b").status_code == 403
     assert client.get("/api/dashboard/filter-options?factory=unknown").status_code == 404
     assert client.get("/api/dashboard/filter-options?factory=fac_off").status_code == 403
