@@ -2,19 +2,19 @@
   "build": {
     "abi": null,
     "dirty": true,
-    "source_sha": "5eb25a6db0792dd27d1b5727ccebe54d0a46b3ec",
-    "version": "0.11.1"
+    "source_sha": "ecd4a1fb41e72d0ad48cd032e8ed96d55e9b126e",
+    "version": "0.11.2"
   },
   "checksums": {
-    "build-info.json": "2714a1a792535a0733c072d613db150c2a20165eaa19f8d5bee5a1fca243da42",
-    "Engcost-0.11.1-Setup.exe": "3829e80f7d6df68504b1ab664d62b25c5695cb7bc23a770412314c969d4fa1f5"
+    "build-info.json": "b09d9b6db6f76a98c7bcbaefc08ad59649889cf679ee6e1888ee9aab5eeb5ae0",
+    "Engcost-0.11.2-Setup.exe": "8ae495ecf743898a8ac91ebc0371455a676a9a69858d59bfe5c0e99d8c7ffdc1"
   },
   "native": {
-    "executable_sha256": "6090d81ac5bf314464e57503e7a5af56804b2d6fa60a9b5aa18792a7f1a6688a",
+    "executable_sha256": "b810ab88a8617d16a9343c9a76bc2f4a8197447c6d644cf6de4b0d785cc5cf81",
     "host": "Windows-2022Server-10.0.20348-SP0",
     "isolated_runtime_path": true,
     "native_installer_environment": "see CI job/validation report",
-    "first_setup_server_ready_seconds": 0.5729747999999972,
+    "first_setup_server_ready_seconds": 0.7847795999998652,
     "setup_browser": [
       {
         "mode": "fresh",
@@ -22,20 +22,20 @@
           {
             "path": "/_local/workspace",
             "status": 302,
-            "origin": "http://127.0.0.1:64875"
+            "origin": "http://127.0.0.1:56825"
           },
           {
             "path": "/_local/admin",
             "status": 302,
-            "origin": "http://127.0.0.1:64875"
+            "origin": "http://127.0.0.1:56825"
           },
           {
             "path": "/_local/stop",
             "status": 200,
-            "origin": "http://127.0.0.1:64875"
+            "origin": "http://127.0.0.1:56825"
           }
         ],
-        "admin_submit_to_login_seconds": 1.2891661999999542,
+        "admin_submit_to_login_seconds": 1.322134799999958,
         "external_requests": 0,
         "failed_requests": 0,
         "javascript_errors": 0
@@ -60,70 +60,80 @@
         "javascript_errors": 0
       }
     ],
-    "setup_to_business_ready_seconds": 1.2891661999999542,
+    "setup_to_business_ready_seconds": 1.322134799999958,
+    "persian_material_browser": {
+      "material": "اسید \"سرب\"‌دار",
+      "material_price": 150,
+      "bom_live_cost_in_rial": 300,
+      "general_add_reload_edit_reload": true,
+      "bom_select_save_reload": true,
+      "external_requests": 0,
+      "failed_requests": 0,
+      "javascript_errors": 0
+    },
     "restart_server_ready_seconds": [
-      0.4756030000000919,
-      0.47575300000005427,
-      0.48674419999997554,
-      0.48768760000007205,
-      0.4740829999999505
+      0.6289859000000888,
+      0.5756395000000794,
+      0.6099128999999266,
+      0.5868442000000869,
+      0.5668047999999999
     ],
     "restart_business_additional_seconds": [
-      0.6212553999999955,
-      0.575095200000078,
-      0.5734904999999344,
-      0.7636095999999952,
-      0.7802493000000368
+      0.6850630999999794,
+      0.6865362000000914,
+      0.6720345000001089,
+      0.6799777999999606,
+      0.6887349999999515
     ],
     "requests_seconds": {
       "cost-analysis": [
-        0.12255010000001221,
-        0.13862359999995988,
-        0.12258780000001934,
-        0.11102889999995114,
-        0.15350759999989805,
-        0.12598869999999351,
-        0.12597549999998137,
-        0.12451109999994969,
-        0.12317559999996774,
-        0.12420250000002397
+        0.17380359999992834,
+        0.18494299999997565,
+        0.17465560000005098,
+        0.1852824000000055,
+        0.19331740000006903,
+        0.18029219999993984,
+        0.17463539999994282,
+        0.17100699999991775,
+        0.17288959999996223,
+        0.17335939999998118
       ],
       "A-B": [
-        0.11636569999996027,
-        0.12615809999999783,
-        0.12476939999999104,
-        0.12451759999999013,
-        0.15876489999993737,
-        0.12420850000000883,
-        0.12410780000004706,
-        0.12523899999996502,
-        0.12345879999998033,
-        0.12431379999998171
+        0.18121109999992768,
+        0.17498649999993177,
+        0.1840776999999889,
+        0.18676120000009178,
+        0.21701119999988805,
+        0.18916489999992336,
+        0.18687019999993026,
+        0.19182769999997618,
+        0.18490470000006098,
+        0.18700030000013612
       ],
       "matrix": [
-        0.14564959999995608,
-        0.15106650000006994,
-        0.16032749999999396,
-        0.14291900000000624,
-        0.1321600999999646,
-        0.13130069999999705,
-        0.1337333999999828,
-        0.12534119999997984,
-        0.1271567999999661,
-        0.12318760000005113
+        0.20245079999995141,
+        0.2064093999999841,
+        0.22863759999995636,
+        0.19145360000015899,
+        0.20090049999998882,
+        0.20510369999988143,
+        0.20452180000006592,
+        0.20206059999986792,
+        0.20322940000005474,
+        0.20580450000011297
       ]
     },
     "browser": [
       {
         "width": 1440,
-        "first_usable_navigation_seconds": 0.7972614000000249,
+        "first_usable_navigation_seconds": 0.7705224000001181,
         "external_requests": 0,
         "failed_requests": 0,
         "javascript_errors": 0
       },
       {
         "width": 390,
-        "first_usable_navigation_seconds": 0.6320270999999593,
+        "first_usable_navigation_seconds": 0.7055754000000434,
         "external_requests": 0,
         "failed_requests": 0,
         "javascript_errors": 0
@@ -148,7 +158,7 @@
     ],
     "exit_code": 0,
     "junit": "D:\\a\\Engcost_determination_app\\Engcost_determination_app\\work\\pr11-artifacts\\validation\\native-windows-backend.xml",
-    "tests": 1062,
+    "tests": 1066,
     "failures": 0,
     "errors": 0,
     "skipped": 0

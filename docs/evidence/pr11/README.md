@@ -1,13 +1,14 @@
 # PR-11 evidence
 
-[Native run 38463009134](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38463009134) passed version 0.11.1 Windows Server 2022 and Ubuntu 22.04 builds, actual installer execution, offline frozen/browser checks including actual setup/admin/stop form clicks, running reinstall/uninstall preservation and all 1,062 backend cases on each platform (zero failures/errors/skips).
-Validated code head `3c206eeef7df95ea8a681f08808bcf0583cbbc79`; packages record PR merge SHA `5eb25a6db0792dd27d1b5727ccebe54d0a46b3ec` and `dirty: true`. Per-source/resource hashes are in each archive's build-info.json.
+[Native run 38502849797](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38502849797) passed version 0.11.2 Windows Server 2022 and Ubuntu 22.04 builds, actual installer execution, offline frozen/browser checks including actual setup/admin/stop form clicks and Persian material add/reload/edit/BOM roundtrips, running reinstall/uninstall preservation and all 1,066 backend cases on each platform (zero failures/errors/skips).
+Validated code head `5df250884b2446c1de03383d56f4b18dfcc8116e`; packages record PR merge SHA `ecd4a1fb41e72d0ad48cd032e8ed96d55e9b126e` and `dirty: true`. Per-source/resource hashes are in each archive's build-info.json.
 
-* [Windows installer and native reports](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38463009134/artifacts/11848591222).
-* [Ubuntu installer and native reports](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38463009134/artifacts/11847451795).
+* [Windows installer and native reports](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38502849797/artifacts/11867001264).
+* [Ubuntu installer and native reports](https://github.com/BabakHeidari/Engcost_determination_app/actions/runs/38502849797/artifacts/11866568894).
 * [Native Windows raw summary](native-windows-summary.json) and [Ubuntu raw summary](native-ubuntu-summary.json), including installer/executable checksums and every timing sample.
-* [Local backend: 1,062 passed, zero skipped](backend.txt), [JUnit](backend.xml).
-* [Existing primary browser: 43 passed, zero skipped](browser.txt), [JUnit](browser.xml); retained report predates this controller-only fix. Refreshed packaged browser checks now cover actual setup form clicks on both platforms.
+* [Local backend: 1,066 passed, zero skipped](backend.txt), [JUnit](backend.xml).
+* [Existing primary browser: 43 passed, zero skipped](browser.txt), [JUnit](browser.xml); retained report predates the setup/material corrections. Refreshed packaged browser checks cover actual setup form clicks and Persian material/BOM roundtrips on both platforms.
+* [Local Persian material table](persian-material-general.png) and [BOM](persian-material-bom.png), after actual UI save/reload/edit/selection with verified price/cost.
 * [Local private first-admin screen](setup-admin.png).
 * [Local frozen Dashboard desktop](dashboard-1440.png) and [mobile](dashboard-390.png), synthetic 200-product fixture with exact-table fallback exercised.
 

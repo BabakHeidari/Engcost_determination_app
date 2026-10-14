@@ -6,19 +6,19 @@
       "target_baseline_gate": "2.35"
     },
     "dirty": true,
-    "source_sha": "5eb25a6db0792dd27d1b5727ccebe54d0a46b3ec",
-    "version": "0.11.1"
+    "source_sha": "ecd4a1fb41e72d0ad48cd032e8ed96d55e9b126e",
+    "version": "0.11.2"
   },
   "checksums": {
-    "build-info.json": "da57d1eb543bb30de7dd0839f8e9882f64f00649d7ef5d734ca703f80aafd661",
-    "engcost_0.11.1_amd64.deb": "af83405fcc801be239f93e3fc3076e1ee14da179740d89eaf93bfc982c67e007"
+    "build-info.json": "2a1eef1df413a19b88cc227b9001804390d1916e943beb8cf3da353b72101f8d",
+    "engcost_0.11.2_amd64.deb": "5b07ab44caaa569981b1e4001b126d70154feae6bd3328761bd1124058c32c2b"
   },
   "native": {
-    "executable_sha256": "d7259701eb146bdd8b54c3975524f9250d01e36aedac94d47e40c488794959df",
+    "executable_sha256": "d6e80ff3db85b89b6f8fb185e97c9965139a1b7633877ebfbde7aa3a0c99540d",
     "host": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.35",
     "isolated_runtime_path": true,
     "native_installer_environment": "see CI job/validation report",
-    "first_setup_server_ready_seconds": 0.28127916599999025,
+    "first_setup_server_ready_seconds": 0.23009378899999433,
     "setup_browser": [
       {
         "mode": "fresh",
@@ -26,20 +26,20 @@
           {
             "path": "/_local/workspace",
             "status": 302,
-            "origin": "http://127.0.0.1:38585"
+            "origin": "http://127.0.0.1:43921"
           },
           {
             "path": "/_local/admin",
             "status": 302,
-            "origin": "http://127.0.0.1:38585"
+            "origin": "http://127.0.0.1:43921"
           },
           {
             "path": "/_local/stop",
             "status": 200,
-            "origin": "http://127.0.0.1:38585"
+            "origin": "http://127.0.0.1:43921"
           }
         ],
-        "admin_submit_to_login_seconds": 0.7444669400000521,
+        "admin_submit_to_login_seconds": 0.7039480660000095,
         "external_requests": 0,
         "failed_requests": 0,
         "javascript_errors": 0
@@ -64,70 +64,80 @@
         "javascript_errors": 0
       }
     ],
-    "setup_to_business_ready_seconds": 0.7444669400000521,
+    "setup_to_business_ready_seconds": 0.7039480660000095,
+    "persian_material_browser": {
+      "material": "اسید \"سرب\"‌دار",
+      "material_price": 150,
+      "bom_live_cost_in_rial": 300,
+      "general_add_reload_edit_reload": true,
+      "bom_select_save_reload": true,
+      "external_requests": 0,
+      "failed_requests": 0,
+      "javascript_errors": 0
+    },
     "restart_server_ready_seconds": [
-      0.2802750899999751,
-      0.2906299039999567,
-      0.28370349099998293,
-      0.2895604290000051,
-      0.28277132099998425
+      0.25313960999997676,
+      0.20320375399998625,
+      0.2026292070000011,
+      0.203026594999983,
+      0.22886644599998363
     ],
     "restart_business_additional_seconds": [
-      0.39586632499998586,
-      0.4051735720000238,
-      0.4053236130000073,
-      0.3908002080000301,
-      0.39077669499999956
+      0.3264678980000042,
+      0.4098016659999928,
+      0.3234959709999998,
+      0.32943634899999097,
+      0.32011681500000577
     ],
     "requests_seconds": {
       "cost-analysis": [
-        0.08808678200000486,
-        0.0852874619999966,
-        0.0861046900000133,
-        0.08586790500004327,
-        0.12203394699997716,
-        0.08486532799997804,
-        0.08544310700000324,
-        0.08603040999997802,
-        0.08489470899996832,
-        0.0857697670000448
+        0.06632804699998474,
+        0.06339173800000708,
+        0.06414301800000999,
+        0.06401883199998792,
+        0.08544835099999659,
+        0.0642138849999867,
+        0.06347666599998547,
+        0.06358151399999201,
+        0.06325468099998943,
+        0.06384128399997735
       ],
       "A-B": [
-        0.08950932599998396,
-        0.09166511500001207,
-        0.08888172899997926,
-        0.08921074200003432,
-        0.08936688800002912,
-        0.10903138800000534,
-        0.08861999800001286,
-        0.0894486579999807,
-        0.08926177000000735,
-        0.08892570900002283
+        0.06845367599999008,
+        0.068202317000015,
+        0.06679745400001025,
+        0.06789696800001366,
+        0.06717047500001172,
+        0.08632322700000827,
+        0.06613854200000446,
+        0.0663437599999952,
+        0.06673920500000463,
+        0.06645222299999887
       ],
       "matrix": [
-        0.10209564699999873,
-        0.10334253100000979,
-        0.12625127600000496,
-        0.10286643999995704,
-        0.10183453499996631,
-        0.1034095669999715,
-        0.10208724300002814,
-        0.10289619600001743,
-        0.10482661700001472,
-        0.10417933299999049
+        0.07643117099999586,
+        0.07699729300000513,
+        0.09758908100002373,
+        0.07703256599998554,
+        0.07623405499998626,
+        0.07700340199997413,
+        0.07628368899997895,
+        0.0768577819999905,
+        0.07627352299999757,
+        0.07693185400000857
       ]
     },
     "browser": [
       {
         "width": 1440,
-        "first_usable_navigation_seconds": 0.8249609299999747,
+        "first_usable_navigation_seconds": 0.7879371010000114,
         "external_requests": 0,
         "failed_requests": 0,
         "javascript_errors": 0
       },
       {
         "width": 390,
-        "first_usable_navigation_seconds": 0.7096083810000096,
+        "first_usable_navigation_seconds": 0.8161696640000002,
         "external_requests": 0,
         "failed_requests": 0,
         "javascript_errors": 0
@@ -152,7 +162,7 @@
     ],
     "exit_code": 0,
     "junit": "/home/runner/work/Engcost_determination_app/Engcost_determination_app/work/pr11-artifacts/validation/native-ubuntu-backend.xml",
-    "tests": 1062,
+    "tests": 1066,
     "failures": 0,
     "errors": 0,
     "skipped": 0
